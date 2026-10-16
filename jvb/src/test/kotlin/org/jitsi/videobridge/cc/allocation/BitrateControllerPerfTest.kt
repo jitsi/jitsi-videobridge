@@ -22,6 +22,7 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
@@ -80,6 +81,9 @@ class BitrateControllerPerfTest : StringSpec() {
         DiagnosticContext(),
         createLogger(),
         clock,
+        // A fake which is never run, so that the periodic re-allocation does not keep rescheduling itself on
+        // TaskPools.SCHEDULED_POOL after the spec (the tests drive the allocation themselves).
+        FakeScheduledExecutorService(),
     ).apply {
         // The BC only starts working 10 seconds after it first received media, so fake that.
         transformRtp(PacketInfo(VideoRtpPacket(ByteArray(100), 0, 100)))

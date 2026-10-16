@@ -34,6 +34,7 @@ import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
+import org.jitsi.videobridge.cc.EncodingLiveness
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
 import java.time.Duration
@@ -78,7 +79,7 @@ class Av1DDAdaptiveSourceProjectionContext(
      */
     private var lastFrameNumberIndexResumption = -1L
 
-    override fun accept(packetInfo: PacketInfo, targetIndex: Int): Boolean {
+    override fun accept(packetInfo: PacketInfo, targetIndex: Int, liveness: EncodingLiveness): Boolean {
         val packet = packetInfo.packet
 
         if (packet !is Av1DDPacket) {
@@ -107,7 +108,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             }
             val receivedTime = packetInfo.receivedTime
             val acceptResult = av1QualityFilter
-                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime)
+                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime, liveness)
             frame.isAccepted = acceptResult.accept && frameIsProjectable(frame)
             if (frame.isAccepted) {
                 val projection: Av1DDFrameProjection
@@ -602,13 +603,16 @@ class Av1DDAdaptiveSourceProjectionContext(
         )
     }
 
-    override fun needsKeyframe(): Boolean {
-        if (av1QualityFilter.needsKeyframe) {
-            return true
-        }
+    override fun needsKeyframe(): Boolean = av1QualityFilter.needsKeyframe || needsKeyframeToStart()
 
-        return lastAv1FrameProjection.av1Frame == null
-    }
+    override fun shouldRequestKeyframe(): Boolean =
+        av1QualityFilter.shouldRequestKeyframe || (needsKeyframeToStart() && av1QualityFilter.mayRequestKeyframe)
+
+    /**
+     * Whether a keyframe is needed for a reason of this context's own, not the quality filter's: nothing has been
+     * sent yet.
+     */
+    private fun needsKeyframeToStart(): Boolean = lastAv1FrameProjection.av1Frame == null
 
     override fun rewriteRtp(packetInfo: PacketInfo) {
         if (packetInfo.packet !is Av1DDPacket) {

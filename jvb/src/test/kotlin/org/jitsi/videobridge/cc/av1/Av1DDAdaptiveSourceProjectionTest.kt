@@ -35,6 +35,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.cc.RtpState
+import org.jitsi.videobridge.cc.accept
 import org.junit.Assert
 import org.junit.Test
 import java.time.Duration

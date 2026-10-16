@@ -31,6 +31,7 @@ import org.jitsi.videobridge.util.TaskPools
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
@@ -50,14 +51,23 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
     private val trustBwe: Supplier<Boolean>,
     parentLogger: Logger,
     private val diagnosticContext: DiagnosticContext,
-    private val clock: Clock
+    private val clock: Clock,
+    /**
+     * Runs the periodic re-allocation. Only set in tests. When null, [TaskPools.SCHEDULED_POOL] is used, read when
+     * each update is scheduled.
+     */
+    private val customScheduler: ScheduledExecutorService? = null
 ) {
     private val logger = createChildLogger(parentLogger)
+
+    private val scheduler: ScheduledExecutorService
+        get() = customScheduler ?: TaskPools.SCHEDULED_POOL
 
     /** The estimated available bandwidth in bits per second. */
     private var bweBps: Long = -1
 
     /** Whether this bandwidth estimator has been expired. Once expired we stop periodic re-allocation. */
+    @Volatile
     private var expired = false
 
     /**
@@ -98,6 +108,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         private set
 
     /** The task scheduled to call [.update]. */
+    @Volatile
     private var updateTask: ScheduledFuture<*>? = null
 
     init {
@@ -369,11 +380,17 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 
         // Add 5ms to avoid having to re-schedule right away. This increases the average period at which we
         // re-allocate by an insignificant amount.
-        updateTask = TaskPools.SCHEDULED_POOL.schedule(
+        val task = scheduler.schedule(
             { rescheduleUpdate() },
             delayMs + 5,
             TimeUnit.MILLISECONDS
         )
+        updateTask = task
+        // expire() may have run since the check above, and cancelled the previous task instead of this one. Either
+        // it sees this task, or we see that it expired (both fields are volatile).
+        if (expired) {
+            task.cancel(false)
+        }
     }
 
     companion object {

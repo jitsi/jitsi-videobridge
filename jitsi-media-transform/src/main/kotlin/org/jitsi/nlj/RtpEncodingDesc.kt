@@ -77,6 +77,17 @@ constructor(
 
     private var nominalHeight = initialLayers.getNominalHeight()
 
+    /**
+     * The source this encoding belongs to, set by the source when it is constructed. The source keeps lookup tables
+     * of its encodings' layers, which the [layers] setter tells it to rebuild.
+     */
+    internal var source: MediaSourceDesc? = null
+
+    /**
+     * The encoding's layers. Assigning them replaces the layer objects, so the source's lookup tables are rebuilt
+     * from the setter; see [MediaSourceDesc.setEncodingLayers], which also takes the source's lock. A change to a
+     * layer's attributes in place needs no rebuild, since the tables hold the layer objects themselves.
+     */
     internal var layers = initialLayers
         set(newLayers) {
             validateLayerEids(newLayers)
@@ -110,7 +121,29 @@ constructor(
                 }
             }
             field = newLayers
+            source?.onEncodingLayersChanged()
         }
+
+    /**
+     * Sets the height of every layer of this encoding to [height], as learned from the bitstream, and returns whether
+     * any layer's height changed. The layers stay the same objects, so the source's layer lookup tables, which hold
+     * them, see the new height. Meant for an encoding with a single spatial layer, whose layers all share its height,
+     * which is also recorded as the encoding's nominal height. Called on the receive pipeline's thread, like the other
+     * code which updates layers' attributes in place.
+     */
+    internal fun updateHeight(height: Int): Boolean {
+        var changed = false
+        for (layer in layers) {
+            if (layer.height != height) {
+                layer.height = height
+                changed = true
+            }
+        }
+        if (height != RtpLayerDesc.NO_HEIGHT) {
+            nominalHeight = height
+        }
+        return changed
+    }
 
     /**
      * @return the "id" of a layer within this source, across all encodings. This is a server-side id and should
@@ -119,6 +152,10 @@ constructor(
      * maintained in [MediaSourceDesc].
      */
     fun encodingId(layer: RtpLayerDesc): Long = calcEncodingId(primarySSRC, layer.layerId)
+
+    /** Tracks whether this encoding is currently being sent, from its media packets; see [EncodingLivenessTracker]. */
+    var liveness = EncodingLivenessTracker()
+        private set
 
     /**
      * Get the secondary ssrc for this encoding that corresponds to the given
@@ -145,6 +182,7 @@ constructor(
         layers: Array<RtpLayerDesc> = Array(this.layers.size) { i -> this.layers[i].copy() }
     ) = RtpEncodingDesc(primarySSRC, layers, eid).also {
         this.secondarySsrcs.forEach { (ssrc, type) -> it.addSecondarySsrc(ssrc, type) }
+        it.liveness = this.liveness.copy()
     }
 
     /**
@@ -173,6 +211,7 @@ constructor(
         put("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
         put("eid", eid)
         put("nominal_height", nominalHeight)
+        set<ObjectNode>("liveness", liveness.debugState(System.currentTimeMillis()))
         for (layer in layers) {
             set<ObjectNode>(layer.indexString(), layer.debugState())
         }

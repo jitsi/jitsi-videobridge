@@ -72,6 +72,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
+import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.utils.sumOf
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.CryptexConfig
@@ -333,9 +334,12 @@ class Relay @JvmOverloads constructor(
      * The queue which enforces sequential processing of incoming data channel messages
      * to maintain processing order.
      */
-    private val incomingDataChannelMessagesQueue = PacketInfoQueue(
+    // A plain PacketQueue rather than a PacketInfoQueue: the buffers are the SCTP library's message payloads, not
+    // pool buffers, so they must not be returned to the pool when the queue drops or rejects them.
+    private val incomingDataChannelMessagesQueue = PacketQueue<PacketInfo>(
+        TransportConfig.queueSize,
+        null,
         "${javaClass.simpleName}-incoming-data-channel-queue",
-        TaskPools.IO_POOL,
         { packetInfo ->
             packetInfo.packetAs<DataChannelPacket>().let { packet ->
                 dataChannelStack.onIncomingDataChannelPacket(
@@ -346,7 +350,7 @@ class Relay @JvmOverloads constructor(
             }
             true
         },
-        TransportConfig.queueSize
+        TaskPools.IO_POOL
     )
 
     fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
@@ -790,6 +794,7 @@ class Relay @JvmOverloads constructor(
             }
         }
         ep?.expire()
+        updateKeyframeModeSources()
     }
 
     private fun getOrCreateRelaySender(endpointId: String): RelayEndpointSender {
@@ -812,6 +817,7 @@ class Relay @JvmOverloads constructor(
             s.setExtmapAllowMixed(extmapAllowMixed)
             s.setFeature(Features.TRANSCEIVER_PCAP_DUMP, transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP))
             s.setKeyframeCostSupplier(::getKeyframeCost)
+            s.setKeyframeModeDetector(transceiver.keyframeModeDetector)
 
             senders[endpointId] = s
 
@@ -860,6 +866,22 @@ class Relay @JvmOverloads constructor(
     ) {
         ep.audioSources = audioSources.toList()
         ep.mediaSources = videoSources.toTypedArray()
+        updateKeyframeModeSources()
+    }
+
+    /**
+     * Gives the keyframe mode detector every relayed endpoint's video sources. The relay's own transceiver receives
+     * no media, so unlike an endpoint's it does not learn its sources from its receive pipeline. Instead the relayed
+     * endpoints' receivers report to it, and the relay's senders ask it how to limit their requests. This is the
+     * detector's only feeder: the relay's transceiver is never given media sources of its own, which would replace
+     * these.
+     */
+    private fun updateKeyframeModeSources() {
+        /* Published under the lock, so that two concurrent updates can not publish the older set last. */
+        synchronized(endpointsLock) {
+            val sources = relayedEndpoints.values.flatMap { it.mediaSources.asList() }
+            transceiver.keyframeModeDetector.setMediaSources(sources.toTypedArray())
+        }
     }
 
     fun getEndpoint(id: String): RelayedEndpoint? = synchronized(endpointsLock) { relayedEndpoints[id] }
@@ -908,10 +930,8 @@ class Relay @JvmOverloads constructor(
         when (packet) {
             is CompoundRtcpPacket -> packet.packets.forEach { ssrcs.addAll(getRtcpSsrcs(it)) }
 
-            is RtcpFbFirPacket -> ssrcs.add(packet.mediaSenderSsrc)
-
             // TODO: support multiple FIRs in a packet
-            is RtcpFbPacket -> ssrcs.add(packet.mediaSourceSsrc)
+            is RtcpFbPacket -> ssrcs.add(packet.targetMediaSsrc)
 
             is RtcpSrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
 

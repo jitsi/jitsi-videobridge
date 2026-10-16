@@ -28,6 +28,8 @@ import org.jitsi.nlj.findRtpLayerDescs
 import org.jitsi.nlj.findRtpSource
 import org.jitsi.nlj.rtcp.KeyframeBudgetConfig
 import org.jitsi.nlj.rtcp.KeyframeCost
+import org.jitsi.nlj.rtcp.KeyframeModeDetector
+import org.jitsi.nlj.rtcp.SenderKeyframeMode
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
@@ -73,11 +75,20 @@ class VideoBitrateCalculator(
      */
     private val keyframeCosts = ConcurrentHashMap<Long, KeyframeCostTracker>()
 
+    /**
+     * Knows how each source's sender answers keyframe requests, which decides which encodings a keyframe costs; see
+     * [getKeyframeCost].
+     */
+    @Volatile
+    private var keyframeModeDetector: KeyframeModeDetector? = null
+
     override fun observe(packetInfo: PacketInfo) {
         super.observe(packetInfo)
 
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         val now = clock.millis()
+
+        val isKeyframe = (videoRtpPacket as? ParsedVideoPacket)?.isKeyframe ?: false
 
         /* Before the layer lookup: the tracker only needs the stream's own properties, and a packet with no known
          * layer, as when an encoding's structure has not been seen yet, is still part of the stream's bitrate. So is a
@@ -87,7 +98,7 @@ class VideoBitrateCalculator(
             keyframeCosts[videoRtpPacket.ssrc]?.observe(
                 videoRtpPacket.timestamp,
                 videoRtpPacket.length,
-                (videoRtpPacket as? ParsedVideoPacket)?.isKeyframe ?: false,
+                isKeyframe,
                 now
             )
         }
@@ -126,7 +137,16 @@ class VideoBitrateCalculator(
         var keyframeBits = 0L
         var sourceBitrate = 0.bps
         var keyframeBitrate = 0.bps
-        source.rtpEncodings.forEach { encoding ->
+        /* A sender which generates a keyframe only on the encoding asked for is charged for that encoding alone,
+         * against that encoding's bitrate. Its requests are limited per encoding; see
+         * [KeyframeModeDetector.limiterKeys]. */
+        val perEncoding = keyframeModeDetector?.getMode(ssrc) == SenderKeyframeMode.PER_ENCODING
+        val encodings = if (perEncoding) {
+            source.rtpEncodings.filter { it.hasSsrc(ssrc) }
+        } else {
+            source.rtpEncodings.toList()
+        }
+        encodings.forEach { encoding ->
             keyframeCosts[encoding.primarySSRC]?.let { tracker ->
                 val meanKeyframeSize = tracker.getMeanKeyframeSize(now)
                 val encodingBitrate = tracker.getStreamBitrate(now)
@@ -142,6 +162,11 @@ class VideoBitrateCalculator(
             return null
         }
         return KeyframeCost(keyframeBits.bits, sourceBitrate, keyframeBitrate)
+    }
+
+    /** Sets the [KeyframeModeDetector], whose mode for a source decides which encodings its keyframe cost covers. */
+    fun setKeyframeModeDetector(detector: KeyframeModeDetector) {
+        keyframeModeDetector = detector
     }
 
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {

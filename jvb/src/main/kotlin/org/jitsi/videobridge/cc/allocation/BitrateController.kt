@@ -30,11 +30,13 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.videobridge.cc.AdaptiveSourceProjection
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
 import java.time.Clock
 import java.time.Duration
+import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
 
 /**
@@ -51,7 +53,9 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     endpointsSupplier: Supplier<List<T>>,
     private val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    /** Runs the periodic re-allocation, see [BandwidthAllocator]. Only set in tests. */
+    scheduler: ScheduledExecutorService? = null
 ) {
     val eventEmitter = SyncEventEmitter<EventHandler>()
 
@@ -92,7 +96,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             Supplier { trustBwe },
             parentLogger,
             diagnosticContext,
-            clock
+            clock,
+            scheduler
         )
     fun hasSuspendedSources() = bandwidthAllocator.allocation.hasSuspendedSources
 
@@ -150,6 +155,9 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun accept(rtcpSrPacket: RtcpSrPacket): Boolean = packetHandler.accept(rtcpSrPacket)
     fun transformRtcp(rtcpSrPacket: RtcpSrPacket): Boolean = packetHandler.transformRtcp(rtcpSrPacket)
     fun transformRtp(packetInfo: PacketInfo): Boolean = packetHandler.transformRtp(packetInfo)
+
+    /** See [PacketHandler.retargetKeyframeRequest]. */
+    fun retargetKeyframeRequest(sourceSsrc: Long): Long? = packetHandler.retargetKeyframeRequest(sourceSsrc)
 
     fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("bitrate_allocator", bandwidthAllocator.debugState)
@@ -290,6 +298,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             oldEffectiveConstraints: EffectiveConstraintsMap,
             newEffectiveConstraints: EffectiveConstraintsMap,
         )
+
+        /**
+         * A projection needs a keyframe to reach its target. [ssrc] is the SSRC of the encoding of the source
+         * (owned by [endpointId]) to request it from, see [AdaptiveSourceProjection.getKeyframeRequestSsrc].
+         */
         fun keyframeNeeded(endpointId: String?, ssrc: Long)
 
         /**
