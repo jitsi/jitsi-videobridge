@@ -21,7 +21,6 @@ import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
-import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorStatelessSubset
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
@@ -72,9 +71,8 @@ class Av1DDPacket : ParsedVideoPacket {
         requireNotNull(ddExt) {
             "Packet did not have Dependency Descriptor"
         }
-        val parser = Av1DependencyDescriptorReader(ddExt)
         descriptor = try {
-            parser.parse(templateDependencyStructure)
+            Av1DependencyDescriptorHeaderExtension.parse(ddExt, templateDependencyStructure)
         } catch (e: Av1DependencyException) {
             logger.warn(
                 "Could not parse AV1 Dependency Descriptor for ssrc ${packet.ssrc} seq ${packet.sequenceNumber}: " +
@@ -82,7 +80,7 @@ class Av1DDPacket : ParsedVideoPacket {
             )
             null
         }
-        statelessDescriptor = descriptor ?: parser.parseStateless()
+        statelessDescriptor = descriptor ?: Av1DependencyDescriptorStatelessSubset.parse(ddExt)
         frameInfo = descriptor?.let { getFrameInfo(it, logger) }
     }
 
@@ -99,7 +97,7 @@ class Av1DDPacket : ParsedVideoPacket {
         }
         val ddExt = getHeaderExtension(av1DDHeaderExtensionId) ?: return false
         val newDescriptor = try {
-            Av1DependencyDescriptorReader(ddExt).parse(templateDependencyStructure)
+            Av1DependencyDescriptorHeaderExtension.parse(ddExt, templateDependencyStructure)
         } catch (e: Av1DependencyException) {
             logger.warn(
                 "Could not parse updated AV1 Dependency Descriptor for ssrc $ssrc seq $sequenceNumber: ${e.message}"

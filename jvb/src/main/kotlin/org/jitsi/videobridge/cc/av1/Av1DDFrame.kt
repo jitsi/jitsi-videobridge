@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
+import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
@@ -233,9 +233,8 @@ class Av1DDFrame internal constructor(
         if (rawDependencyDescriptor == null) {
             return
         }
-        val parser = Av1DependencyDescriptorReader(rawDependencyDescriptor)
         val descriptor = try {
-            parser.parse(templateDependencyStructure)
+            Av1DependencyDescriptorHeaderExtension.parse(rawDependencyDescriptor, templateDependencyStructure)
         } catch (e: Av1DependencyException) {
             logger.warn("Could not parse updated AV1 Dependency Descriptor: ${e.message}")
             return

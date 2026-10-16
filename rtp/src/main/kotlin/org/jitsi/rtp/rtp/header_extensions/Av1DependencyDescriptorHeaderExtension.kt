@@ -50,6 +50,22 @@ open class Av1DependencyDescriptorStatelessSubset(
         frameNumber = frameNumber,
         newTemplateDependencyStructure = newTemplateDependencyStructure
     )
+
+    companion object {
+        /**
+         * Parse those parts of the dependency descriptor in [length] bytes of [buffer] at [offset] that can be parsed
+         * statelessly, i.e. without an external template dependency structure. The result is not a complete
+         * representation of the descriptor, because some fields need the external structure to be parseable; see
+         * [Av1DependencyDescriptorHeaderExtension.parse] for that.
+         * @throws Av1DependencyException if the descriptor cannot be parsed.
+         */
+        fun parse(buffer: ByteArray, offset: Int, length: Int): Av1DependencyDescriptorStatelessSubset =
+            Av1DependencyDescriptorParser.parseStateless(buffer, offset, length)
+
+        /** Parse the stateless subset of the dependency descriptor in [ext]. See [parse]. */
+        fun parse(ext: RtpPacket.HeaderExtension): Av1DependencyDescriptorStatelessSubset =
+            parse(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
+    }
 }
 
 /**
@@ -103,6 +119,28 @@ class Av1DependencyDescriptorHeaderExtension(
             newTemplateDependencyStructure = newStructure
         }
         structure = newStructure
+    }
+
+    companion object {
+        /**
+         * Parse the dependency descriptor in [length] bytes of [buffer] at [offset], in the context of [dep], the
+         * template dependency structure currently in effect for the stream (null if none is known).
+         * @throws Av1DependencyException if the descriptor cannot be parsed with [dep]: it does not carry a structure
+         * and [dep] is null, it does not match [dep] (the sender changed to a new structure and the packet which
+         * carried it was lost), or it is truncated or exceeds the limits of the specification.
+         */
+        fun parse(
+            buffer: ByteArray,
+            offset: Int,
+            length: Int,
+            dep: Av1TemplateDependencyStructure?
+        ): Av1DependencyDescriptorHeaderExtension = Av1DependencyDescriptorParser.parse(buffer, offset, length, dep)
+
+        /** Parse the dependency descriptor in [ext]. See [parse]. */
+        fun parse(
+            ext: RtpPacket.HeaderExtension,
+            dep: Av1TemplateDependencyStructure?
+        ): Av1DependencyDescriptorHeaderExtension = parse(ext.buffer, ext.dataOffset, ext.dataLengthBytes, dep)
     }
 
     val frameInfo: FrameInfo by lazy {
@@ -753,17 +791,10 @@ fun nsBits(n: Int, v: Int): Int {
 }
 
 /**
- * Reads AV1 dependency descriptors from a buffer. A reader keeps no state between calls, so [parse] and
- * [parseStateless] can be called in any order, and more than once.
+ * Parses AV1 dependency descriptors, for [Av1DependencyDescriptorHeaderExtension.parse] and
+ * [Av1DependencyDescriptorStatelessSubset.parse]. Each call works on its own [BitReader] and in locals.
  */
-class Av1DependencyDescriptorReader(
-    private val buffer: ByteArray,
-    private val offset: Int,
-    val length: Int,
-) {
-    constructor(ext: RtpPacket.HeaderExtension) :
-        this(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
-
+private object Av1DependencyDescriptorParser {
     /** The fields at the start of every descriptor (mandatory_descriptor_fields() in the specification). */
     private class MandatoryFields(
         val startOfFrame: Boolean,
@@ -772,41 +803,38 @@ class Av1DependencyDescriptorReader(
         val frameNumber: Int
     )
 
-    /** Parse those parts of the dependency descriptor that can be parsed statelessly, i.e. without an external
-     * template dependency structure.  The returned object will not be a complete representation of the
-     * dependency descriptor, because some fields need the external structure to be parseable.
-     * @throws Av1DependencyException if the descriptor cannot be parsed.
-     */
-    fun parseStateless(): Av1DependencyDescriptorStatelessSubset = readFields { reader ->
-        val mandatory = reader.readMandatoryDescriptorFields()
-        var newTemplateDependencyStructure: Av1TemplateDependencyStructure? = null
+    fun parseStateless(buffer: ByteArray, offset: Int, length: Int): Av1DependencyDescriptorStatelessSubset =
+        readFields(buffer, offset, length) { reader ->
+            val mandatory = reader.readMandatoryDescriptorFields()
+            var newTemplateDependencyStructure: Av1TemplateDependencyStructure? = null
 
-        if (length > 3) {
-            val templateDependencyStructurePresent = reader.bitAsBoolean()
+            if (length > 3) {
+                val templateDependencyStructurePresent = reader.bitAsBoolean()
 
-            /* activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, and customChainsFlag;
-             * none of these fields are parseable statelessly.
-             */
-            reader.skipBits(4)
+                /* activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, and customChainsFlag;
+                 * none of these fields are parseable statelessly.
+                 */
+                reader.skipBits(4)
 
-            if (templateDependencyStructurePresent) {
-                newTemplateDependencyStructure = Av1TemplateDependencyStructure.read(reader)
+                if (templateDependencyStructurePresent) {
+                    newTemplateDependencyStructure = Av1TemplateDependencyStructure.read(reader)
+                }
             }
+            Av1DependencyDescriptorStatelessSubset(
+                mandatory.startOfFrame,
+                mandatory.endOfFrame,
+                mandatory.frameDependencyTemplateId,
+                mandatory.frameNumber,
+                newTemplateDependencyStructure,
+            )
         }
-        Av1DependencyDescriptorStatelessSubset(
-            mandatory.startOfFrame,
-            mandatory.endOfFrame,
-            mandatory.frameDependencyTemplateId,
-            mandatory.frameNumber,
-            newTemplateDependencyStructure,
-        )
-    }
 
-    /** Parse the dependency descriptor in the context of [dep], the currently-applicable template dependency
-     * structure.
-     * @throws Av1DependencyException if the descriptor cannot be parsed with [dep].
-     */
-    fun parse(dep: Av1TemplateDependencyStructure?): Av1DependencyDescriptorHeaderExtension = readFields { reader ->
+    fun parse(
+        buffer: ByteArray,
+        offset: Int,
+        length: Int,
+        dep: Av1TemplateDependencyStructure?
+    ): Av1DependencyDescriptorHeaderExtension = readFields(buffer, offset, length) { reader ->
         val mandatory = reader.readMandatoryDescriptorFields()
         if (length > 3) {
             reader.readExtendedDescriptorFields(mandatory, dep)
@@ -839,7 +867,7 @@ class Av1DependencyDescriptorReader(
      * packet which carried it was lost). An [Av1DependencyException] thrown by [block] passes through. Other
      * exceptions are not converted: they indicate a bug, not unparseable input.
      */
-    private inline fun <T> readFields(block: (BitReader) -> T): T {
+    private inline fun <T> readFields(buffer: ByteArray, offset: Int, length: Int, block: (BitReader) -> T): T {
         try {
             return block(BitReader(buffer, offset, length))
         } catch (e: BitReaderOverrunException) {
