@@ -15,15 +15,21 @@
  */
 package org.jitsi.nlj.rtp.codec.av1
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.beInstanceOf
 import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
+import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
+import org.jitsi.rtp.util.BitWriter
 import org.jitsi.utils.logging2.LoggerImpl
+import java.util.function.Supplier
 import javax.xml.bind.DatatypeConverter
 
 class Av1DDPacketTest : ShouldSpec() {
@@ -234,6 +240,51 @@ class Av1DDPacketTest : ShouldSpec() {
                 }
             }
         }
+        context("Template ID arithmetic") {
+            should("wrap around in both directions") {
+                getTemplateIdDelta(1, 10) shouldBe 55
+                getTemplateIdDelta(1, 58) shouldBe 7
+                getTemplateIdDelta(5, 80) shouldBe 53
+                applyTemplateIdDelta(10, 55) shouldBe 1
+                applyTemplateIdDelta(5, -11) shouldBe 58
+                applyTemplateIdDelta(70, 0) shouldBe 6
+            }
+        }
+        context("An AV1 DD which carries a malformed template dependency structure") {
+            /* A structure with one more template than the 6-bit template ID can address. It cannot be parsed with
+             * or without a structure in effect, so the packet cannot be used, and the constructor fails. */
+            val malformedDd = ByteArray(24)
+            BitWriter(malformedDd, 0, malformedDd.size).apply {
+                writeBit(true) // startOfFrame
+                writeBit(true) // endOfFrame
+                writeBits(6, 0) // frameDependencyTemplateId
+                writeBits(16, 1) // frameNumber
+                writeBit(true) // templateDependencyStructurePresent
+                writeBits(4, 0) // activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, customChainsFlag
+                writeBits(6, 0) // templateIdOffset
+                writeBits(5, 0) // dtCntMinusOne
+                repeat(Av1TemplateDependencyStructure.MAX_TEMPLATE_COUNT) { writeBits(2, 0) } // One template too many
+                writeBits(2, 3)
+            }
+            val data = scalableKeyframe.data.clone()
+            val rtpPacket = RtpPacket(data, 0, data.size).apply {
+                removeHeaderExtension(AV1_DD_HEADER_EXTENSION_ID)
+                val ext = addHeaderExtension(AV1_DD_HEADER_EXTENSION_ID, malformedDd.size)
+                System.arraycopy(malformedDd, 0, ext.buffer, ext.dataOffset, malformedDd.size)
+                encodeHeaderExtensions()
+            }
+
+            should("fail to construct with one exception, and log nothing") {
+                val recordingLogger = WarningRecordingLogger()
+                val e = shouldThrow<MalformedAv1DependencyDescriptorException> {
+                    Av1DDPacket(rtpPacket, AV1_DD_HEADER_EXTENSION_ID, null, recordingLogger)
+                }
+                e.message shouldContain "Malformed AV1 Dependency Descriptor"
+                e.message shouldContain "more than ${Av1TemplateDependencyStructure.MAX_TEMPLATE_COUNT} templates"
+                e.cause should beInstanceOf<Av1DependencyException>()
+                recordingLogger.warnings shouldBe emptyList()
+            }
+        }
         context("An AV1 DD that does not match the known template dependency structure") {
             /* The sender changed to a new structure with two chains, and the packet that carried the new structure
              * was lost. The bridge still has the older structure with three chains. The DD of the next packets has
@@ -284,5 +335,22 @@ class Av1DDPacketTest : ShouldSpec() {
 
     companion object {
         const val AV1_DD_HEADER_EXTENSION_ID = 11
+    }
+}
+
+/** A logger which records the messages logged at WARN. */
+private class WarningRecordingLogger : LoggerImpl("Av1DDPacketTest") {
+    val warnings = mutableListOf<String>()
+
+    override fun warn(msg: Any?) {
+        warnings.add("$msg")
+    }
+
+    override fun warn(msg: Supplier<String>) {
+        warnings.add(msg.get())
+    }
+
+    override fun warn(msg: Any?, t: Throwable?) {
+        warnings.add("$msg: $t")
     }
 }

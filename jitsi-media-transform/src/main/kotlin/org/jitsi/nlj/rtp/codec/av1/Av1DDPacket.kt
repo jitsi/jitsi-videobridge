@@ -21,7 +21,6 @@ import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
-import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorStatelessSubset
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
@@ -72,27 +71,55 @@ class Av1DDPacket : ParsedVideoPacket {
         requireNotNull(ddExt) {
             "Packet did not have Dependency Descriptor"
         }
-        val parser = Av1DependencyDescriptorReader(ddExt)
-        descriptor = try {
-            parser.parse(templateDependencyStructure)
+        val parsed = parseDescriptor(ddExt, templateDependencyStructure, packet, logger)
+        descriptor = parsed.descriptor
+        statelessDescriptor = parsed.statelessDescriptor
+        frameInfo = parsed.descriptor?.let { getFrameInfo(it, logger) }
+    }
+
+    /** The result of parsing a dependency descriptor: the full descriptor if it could be parsed, and in any case the
+     * stateless subset, which is the full descriptor itself when that was parsed. */
+    private class ParsedDescriptor(
+        val descriptor: Av1DependencyDescriptorHeaderExtension?,
+        val statelessDescriptor: Av1DependencyDescriptorStatelessSubset
+    )
+
+    /**
+     * Parse the dependency descriptor in [ddExt] with [templateDependencyStructure]. If that fails, the descriptor
+     * may still be usable without a structure, e.g. when the structure in effect for it is not known or is stale,
+     * so the stateless subset is parsed, and the failure is logged at WARN.
+     *
+     * @throws MalformedAv1DependencyDescriptorException if the descriptor cannot be parsed statelessly either. Then
+     * it is malformed, and the packet cannot be used at all. Nothing is logged here, so that the caller logs the
+     * failure once.
+     */
+    private fun parseDescriptor(
+        ddExt: RtpPacket.HeaderExtension,
+        templateDependencyStructure: Av1TemplateDependencyStructure?,
+        packet: RtpPacket,
+        logger: Logger
+    ): ParsedDescriptor {
+        val descriptor = try {
+            Av1DependencyDescriptorHeaderExtension.parse(ddExt, templateDependencyStructure)
         } catch (e: Av1DependencyException) {
+            val statelessDescriptor = try {
+                Av1DependencyDescriptorStatelessSubset.parse(ddExt)
+            } catch (statelessException: Av1DependencyException) {
+                throw MalformedAv1DependencyDescriptorException(packet, statelessException, e)
+            }
             logger.warn(
                 "Could not parse AV1 Dependency Descriptor for ssrc ${packet.ssrc} seq ${packet.sequenceNumber}: " +
                     e.message
             )
-            null
+            return ParsedDescriptor(null, statelessDescriptor)
         }
-        statelessDescriptor = descriptor ?: parser.parseStateless()
-        frameInfo = descriptor?.let { getFrameInfo(it, logger) }
+        return ParsedDescriptor(descriptor, descriptor)
     }
 
     /**
      * Parse the dependency descriptor again, with [templateDependencyStructure], if it could not be parsed when the
      * packet was created. This is for a packet whose structure was not known to the parser, e.g. a late retransmission
      * for which the structure has left the parser's history, when the frame of the packet knows the structure.
-     *
-     * The descriptor gets a copy of [templateDependencyStructure], because the structure of a descriptor is
-     * modified when the packet is rewritten.
      *
      * @return true if the packet has a descriptor after the call.
      */
@@ -102,7 +129,7 @@ class Av1DDPacket : ParsedVideoPacket {
         }
         val ddExt = getHeaderExtension(av1DDHeaderExtensionId) ?: return false
         val newDescriptor = try {
-            Av1DependencyDescriptorReader(ddExt).parse(templateDependencyStructure.clone())
+            Av1DependencyDescriptorHeaderExtension.parse(ddExt, templateDependencyStructure)
         } catch (e: Av1DependencyException) {
             logger.warn(
                 "Could not parse updated AV1 Dependency Descriptor for ssrc $ssrc seq $sequenceNumber: ${e.message}"
@@ -195,6 +222,26 @@ class Av1DDPacket : ParsedVideoPacket {
     }
 }
 
+/**
+ * A dependency descriptor which cannot be parsed even statelessly, so the packet cannot be used. The message has the
+ * reason of the stateless parse, and of the full parse with the structure in effect if that differs. The cause is
+ * the failure of the full parse.
+ */
+class MalformedAv1DependencyDescriptorException(
+    packet: RtpPacket,
+    statelessFailure: Av1DependencyException,
+    fullParseFailure: Av1DependencyException
+) : Av1DependencyException(
+    buildString {
+        append("Malformed AV1 Dependency Descriptor for ssrc ${packet.ssrc} seq ${packet.sequenceNumber}: ")
+        append(statelessFailure.message)
+        if (fullParseFailure.message != statelessFailure.message) {
+            append(" (with the structure in effect: ${fullParseFailure.message})")
+        }
+    },
+    fullParseFailure
+)
+
 fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
     ssrc: Long,
     eid: Int = 0,
@@ -257,7 +304,7 @@ fun Int.containsDecodeTarget(dt: Int) = ((1 shl dt) and this) != 0
  * getTl0PicIdxDelta(1, 10) -> 55 (10 + 55 = 1)
  * getTl0PicIdxDelta(1, 58) -> 7 (58 + 7 = 1)
  */
-fun getTemplateIdDelta(a: Int, b: Int): Int = (a - b + 64) % 64
+fun getTemplateIdDelta(a: Int, b: Int): Int = Math.floorMod(a - b, 64)
 
 /**
  * Apply a delta to a given templateID and return the result (taking
@@ -266,4 +313,4 @@ fun getTemplateIdDelta(a: Int, b: Int): Int = (a - b + 64) % 64
  * @param delta the delta to be applied
  * @return the templateID resulting from doing "start + delta"
  */
-fun applyTemplateIdDelta(start: Int, delta: Int): Int = (start + delta) % 64
+fun applyTemplateIdDelta(start: Int, delta: Int): Int = Math.floorMod(start + delta, 64)

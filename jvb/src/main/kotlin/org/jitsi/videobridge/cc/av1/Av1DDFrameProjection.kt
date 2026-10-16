@@ -158,16 +158,11 @@ class Av1DDFrameProjection internal constructor(
         ) {
             descriptor.frameNumber = frameNumber
             descriptor.frameDependencyTemplateId = templateId
+            descriptor.rewriteTemplateIdOffset(rewriteTemplateId(descriptor.structure.templateIdOffset))
             val structure = descriptor.structure
-            check(
-                descriptor.newTemplateDependencyStructure == null ||
-                    descriptor.newTemplateDependencyStructure === descriptor.structure
-            )
-
-            structure.templateIdOffset = rewriteTemplateId(structure.templateIdOffset)
             if (dti != null && (
                     descriptor.newTemplateDependencyStructure == null ||
-                        dti != (1 shl structure.decodeTargetCount) - 1
+                        dti != structure.allDecodeTargetsMask
                     )
             ) {
                 descriptor.activeDecodeTargetsBitmask = dti
