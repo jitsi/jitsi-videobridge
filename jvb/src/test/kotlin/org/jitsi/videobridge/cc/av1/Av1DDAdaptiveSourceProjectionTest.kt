@@ -1599,9 +1599,6 @@ private open class Av1PacketGenerator(
         rtpPacket.timestamp = ts
         rtpPacket.isMarked = endOfPicture
 
-        /* Each packet gets its own copy of the structure, as from Av1DDParser. Rewriting a packet modifies the
-         * structure of its descriptor. */
-        val structure = this.structure.clone()
         val dd = Av1DependencyDescriptorHeaderExtension(
             startOfFrame = startOfFrame,
             endOfFrame = endOfFrame,
