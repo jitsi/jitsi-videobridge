@@ -407,6 +407,16 @@ abstract class SsrcCache(
     }
 
     /**
+     * Forget the remote SSRCs [ssrcs] (e.g. because their sources were removed), so that the next packet from one of
+     * them is looked up again.
+     */
+    fun removeReceiveSsrcs(ssrcs: Collection<Long>) {
+        synchronized(sendSources) {
+            receivedSsrcs.keys.removeAll(ssrcs.toSet())
+        }
+    }
+
+    /**
      * Assign send SSRCs to the given sources. Any remapped SSRCs will be notified to the client.
      */
     fun activate(sources: List<MediaSourceDesc>) {

@@ -1145,9 +1145,11 @@ public class Conference
         }
 
         relaysById.forEach((i, relay) -> relay.endpointExpired(id));
-        endpoint.getSsrcs().forEach(ssrc -> {
+        Set<Long> ssrcs = endpoint.getSsrcs();
+        ssrcs.forEach(ssrc -> {
             endpointsBySsrc.remove(ssrc, endpoint);
         });
+        ssrcsRemoved(ssrcs);
         audioSubscriptionManager.removeEndpoint(endpoint.getId());
         audioSubscriptionManager.removeSources(new HashSet<>(endpoint.getAudioSources()));
         endpointsChanged(removedEndpoint.getVisitor());
@@ -1242,6 +1244,18 @@ public class Conference
         Packet packet = packetInfo.getPacket();
         return packet instanceof RtpPacket
                 && audioSubscriptionManager.isSynthetic(((RtpPacket) packet).getSsrc());
+    }
+
+    /**
+     * Notifies the local endpoints that the given SSRCs were removed (their sources were removed, or their endpoint
+     * expired), so that they forget their state for these SSRCs.
+     */
+    public void ssrcsRemoved(@NotNull Collection<Long> ssrcs)
+    {
+        if (!ssrcs.isEmpty())
+        {
+            getLocalEndpoints().forEach(endpoint -> endpoint.remoteSsrcsRemoved(ssrcs));
+        }
     }
 
     public void addEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)

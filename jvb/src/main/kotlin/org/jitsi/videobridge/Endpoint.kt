@@ -404,9 +404,10 @@ class Endpoint @JvmOverloads constructor(
     /**
      * SSRCs for which we have already logged that no properties were found, so that the message is logged once per
      * SSRC (at a higher level) instead of for every packet. Bounded: the worst case of eviction is logging again for
-     * an SSRC seen long ago.
+     * an SSRC seen long ago. An SSRC is also removed when its source is removed (see [remoteSsrcsRemoved]), so that
+     * a packet received after the removal is logged again.
      */
-    private val loggedUnknownSsrcs: MutableSet<Long> =
+    internal val loggedUnknownSsrcs: MutableSet<Long> =
         Collections.synchronizedSet(LRUCache.lruSet(MAX_LOGGED_UNKNOWN_SSRCS, true))
 
     /**
@@ -453,9 +454,11 @@ class Endpoint @JvmOverloads constructor(
         get() = transceiver.getMediaSources()
         set(value) {
             applyVideoTypeCache(value)
-            val wasEmpty = transceiver.getMediaSources().isEmpty()
+            val oldSources = transceiver.getMediaSources()
+            val wasEmpty = oldSources.isEmpty()
             if (transceiver.setMediaSources(value)) {
                 eventEmitter.fireEvent { sourcesChanged() }
+                conference.ssrcsRemoved(oldSources.ssrcs() - transceiver.getMediaSources().ssrcs())
             }
             if (wasEmpty) {
                 sendAllVideoConstraints()
@@ -474,6 +477,7 @@ class Endpoint @JvmOverloads constructor(
             conference.addAudioSources(addedDescs)
             field = newValue
             audioSourcesChanged(newValue)
+            conference.ssrcsRemoved(removedDescs.map { it.ssrc })
         }
 
     private fun setupIceTransport() {
@@ -975,14 +979,27 @@ class Endpoint @JvmOverloads constructor(
      */
     override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
         conference.getEndpointBySsrc(ssrc)?.let { ep ->
-            return when (ep) {
+            when (ep) {
                 is Endpoint -> ep.audioSources
                 is RelayedEndpoint -> ep.audioSources
                 else -> emptyList()
-            }.find { it.ssrc == ssrc }
+            }.find { it.ssrc == ssrc }?.let { return it }
         }
         logNoPropertiesFound(ssrc)
         return null
+    }
+
+    /**
+     * Notifies this endpoint that the SSRCs [ssrcs] of another endpoint were removed (their sources were removed, or
+     * the endpoint expired). Forgets their state, so that a later packet from one of them is looked up (and logged)
+     * again.
+     */
+    fun remoteSsrcsRemoved(ssrcs: Collection<Long>) {
+        if (doSsrcRewriting) {
+            audioSsrcs.removeReceiveSsrcs(ssrcs)
+            videoSsrcs.removeReceiveSsrcs(ssrcs)
+        }
+        loggedUnknownSsrcs.removeAll(ssrcs.toSet())
     }
 
     /**
