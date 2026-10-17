@@ -108,6 +108,7 @@ open class ArrayCache<T>(
         cache[position].item = cloneItem(item)
         cache[position].index = index
         cache[position].timeAdded = timeAdded
+        cache[position].timeInserted = timeAdded
         return true
     }
 
@@ -183,7 +184,8 @@ open class ArrayCache<T>(
     }
 
     /**
-     * Updates the [timeAdded] value of an item with a particular index, if it is in the cache.
+     * Updates the [timeAdded] value of an item with a particular index, if it is in the cache. This does not change
+     * [Container.timeInserted].
      */
     protected fun updateTimeAdded(index: Long, timeAdded: Long) = if (synchronize) {
         synchronized(syncRoot) {
@@ -251,6 +253,7 @@ open class ArrayCache<T>(
                 item?.let { discardItem(it) }
                 item = null
                 timeAdded = -1
+                timeInserted = -1
             }
         }
         head = -1
@@ -269,9 +272,12 @@ open class ArrayCache<T>(
     inner class Container(
         var item: T? = null,
         var index: Long = -1,
-        var timeAdded: Long = -1
+        /** The time the item was added, or the last time that [updateTimeAdded] set for it. */
+        var timeAdded: Long = -1,
+        /** The time the item was added. [updateTimeAdded] does not change it. */
+        var timeInserted: Long = -1
     ) {
         fun clone(shouldCloneItem: Boolean): Container =
-            Container(item?.let { if (shouldCloneItem) cloneItem(it) else it }, index, timeAdded)
+            Container(item?.let { if (shouldCloneItem) cloneItem(it) else it }, index, timeAdded, timeInserted)
     }
 }
