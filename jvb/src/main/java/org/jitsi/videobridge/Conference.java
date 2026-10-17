@@ -30,6 +30,7 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.rtp.rtp.header_extensions.*;
 import org.jitsi.tracing.*;
 import org.jitsi.utils.LRUCache;
+import org.jitsi.utils.RateLimit;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
@@ -240,6 +241,18 @@ public class Conference
 
     @NotNull
     private final ExporterWrapper exporter;
+
+    /**
+     * Limits the rate at which {@link #sendOut} logs an exception thrown by a handler's
+     * {@link PotentialPacketHandler#wants}. Access is synchronized on the instance.
+     */
+    private final RateLimit wantsExceptionLogLimit = new RateLimit();
+
+    /**
+     * The number of exceptions thrown by a handler's {@link PotentialPacketHandler#wants} which were not logged
+     * because of {@link #wantsExceptionLogLimit}.
+     */
+    private final AtomicLong suppressedWantsExceptions = new AtomicLong();
 
     /**
      * Source names for which an injected (translated) synthetic source has already been created, so we log its
@@ -1387,7 +1400,7 @@ public class Conference
                 continue;
             }
 
-            if (endpoint.wants(packetInfo))
+            if (wants(endpoint, packetInfo))
             {
                 if (prevHandler != null)
                 {
@@ -1398,7 +1411,7 @@ public class Conference
         }
         for (Relay relay: relaysById.values())
         {
-            if (relay.wants(packetInfo))
+            if (wants(relay, packetInfo))
             {
                 if (prevHandler != null)
                 {
@@ -1411,7 +1424,7 @@ public class Conference
         {
             // Never export synthetic (bridge-generated) audio, e.g. don't feed translated audio back to the
             // translator that produced it, or to a transcriber/recorder that exports all audio (empty exports list).
-            if (!syntheticSource && exporterHandler.wants(packetInfo))
+            if (!syntheticSource && wants(exporterHandler, packetInfo))
             {
                 if (prevHandler != null)
                 {
@@ -1430,6 +1443,51 @@ public class Conference
             // No one wanted the packet, so the buffer is now free!
             ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
+    }
+
+    /**
+     * Checks whether a handler wants a packet. An exception from the handler is logged and taken to mean that it does
+     * not want the packet, so that one handler cannot stop the packet from reaching the others.
+     */
+    private boolean wants(PotentialPacketHandler handler, PacketInfo packetInfo)
+    {
+        try
+        {
+            return handler.wants(packetInfo);
+        }
+        catch (Exception e)
+        {
+            boolean log;
+            synchronized (wantsExceptionLogLimit)
+            {
+                log = wantsExceptionLogLimit.accept();
+            }
+            if (log)
+            {
+                long suppressed = suppressedWantsExceptions.getAndSet(0);
+                logger.error("Failed to check whether " + describe(handler) + " wants a packet from endpoint "
+                        + packetInfo.getEndpointId() + ", not sending it there: " + packetInfo.getPacket()
+                        + (suppressed > 0 ? " (" + suppressed + " more failures not logged)" : ""), e);
+            }
+            else
+            {
+                suppressedWantsExceptions.incrementAndGet();
+            }
+            return false;
+        }
+    }
+
+    private static String describe(PotentialPacketHandler handler)
+    {
+        if (handler instanceof AbstractEndpoint)
+        {
+            return "endpoint " + ((AbstractEndpoint) handler).getId();
+        }
+        if (handler instanceof Relay)
+        {
+            return "relay " + ((Relay) handler).getId();
+        }
+        return handler.getClass().getSimpleName();
     }
 
     public void applyConnects(List<Connect> connects)
