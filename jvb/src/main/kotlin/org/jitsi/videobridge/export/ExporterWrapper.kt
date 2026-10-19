@@ -74,6 +74,19 @@ class ExporterWrapper internal constructor(
     /** The current exporters as packet handlers, for the conference's send path. */
     fun getPacketHandlers(): List<PotentialPacketHandler> = packetHandlers
 
+    /** The conference's recent speakers as last reported: nobody, in silence, until someone speaks. */
+    private var speakers: Pair<List<String>, Boolean> = Pair(emptyList(), true)
+
+    /**
+     * Pass the conference's recent speakers (source names, the dominant speaker first) on to the exporters; each
+     * decides whether its peer gets them. Kept, so an exporter created later starts from the current order.
+     */
+    @Synchronized
+    fun speakersChanged(recentSpeakers: List<String>, silence: Boolean) {
+        speakers = Pair(recentSpeakers, silence)
+        exporters.values.forEach { it.exporter.speakersChanged(recentSpeakers, silence) }
+    }
+
     /**
      * Apply a delta of connects, using the connect's [Connect.id] as its identity. Connects not mentioned are left
      * running unchanged. Each connect is one of:
@@ -159,7 +172,10 @@ class ExporterWrapper internal constructor(
             }
         }
         toCreate.forEach { connect ->
-            exporters[connect.id] = Entry(exporterFactory(connect), ConnectParams(connect))
+            exporters[connect.id] = Entry(
+                exporterFactory(connect).apply { speakersChanged(speakers.first, speakers.second) },
+                ConnectParams(connect)
+            )
         }
         toUpdate.forEach { (connect, params) ->
             val existing = exporters.getValue(connect.id)

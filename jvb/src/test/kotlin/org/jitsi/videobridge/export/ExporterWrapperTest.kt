@@ -320,6 +320,32 @@ class ExporterWrapperTest : ShouldSpec() {
             }
         }
 
+        context("Speakers") {
+            should("pass the speaker order to every running exporter") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true), connect("b", create = true)))
+
+                f.wrapper.speakersChanged(listOf("s2", "s1"), silence = false)
+
+                verify(exactly = 1) { f["a"].speakersChanged(listOf("s2", "s1"), false) }
+                verify(exactly = 1) { f["b"].speakersChanged(listOf("s2", "s1"), false) }
+            }
+            should("start a new exporter from nobody speaking, in silence") {
+                val f = Fixture()
+
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
+
+                verify(exactly = 1) { f["a"].speakersChanged(emptyList(), true) }
+            }
+            should("start a new exporter from the order reported before it was created") {
+                val f = Fixture()
+                f.wrapper.speakersChanged(listOf("s1"), silence = false)
+
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
+
+                verify(exactly = 1) { f["a"].speakersChanged(listOf("s1"), false) }
+            }
+        }
         context("Debug state") {
             should("tag each exporter's debug info with its connect id") {
                 val f = Fixture()

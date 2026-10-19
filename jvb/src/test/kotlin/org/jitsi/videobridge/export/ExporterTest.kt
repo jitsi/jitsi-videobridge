@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.export
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -227,6 +228,80 @@ class ExporterTest : ShouldSpec() {
             }
         }
 
+        context("speakers: passing the dominant-speaker order on to the peer") {
+            val sources = mapOf(1L to "ep1-a0", 2L to "ep2-a0")
+            fun Session.sentEvents(): List<ObjectNode> {
+                val sent = mutableListOf<String>()
+                verify { sendText(capture(sent), any()) }
+                return sent.map { ObjectMapper().readTree(it) as ObjectNode }
+            }
+
+            should("send the order limited to the exported sources, on an agent connect") {
+                val (exporter, _) = fixture(
+                    exports = listOf("ep1-a0"),
+                    requests = listOf("agent-a0"),
+                    sources = sources,
+                    type = Connect.Types.AGENT
+                )
+                val session = connect(exporter)
+
+                exporter.speakersChanged(listOf("ep2-a0", "ep1-a0", "ep3-a0"), silence = false)
+
+                val speakers = session.sentEvents().single { it.path("event").asText() == "speakers" }
+                speakers.path("speakers").map { it.asText() } shouldBe listOf("ep1-a0")
+                speakers.path("silence").asBoolean() shouldBe false
+            }
+            should("send the last known order when the connection opens, after the sources") {
+                val (exporter, _) = fixture(
+                    exports = listOf("ep1-a0", "ep2-a0"),
+                    requests = listOf("agent-a0"),
+                    sources = sources,
+                    type = Connect.Types.AGENT
+                )
+                exporter.speakersChanged(listOf("ep2-a0", "ep1-a0"), silence = true)
+                val session = mockk<Session>(relaxed = true)
+
+                exporter.recorderWebSocket.onWebSocketOpen(session)
+
+                val events = session.sentEvents().map { it.path("event").asText() }
+                events.take(2) shouldBe listOf("sources", "speakers")
+                val speakers = session.sentEvents().single { it.path("event").asText() == "speakers" }
+                speakers.path("speakers").map { it.asText() } shouldBe listOf("ep2-a0", "ep1-a0")
+                speakers.path("silence").asBoolean() shouldBe true
+            }
+            should("send nothing before the order is known") {
+                val (exporter, _) = fixture(requests = listOf("agent-a0"), type = Connect.Types.AGENT)
+                val session = mockk<Session>(relaxed = true)
+
+                exporter.recorderWebSocket.onWebSocketOpen(session)
+
+                session.sentEvents().none { it.path("event").asText() == "speakers" } shouldBe true
+            }
+            should("re-send the order when a live update changes the exports") {
+                val (exporter, _) = fixture(
+                    requests = listOf("agent-a0"),
+                    sources = sources,
+                    type = Connect.Types.AGENT
+                )
+                val session = connect(exporter)
+                exporter.speakersChanged(listOf("ep2-a0", "ep1-a0"), silence = false)
+
+                exporter.update(exports = listOf("ep2-a0"), requests = listOf("agent-a0"))
+
+                val orders = session.sentEvents()
+                    .filter { it.path("event").asText() == "speakers" }
+                    .map { e -> e.path("speakers").map { it.asText() } }
+                orders shouldBe listOf(emptyList(), listOf("ep2-a0"))
+            }
+            should("not send the order to a non-agent peer") {
+                val (exporter, _) = fixture(sources = sources, type = Connect.Types.TRANSCRIBER)
+                val session = connect(exporter)
+
+                exporter.speakersChanged(listOf("ep1-a0"), silence = false)
+
+                verify(exactly = 0) { session.sendText(any(), any()) }
+            }
+        }
         context("reconnecting after a websocket close") {
             should("schedule a reconnect after an abnormal close (1006)") {
                 val scheduler = fakeScheduler()

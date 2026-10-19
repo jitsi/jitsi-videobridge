@@ -29,6 +29,7 @@ import org.jitsi.mediajson.PingEvent
 import org.jitsi.mediajson.PongEvent
 import org.jitsi.mediajson.SessionEndEvent
 import org.jitsi.mediajson.SourcesEvent
+import org.jitsi.mediajson.SpeakersEvent
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.mediajson.StopEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
@@ -81,6 +82,10 @@ internal class Exporter(
 
     @Volatile
     private var reconnectExhausted = false
+
+    /** The conference's recent speakers as last reported by [speakersChanged]; null until the first report. */
+    @Volatile
+    private var speakers: Speakers? = null
 
     private var connectionOpenedAtMs: Long = 0
 
@@ -159,6 +164,7 @@ internal class Exporter(
             if (exports.isNotEmpty() || requests.isNotEmpty()) {
                 sendSources()
             }
+            sendSpeakers()
             sendInfo()
         }
 
@@ -204,8 +210,11 @@ internal class Exporter(
         if (!isConnected()) return false
         val audioPacket = packet.packet as? AudioRtpPacket ?: return false
         val sourceName = eventHandler.getAudioSourceName(audioPacket.ssrc) ?: return false
-        return (exports.isEmpty() && requests.isEmpty()) || sourceName in exports
+        return exportsSource(sourceName)
     }
+
+    /** Whether audio from the source with this name is exported to the peer (see [wants]). */
+    private fun exportsSource(sourceName: String) = (exports.isEmpty() && requests.isEmpty()) || sourceName in exports
 
     /**
      * Apply an update to the connect with this exporter's URL. Only the exported/requested source names may change
@@ -217,6 +226,28 @@ internal class Exporter(
         this.requests = requests
         // If we're connected, propagate the change now; otherwise it will be sent when the connection opens.
         sendSources()
+        // The speakers the peer may know about follow the exports.
+        sendSpeakers()
+    }
+
+    /**
+     * Pass on the conference's recent speakers, the dominant speaker first, so the peer can follow the dominant
+     * speaker without measuring audio levels itself. Only agent connects get them: no other peer type has a use for
+     * them, and a third-party recorder might not tolerate an unknown event. Like the audio, the list is limited to
+     * the sources this connect exports.
+     */
+    fun speakersChanged(recentSpeakers: List<String>, silence: Boolean) {
+        if (type != Connect.Types.AGENT) return
+        speakers = Speakers(recentSpeakers, silence)
+        sendSpeakers()
+    }
+
+    /** Send the exported part of the current speaker order to the peer. No-op if not connected or not yet known. */
+    private fun sendSpeakers() {
+        val session = recorderWebSocket.session ?: return
+        val speakers = speakers ?: return
+        val exported = speakers.order.filter { exportsSource(it) }
+        session.sendText(SpeakersEvent(exported, speakers.silence).toJson(), Callback.NOOP)
     }
 
     /** Send the current exported/requested source names to the peer. No-op if not currently connected. */
@@ -470,6 +501,7 @@ internal class Exporter(
         put("type", type.toString().lowercase())
         putArray("exports").apply { exports.forEach { add(it) } }
         putArray("requests").apply { requests.forEach { add(it) } }
+        speakers?.let { put("speakers", it.order.toString()) }
         put("is_connected", isConnected())
         put("is_shutting_down", isShuttingDown.get())
         put("reconnect_attempts", reconnectAttempts.get())
@@ -495,6 +527,9 @@ internal class Exporter(
     }
 
     private class TerminalClose(val code: Int, val reason: String?)
+
+    /** The conference's recent speakers, the dominant speaker first, and whether it is currently silent. */
+    private data class Speakers(val order: List<String>, val silence: Boolean)
 
     companion object {
         /** Terminal close code (opus-transcriber-proxy AGENT_PROTOCOL.md): the agent sent `end`; do not redial. */
