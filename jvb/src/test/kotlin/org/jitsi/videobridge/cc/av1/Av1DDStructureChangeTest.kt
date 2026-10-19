@@ -21,7 +21,6 @@ import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
-import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.utils.logging.DiagnosticContext
@@ -214,9 +213,8 @@ class Av1DDStructureChangeTest {
 
         private fun parseStructure(hex: String, offset: Int): Av1TemplateDependencyStructure {
             val dd = parseHexBinary(hex)
-            return Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure.also {
-                it.templateIdOffset = offset
-            }
+            return Av1DependencyDescriptorHeaderExtension.parse(dd, 0, dd.size, null).structure
+                .withTemplateIdOffset(offset)
         }
 
         /** L3T3_KEY, 9 decode targets, 15 templates, at template ID offset 0. */
