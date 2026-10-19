@@ -151,6 +151,9 @@ class Endpoint @JvmOverloads constructor(
     /** The time at which this endpoint was created */
     val creationTime = clock.instant()
 
+    /** Synthetic endpoints: when [shouldExpire] last saw a human endpoint in the conference; the backstop runs from here. */
+    private var lastHumanSeen: Instant = creationTime
+
     private val sctpHandler = if (sctpConfig.enabled) DcSctpHandler() else null
 
     /** The [DcSctpTransport] instance we'll use to manage the SCTP connection */
@@ -994,11 +997,21 @@ class Endpoint @JvmOverloads constructor(
     override fun shouldExpire(): Boolean {
         if (synthetic) {
             // A synthetic endpoint has no transport, so the ICE/activity checks below don't apply. It is expired
-            // explicitly via colibri; as a backstop against lost signaling, allow expiry once no human endpoint
-            // remains in the conference, local or relayed: a synthetic endpoint alone doesn't keep the conference
-            // alive, but one hosted on a bridge whose humans are all behind relays stays for the call.
-            return Duration.between(creationTime, clock.instant()) > epTimeout &&
-                conference.endpoints.none { it !== this && !it.synthetic }
+            // explicitly via colibri; as a backstop against lost signaling, allow expiry once no human endpoint,
+            // local or relayed, has been in the conference for epTimeout: a synthetic endpoint alone doesn't keep
+            // the conference alive, but a momentary gap (a reload, a re-invite, a relay being re-created) must not
+            // kill it, since jicofo is not told of an expiry.
+            val now = clock.instant()
+            if (conference.endpoints.any { it !== this && !it.synthetic }) {
+                lastHumanSeen = now
+                return false
+            }
+            val alone = Duration.between(lastHumanSeen, now)
+            if (alone > epTimeout) {
+                logger.warn("Allowing to expire because no human endpoint has been in the conference for $alone.")
+                return true
+            }
+            return false
         }
         if (iceTransport.hasFailed()) {
             logger.warn("Allowing to expire because ICE failed.")

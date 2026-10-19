@@ -233,6 +233,17 @@ class BridgeChannelMessageTest : ShouldSpec() {
                     shouldBeInstanceOf<SyntheticSourceSendingChangeEvent>()
                     kind shouldBe SyntheticSourceKind.TRANSLATION
                 }
+
+                // A kind this bridge doesn't know (from a newer peer) reads as absent, as the field's doc promises,
+                // rather than failing the whole message.
+                val unknownKind = """
+                    {"colibriClass":"SyntheticSourceSendingChangeEvent",
+                     "sourceName":"55555555-a0","sending":true,"timestamp":0,"kind":"hologram"}
+                """.trimIndent()
+                parse(unknownKind).apply {
+                    shouldBeInstanceOf<SyntheticSourceSendingChangeEvent>()
+                    kind shouldBe null
+                }
             }
         }
 
@@ -455,6 +466,16 @@ class BridgeChannelMessageTest : ShouldSpec() {
                     AudioSourceMapping(source2, owner2, ssrc2)
                 )
             )
+
+            // A kind this bridge doesn't know (from a newer peer) reads as absent instead of failing the message.
+            val unknownKind = """
+                {"colibriClass":"AudioSourcesMap",
+                 "mappedSources":[{"source":"$source1","owner":"$owner1","ssrc":$ssrc1,"kind":"hologram"}]}
+            """.trimIndent()
+            parse(unknownKind).apply {
+                shouldBeInstanceOf<AudioSourcesMap>()
+                mappedSources.single().kind shouldBe null
+            }
 
             parse(audioSourcesMapMessage.toJson()).apply {
                 shouldBeInstanceOf<AudioSourcesMap>()

@@ -18,6 +18,7 @@ package org.jitsi.videobridge.message
 import com.fasterxml.jackson.annotation.JsonAnyGetter
 import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -376,6 +377,7 @@ data class AudioSourceMapping(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     val mid: String? = null,
     /** The kind of a synthetic source ("agent" or "translation"); absent for a regular source or when not known. */
+    @JsonFormat(with = [JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_AS_NULL])
     @JsonInclude(JsonInclude.Include.NON_NULL)
     val kind: SyntheticSourceKind? = null
 )
@@ -411,8 +413,12 @@ class SyntheticSourceSendingChangeEvent(
      * run spans [start, stop).
      */
     val timestamp: Long,
-    /** The kind of the synthetic source ("agent" or "translation"), absent when the bridge doesn't know it. */
+    /**
+     * The kind of the synthetic source ("agent" or "translation"), absent when the bridge doesn't know it. A kind
+     * this bridge doesn't know (from a newer peer) reads as absent rather than failing the whole message.
+     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonFormat(with = [JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_AS_NULL])
     val kind: SyntheticSourceKind? = null
 ) : BridgeChannelMessage() {
     companion object {

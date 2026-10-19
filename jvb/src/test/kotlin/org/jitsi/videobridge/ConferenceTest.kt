@@ -84,8 +84,17 @@ class ConferenceTest : ConfigTest() {
                     bot.shouldExpire() shouldBe true
 
                     // With a non-synthetic local endpoint present, a synthetic endpoint never expires on its own.
-                    createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
+                    val human = createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
                     bot.shouldExpire() shouldBe false
+
+                    // The backstop is a grace period from the last time a human was present, not a snapshot: a
+                    // human leaving (a reload, a re-invite) must not expire the bot at the next check.
+                    human.expire()
+                    bot.shouldExpire() shouldBe false
+                    clock.elapse(1.mins)
+                    bot.shouldExpire() shouldBe false
+                    clock.elapse(3.mins)
+                    bot.shouldExpire() shouldBe true
                 } finally {
                     expire()
                     // Never added to the conference, so expiring the conference doesn't reach it.

@@ -352,6 +352,18 @@ class ExporterTest : ShouldSpec() {
                 scheduler.numPendingJobs() shouldBe 0
                 exporter.debugState().path("reconnect_attempts").asInt() shouldBe 0
             }
+            should("cancel a reconnect already scheduled when a terminal close arrives") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(requests = listOf("agent-a0"), type = Connect.Types.AGENT)
+                exporter.recorderWebSocket.onWebSocketError(RuntimeException("handshake failed"))
+                scheduler.numPendingJobs() shouldBe 1
+
+                exporter.close(Exporter.CLOSE_ENDPOINT_UNREACHABLE, "endpoint refused: HTTP 401")
+
+                scheduler.numPendingJobs() shouldBe 0
+                exporter.debugState().path("terminal_close").path("code").asInt() shouldBe
+                    Exporter.CLOSE_ENDPOINT_UNREACHABLE
+            }
             should("cap reconnects at agent-max-reconnect-attempts only for agent connects") {
                 withNewConfig("videobridge.exporter.agent-max-reconnect-attempts = 2") {
                     fakeScheduler()

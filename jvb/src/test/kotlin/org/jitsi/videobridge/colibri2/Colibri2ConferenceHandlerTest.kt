@@ -38,12 +38,16 @@ import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.Endpoints
+import org.jitsi.xmpp.extensions.colibri2.Media
 import org.jitsi.xmpp.extensions.colibri2.MediaSource
 import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
+import org.jitsi.xmpp.extensions.jingle.PayloadTypePacketExtension
+import org.jitsi.xmpp.extensions.jingle.RTPHdrExtPacketExtension
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.jxmpp.jid.impl.JidCreate
+import java.net.URI
 
 /**
  * Tests for [Colibri2ConferenceHandler]: the [SyntheticSourceKind] it gives a synthetic audio source, which follows
@@ -172,6 +176,42 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 should("remove the endpoints it added to the relay") {
                     verify { relay.removeRemoteEndpoint("e1") }
                 }
+            }
+        }
+
+        context("A synthetic endpoint created with media, as jicofo signals it") {
+            val media = Media.getBuilder().setType(MediaType.AUDIO)
+                .addPayloadType(
+                    PayloadTypePacketExtension().apply {
+                        setId(111)
+                        setName("opus")
+                        setClockrate(48000)
+                        setChannels(2)
+                    }
+                )
+                .addRtpHdrExt(
+                    RTPHdrExtPacketExtension().apply {
+                        setID("1")
+                        setURI(URI("urn:ietf:params:rtp-hdrext:ssrc-audio-level"))
+                    }
+                )
+                .build()
+            val endpoint = Colibri2Endpoint.getBuilder().apply {
+                setId("agent")
+                setCreate(true)
+                addCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
+                addCapability(Capability.CAP_SYNTHETIC_ENDPOINT)
+                setSources(sources(arrayOf(audioSource("agent-a0", 1L, true))))
+                addMedia(media)
+            }.build()
+            handler.handleConferenceModifyIQ(endpointRequest(endpoint)).first.type shouldBe IQ.Type.result
+
+            should("itself supply the payload type and audio-level extension the injected audio needs") {
+                // Injection looks these up on the local endpoints, so an agent alone on its bridge (humans relayed
+                // in) depends on its own media.
+                val agent = conference.getLocalEndpoint("agent").shouldNotBeNull()
+                agent.getOpusPayloadType().shouldNotBeNull().pt shouldBe 111
+                agent.getAudioLevelExtensionId() shouldBe 1
             }
         }
     }

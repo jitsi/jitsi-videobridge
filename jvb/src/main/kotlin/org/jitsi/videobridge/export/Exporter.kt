@@ -144,7 +144,16 @@ internal class Exporter(
             }
             if (statusCode == CLOSE_AGENT_ENDED || statusCode == CLOSE_ENDPOINT_UNREACHABLE) {
                 terminalClose = TerminalClose(statusCode, reason)
-                logger.info("Websocket closed with terminal status $statusCode, reason: $reason. Not reconnecting.")
+                // A reconnect already scheduled by an error or a ping timeout must not redial either.
+                cancelReconnect()
+                val message = "Websocket closed with terminal status $statusCode, reason: $reason. Not reconnecting."
+                if (statusCode == CLOSE_ENDPOINT_UNREACHABLE) {
+                    // The dial to the agent endpoint failed (or the agent broke the contract): worth an operator's eye.
+                    endpointUnreachableCount.inc()
+                    logger.warn(message)
+                } else {
+                    logger.info(message)
+                }
             } else {
                 logger.info("Websocket closed with status $statusCode, reason: $reason")
                 if (!isShuttingDown.get()) {
@@ -221,7 +230,15 @@ internal class Exporter(
      * on a running exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
      */
     fun update(exports: List<String>, requests: List<String>) {
-        logger.info("Updating exports=$exports requests=$requests")
+        if (terminalClose != null || reconnectExhausted) {
+            logger.warn(
+                "Updating exports=$exports requests=$requests on a connect that will not reconnect " +
+                    "(terminal close ${terminalClose?.code}, reconnects exhausted $reconnectExhausted); " +
+                    "the peer will not get them."
+            )
+        } else {
+            logger.info("Updating exports=$exports requests=$requests")
+        }
         this.exports = exports
         this.requests = requests
         // If we're connected, propagate the change now; otherwise it will be sent when the connection opens.
@@ -441,6 +458,7 @@ internal class Exporter(
         ).minOrNull()
         if (maxAttempts != null && attempt > maxAttempts) {
             reconnectExhausted = true
+            reconnectsExhaustedCount.inc()
             logger.warn("Max reconnection attempts ($maxAttempts) reached, giving up")
             return
         }
@@ -450,7 +468,7 @@ internal class Exporter(
 
         cancelReconnect()
         reconnectFuture = TaskPools.SCHEDULED_POOL.schedule({
-            if (!isShuttingDown.get()) {
+            if (!isShuttingDown.get() && terminalClose == null) {
                 try {
                     logger.info("Attempting reconnection (attempt $attempt)")
                     webSocketClient.connect(recorderWebSocket, url, createUpgradeRequest())
@@ -551,6 +569,16 @@ internal class Exporter(
         private val webSocketInternalErrors = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_websocket_internal_errors",
             "Number of websocket connection which were connected but closed with code 1011"
+        )
+
+        private val endpointUnreachableCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_endpoint_unreachable",
+            "Number of agent connects the peer closed because the agent endpoint could not be dialed (code 4002)"
+        )
+
+        private val reconnectsExhaustedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_reconnects_exhausted",
+            "Number of exporters that gave up reconnecting after the maximum number of attempts"
         )
 
         private val startsCount = VideobridgeMetricsContainer.instance.registerCounter(

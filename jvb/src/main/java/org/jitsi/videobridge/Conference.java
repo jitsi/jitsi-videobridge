@@ -291,6 +291,12 @@ public class Conference
      */
     private final AtomicBoolean loggedNoAudioLevelExtension = new AtomicBoolean(false);
 
+    /** Whether we logged that an agent's injected audio has no owner endpoint (so it can't rank as a speaker). */
+    private final AtomicBoolean loggedNoAgentOwner = new AtomicBoolean(false);
+
+    /** Whether we logged a failure to feed an agent's audio level to speech activity. */
+    private final AtomicBoolean loggedLevelChangedFailure = new AtomicBoolean(false);
+
     /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
      */
@@ -644,6 +650,35 @@ public class Conference
                 {
                     maybeSendKeyframeRequest(recentSpeakers.get(0));
                 }
+            }
+        }
+    }
+
+    /**
+     * Feeds an injected agent packet's audio level to speech activity, so a talking bot can be the dominant speaker.
+     * A side effect of the injection: a failure here is logged once and never drops the packet.
+     */
+    private void feedAgentSpeechActivity(AudioSourceDesc source, String sourceName, int audioLevel)
+    {
+        AbstractEndpoint owner = source.getOwner() != null ? getEndpoint(source.getOwner()) : null;
+        if (owner == null)
+        {
+            if (loggedNoAgentOwner.compareAndSet(false, true))
+            {
+                logger.warn("Injected agent audio for " + sourceName + " has no owner endpoint; the agent can not "
+                    + "become the dominant speaker.");
+            }
+            return;
+        }
+        try
+        {
+            speechActivity.levelChanged(owner, Math.max(0, 127 - audioLevel));
+        }
+        catch (Exception e)
+        {
+            if (loggedLevelChangedFailure.compareAndSet(false, true))
+            {
+                logger.warn("Failed to feed an agent's audio level to speech activity", e);
             }
         }
     }
@@ -1796,11 +1831,9 @@ public class Conference
                     // This packet enters via handleIncomingPacket, not an endpoint's receive pipeline, so feed speech
                     // activity here for a voice agent, with the same loudness the receive pipeline derives (127 is
                     // silence on the wire), so a talking bot can be the dominant speaker. Translated audio never is.
-                    AbstractEndpoint owner = source.getKind() == SyntheticSourceKind.AGENT && source.getOwner() != null
-                        ? getEndpoint(source.getOwner()) : null;
-                    if (owner != null)
+                    if (source.getKind() == SyntheticSourceKind.AGENT)
                     {
-                        speechActivity.levelChanged(owner, Math.max(0, 127 - audioLevel));
+                        feedAgentSpeechActivity(source, sourceName, audioLevel);
                     }
                 }
 
