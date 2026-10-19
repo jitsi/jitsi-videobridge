@@ -124,6 +124,9 @@ class Av1DependencyDescriptorHeaderExtension(
      * replaced with a copy that has the new offset (or kept, if the offset is unchanged), because structures are
      * immutable and shared. If this descriptor carries the structure, [newTemplateDependencyStructure] is replaced
      * too, so that the rewritten descriptor is encoded with the new offset.
+     *
+     * This modifies the descriptor, which (unlike the structure) is not shared: it belongs to one packet, and each
+     * receiver rewrites its own copy of the packet.
      */
     fun rewriteTemplateIdOffset(templateIdOffset: Int) {
         val newStructure = structure.withTemplateIdOffset(templateIdOffset)
