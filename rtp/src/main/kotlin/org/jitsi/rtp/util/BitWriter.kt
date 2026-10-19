@@ -43,8 +43,12 @@ class BitWriter(val buf: ByteArray, val byteOffset: Int = 0, private val byteLen
         offset++
     }
 
+    /** Write [value] in [bits] bits. [value] must be non-negative and fit in [bits] bits, except that with [bits] = 32
+     * the whole value is written, including the sign bit. */
     fun writeBits(bits: Int, value: Int) {
-        check(value < (1 shl bits)) {
+        /* Checked explicitly: shift amounts are taken modulo 32, so the check below cannot detect a count above 32. */
+        require(bits in 0..Int.SIZE_BITS) { "cannot write $bits bits" }
+        check(bits == Int.SIZE_BITS || value ushr bits == 0) {
             "value $value cannot be represented in $bits bits"
         }
         repeat(bits) { i ->

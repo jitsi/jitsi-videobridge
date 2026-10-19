@@ -745,7 +745,7 @@ private class Av1DDCodecState : CodecState {
         val descriptor = packet.descriptor
         requireNotNull(descriptor) { "AV1 Packet being routed must have non-null descriptor" }
         this.lastFrameNum = packet.frameNumber
-        this.nextTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
+        this.nextTemplateIdx = (descriptor.structure.templateIdOffset + descriptor.structure.templateCount) % 64
     }
 
     override fun getDeltas(otherState: CodecState?): CodecDeltas? {
@@ -785,8 +785,7 @@ private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int)
         descriptor.frameNumber = RtpUtils.applySequenceNumberDelta(descriptor.frameNumber, frameNumDelta)
         descriptor.frameDependencyTemplateId =
             applyTemplateIdDelta(descriptor.frameDependencyTemplateId, templateIdDelta)
-        descriptor.structure.templateIdOffset =
-            applyTemplateIdDelta(descriptor.structure.templateIdOffset, templateIdDelta)
+        descriptor.rewriteTemplateIdOffset(applyTemplateIdDelta(descriptor.structure.templateIdOffset, templateIdDelta))
 
         packet.reencodeDdExt()
     }

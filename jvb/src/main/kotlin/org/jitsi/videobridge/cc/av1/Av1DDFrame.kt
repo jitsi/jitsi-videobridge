@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
+import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
@@ -184,10 +184,7 @@ class Av1DDFrame internal constructor(
         frameNumber = packet.statelessDescriptor.frameNumber,
         index = index,
         templateId = packet.statelessDescriptor.frameDependencyTemplateId,
-        /* Copied: the frame maps of all receivers see the same packet, so without a copy they would all reference
-         * one structure object, and a projection changes templateIdOffset of the structure of a packet's
-         * descriptor in place when it rewrites the packet. */
-        structure = packet.descriptor?.structure?.clone(),
+        structure = packet.descriptor?.structure,
         activeDecodeTargets = packet.activeDecodeTargets,
         isKeyframe = packet.isKeyframe,
         rawDependencyDescriptor = if (packet.frameInfo == null) {
@@ -224,8 +221,7 @@ class Av1DDFrame internal constructor(
         }
 
         if (structure == null && packet.descriptor?.structure != null) {
-            /* Copied, see the constructor. */
-            structure = packet.descriptor?.structure?.clone()
+            structure = packet.descriptor?.structure
         }
 
         if (frameInfo == null && packet.frameInfo != null) {
@@ -237,9 +233,8 @@ class Av1DDFrame internal constructor(
         if (rawDependencyDescriptor == null) {
             return
         }
-        val parser = Av1DependencyDescriptorReader(rawDependencyDescriptor)
         val descriptor = try {
-            parser.parse(templateDependencyStructure)
+            Av1DependencyDescriptorHeaderExtension.parse(rawDependencyDescriptor, templateDependencyStructure)
         } catch (e: Av1DependencyException) {
             logger.warn("Could not parse updated AV1 Dependency Descriptor: ${e.message}")
             return
