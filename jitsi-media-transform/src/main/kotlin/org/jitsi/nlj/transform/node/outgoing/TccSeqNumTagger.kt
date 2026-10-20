@@ -25,12 +25,17 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicLong
 
 class TccSeqNumTagger(
     transportCcEngine: TransportCcEngine,
     streamInformationStore: ReadOnlyStreamInformationStore
 ) : ModifierNode("TCC sequence number tagger") {
-    private var currTccSeqNum: Long = 1
+    /**
+     * The next sequence number. More than one thread calls [modify]: the sender queue (media), the thread that handles
+     * incoming RTCP (retransmissions in response to NACKs), and the probing threads.
+     */
+    private val nextTccSeqNum = AtomicLong(1)
     private var tccExtensionId: Int? = null
 
     init {
@@ -48,15 +53,13 @@ class TccSeqNumTagger(
                     val ext = rtpPacket.getHeaderExtension(tccExtId)
                         ?: rtpPacket.addHeaderExtension(tccExtId, TccHeaderExtension.DATA_SIZE_BYTES)
 
-                    val curSeq = currTccSeqNum
+                    val curSeq = nextTccSeqNum.getAndIncrement()
 
                     TccHeaderExtension.setSequenceNumber(ext, curSeq.toInt())
 
                     weakTcc.get()?.mediaPacketTagged(packetInfo, curSeq)
 
                     packetInfo.onSent { pkt -> weakTcc.get()?.mediaPacketSent(pkt, curSeq) }
-
-                    currTccSeqNum++
                 }
 
                 else -> Unit

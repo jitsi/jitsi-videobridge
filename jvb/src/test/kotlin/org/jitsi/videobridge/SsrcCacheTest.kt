@@ -18,9 +18,14 @@ package org.jitsi.videobridge
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import jakarta.xml.bind.DatatypeConverter.parseHexBinary
 import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
@@ -29,6 +34,7 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.SyntheticSourceKind
 import java.util.Random
+import java.util.function.Supplier
 
 class SsrcCacheTest : ShouldSpec() {
     private val limit = 50
@@ -113,7 +119,122 @@ class SsrcCacheTest : ShouldSpec() {
                 "anon-3003-a0" to null
             )
         }
+
+        context("An AV1 DD packet") {
+            fun newVideoCache(errorLogger: Logger): VideoSsrcCache {
+                val videoEp = VideoEp(AV1_SSRC)
+                return VideoSsrcCache(limit, videoEp, false, errorLogger).apply { activate(listOf(videoEp.source)) }
+            }
+
+            should("be rewritten when it has a descriptor") {
+                val errorLogger = ErrorRecordingLogger("SsrcCacheTest")
+                val cache = newVideoCache(errorLogger)
+                val structure = av1Packet(AV1_KEYFRAME, null).descriptor!!.structure
+
+                cache.rewriteRtp(av1Packet(AV1_KEYFRAME, null)) shouldBe true
+                val following = av1Packet(AV1_FOLLOWING, structure)
+                following.descriptor shouldNotBe null
+                cache.rewriteRtp(following) shouldBe true
+                errorLogger.errors shouldBe emptyList()
+            }
+            should("not be sent, and not cause an error, when it has no descriptor") {
+                /* The frame number and template ID of the packet cannot be rewritten. */
+                val errorLogger = ErrorRecordingLogger("SsrcCacheTest")
+                val cache = newVideoCache(errorLogger)
+
+                cache.rewriteRtp(av1Packet(AV1_KEYFRAME, null)) shouldBe true
+                val following = av1Packet(AV1_FOLLOWING, null)
+                following.descriptor shouldBe null
+                cache.rewriteRtp(following) shouldBe false
+                errorLogger.errors shouldBe emptyList()
+            }
+        }
     }
+
+    private fun av1Packet(hex: String, structure: Av1TemplateDependencyStructure?): Av1DDPacket {
+        val data = parseHexBinary(hex)
+        return Av1DDPacket(RtpPacket(data, 0, data.size), AV1_DD_HEADER_EXTENSION_ID, structure, logger)
+    }
+
+    companion object {
+        private const val AV1_DD_HEADER_EXTENSION_ID = 11
+        private const val AV1_SSRC = 0x114ed316L
+
+        /* Packets captured from an AV1 test call (see Av1DDPacketTest). */
+
+        /** The first packet of a non-scalable keyframe. Its DD carries a template dependency structure. */
+        private const val AV1_KEYFRAME =
+            // RTP header
+            "902939b91ff6a695114ed316" +
+                // Header extension header
+                "bede0006" +
+                // Other header extensions
+                "3248c482" +
+                "510002" +
+                // AV1 DD
+                "bc80000180003a410180ef808680" +
+                // Padding
+                "000000" +
+                // AV1 Media payload, truncated.
+                "680b0800000004477e1a00d004301061"
+
+        /** A following packet of the same stream. Its DD needs the structure of the keyframe to be parsed. */
+        private const val AV1_FOLLOWING =
+            // RTP header
+            "90a939ba1ff6a695114ed316" +
+                // Header extension header
+                "bede0003" +
+                // Other header extensions
+                "3248d02a" +
+                "510003" +
+                // AV1 DD
+                "b2400001" +
+                // Padding
+                "00" +
+                // AV1 Media payload, truncated.
+                "9057f7c3f51ba803b0c397e938589750"
+    }
+}
+
+/** A logger that records errors, also for the child loggers created from it. */
+private class ErrorRecordingLogger(
+    name: String,
+    val errors: MutableList<String> = mutableListOf()
+) : LoggerImpl(name) {
+    override fun error(msg: Any?) {
+        errors.add("$msg")
+        super.error(msg)
+    }
+
+    override fun error(msg: Supplier<String>) {
+        errors.add(msg.get())
+        super.error(msg)
+    }
+
+    override fun error(msg: Any?, t: Throwable?) {
+        errors.add("$msg: $t")
+        super.error(msg, t)
+    }
+
+    override fun createChildLogger(name: String): Logger = ErrorRecordingLogger(name, errors)
+
+    override fun createChildLogger(name: String, context: Map<String, String>): Logger =
+        ErrorRecordingLogger(name, errors)
+}
+
+/** An endpoint with one video source. */
+private class VideoEp(ssrc: Long) : SsrcRewriter {
+    val source = MediaSourceDesc(arrayOf(RtpEncodingDesc(ssrc, 0)), "owner", "name")
+
+    private var nextSendSsrc = 1L
+
+    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? = if (ssrc == source.primarySSRC) source else null
+
+    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? = null
+
+    override fun getNextSendSsrc(): Long = nextSendSsrc++
+
+    override fun sendMessage(msg: BridgeChannelMessage) {}
 }
 
 private class Ep(

@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.BitReader
+import org.jitsi.rtp.util.BitReaderOverrunException
 import org.jitsi.rtp.util.BitWriter
 
 /**
@@ -32,15 +33,39 @@ open class Av1DependencyDescriptorStatelessSubset(
     var frameDependencyTemplateId: Int,
     var frameNumber: Int,
 
-    val newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
+    newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
 ) {
+    /**
+     * The template dependency structure carried by this descriptor, or null if it does not carry one. A structure
+     * is immutable and shared (see [Av1TemplateDependencyStructure]); when the descriptor is rewritten, this is
+     * replaced, not modified.
+     */
+    var newTemplateDependencyStructure: Av1TemplateDependencyStructure? = newTemplateDependencyStructure
+        protected set
+
     open fun clone(): Av1DependencyDescriptorStatelessSubset = Av1DependencyDescriptorStatelessSubset(
         startOfFrame = startOfFrame,
         endOfFrame = endOfFrame,
         frameDependencyTemplateId = frameDependencyTemplateId,
         frameNumber = frameNumber,
-        newTemplateDependencyStructure = newTemplateDependencyStructure?.clone()
+        newTemplateDependencyStructure = newTemplateDependencyStructure
     )
+
+    companion object {
+        /**
+         * Parse those parts of the dependency descriptor in [length] bytes of [buffer] at [offset] that can be parsed
+         * statelessly, i.e. without an external template dependency structure. The result is not a complete
+         * representation of the descriptor, because some fields need the external structure to be parseable; see
+         * [Av1DependencyDescriptorHeaderExtension.parse] for that.
+         * @throws Av1DependencyException if the descriptor cannot be parsed.
+         */
+        fun parse(buffer: ByteArray, offset: Int, length: Int): Av1DependencyDescriptorStatelessSubset =
+            Av1DependencyDescriptorParser.parseStateless(buffer, offset, length)
+
+        /** Parse the stateless subset of the dependency descriptor in [ext]. See [parse]. */
+        fun parse(ext: RtpPacket.HeaderExtension): Av1DependencyDescriptorStatelessSubset =
+            parse(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
+    }
 }
 
 /**
@@ -55,13 +80,19 @@ class Av1DependencyDescriptorHeaderExtension(
 
     newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
 
+    /**
+     * The active decode targets bitmask, or null if the descriptor does not specify one. A descriptor which carries a
+     * template dependency structure should have a bitmask, since the specification defines its default (all decode
+     * targets active) for that case, and the parser sets it. In that case a null bitmask is encoded as that default.
+     * Without a carried structure, a null bitmask is encoded as absent, which means unchanged for the receiver.
+     */
     var activeDecodeTargetsBitmask: Int?,
 
     val customDtis: List<DTI>?,
     val customFdiffs: List<Int>?,
     val customChains: List<Int>?,
 
-    val structure: Av1TemplateDependencyStructure
+    structure: Av1TemplateDependencyStructure
 ) : Av1DependencyDescriptorStatelessSubset(
     startOfFrame,
     endOfFrame,
@@ -69,16 +100,66 @@ class Av1DependencyDescriptorHeaderExtension(
     frameNumber,
     newTemplateDependencyStructure
 ) {
-    val frameInfo: FrameInfo by lazy {
-        val templateIndex = (frameDependencyTemplateId + 64 - structure.templateIdOffset) % 64
-        if (templateIndex >= structure.templateCount) {
-            val maxTemplate = (structure.templateIdOffset + structure.templateCount - 1) % 64
-            throw Av1DependencyException(
-                "Invalid template ID $frameDependencyTemplateId. " +
-                    "Should be in range ${structure.templateIdOffset} .. $maxTemplate. " +
-                    "Missed a keyframe?"
-            )
+    /**
+     * The template dependency structure in effect for this descriptor: the one it carries, if it carries one, and
+     * otherwise the one from an earlier descriptor of the stream. See [rewriteTemplateIdOffset].
+     */
+    var structure: Av1TemplateDependencyStructure = structure
+        private set
+
+    init {
+        require(newTemplateDependencyStructure == null || newTemplateDependencyStructure === structure) {
+            "A descriptor which carries a template dependency structure must use that structure"
         }
+        require(customDtis == null || customDtis.size == structure.decodeTargetCount) {
+            "Custom DTIs must have one entry for each of the ${structure.decodeTargetCount} decode targets"
+        }
+        require(customChains == null || customChains.size == structure.chainCount) {
+            "Custom chains must have one entry for each of the ${structure.chainCount} chains"
+        }
+    }
+
+    /**
+     * Change the template ID offset of [structure], for a descriptor which is being rewritten. The structure is
+     * replaced with a copy that has the new offset (or kept, if the offset is unchanged), because structures are
+     * immutable and shared. If this descriptor carries the structure, [newTemplateDependencyStructure] is replaced
+     * too, so that the rewritten descriptor is encoded with the new offset.
+     *
+     * This modifies the descriptor, which (unlike the structure) is not shared: it belongs to one packet, and each
+     * receiver rewrites its own copy of the packet.
+     */
+    fun rewriteTemplateIdOffset(templateIdOffset: Int) {
+        val newStructure = structure.withTemplateIdOffset(templateIdOffset)
+        if (newTemplateDependencyStructure != null) {
+            newTemplateDependencyStructure = newStructure
+        }
+        structure = newStructure
+    }
+
+    companion object {
+        /**
+         * Parse the dependency descriptor in [length] bytes of [buffer] at [offset], in the context of [dep], the
+         * template dependency structure currently in effect for the stream (null if none is known).
+         * @throws Av1DependencyException if the descriptor cannot be parsed with [dep]: it does not carry a structure
+         * and [dep] is null, it does not match [dep] (the sender changed to a new structure and the packet which
+         * carried it was lost), or it is truncated or exceeds the limits of the specification.
+         */
+        fun parse(
+            buffer: ByteArray,
+            offset: Int,
+            length: Int,
+            dep: Av1TemplateDependencyStructure?
+        ): Av1DependencyDescriptorHeaderExtension = Av1DependencyDescriptorParser.parse(buffer, offset, length, dep)
+
+        /** Parse the dependency descriptor in [ext]. See [parse]. */
+        fun parse(
+            ext: RtpPacket.HeaderExtension,
+            dep: Av1TemplateDependencyStructure?
+        ): Av1DependencyDescriptorHeaderExtension = parse(ext.buffer, ext.dataOffset, ext.dataLengthBytes, dep)
+    }
+
+    val frameInfo: FrameInfo by lazy {
+        val templateIndex = structure.getTemplateIndex(frameDependencyTemplateId)
         val templateVal = structure.templateInfo[templateIndex]
 
         FrameInfo(
@@ -93,6 +174,22 @@ class Av1DependencyDescriptorHeaderExtension(
     val encodedLength: Int
         get() = (unpaddedLengthBits + 7) / 8
 
+    /**
+     * Whether the active decode targets bitmask is encoded in the descriptor. It is omitted when there is no bitmask,
+     * and when the descriptor carries a template dependency structure and all the decode targets are active, which
+     * is the default.
+     */
+    private val activeDecodeTargetsPresent: Boolean
+        get() = isActiveDecodeTargetsPresent(activeDecodeTargetsBitmask)
+
+    private fun isActiveDecodeTargetsPresent(bitmask: Int?): Boolean {
+        if (bitmask == null) {
+            return false
+        }
+        val newStructure = newTemplateDependencyStructure ?: return true
+        return bitmask != newStructure.allDecodeTargetsMask
+    }
+
     private val unpaddedLengthBits: Int
         get() {
             var length = 24
@@ -104,15 +201,8 @@ class Av1DependencyDescriptorHeaderExtension(
             ) {
                 length += 5
             }
-            if (newTemplateDependencyStructure != null) {
-                length += newTemplateDependencyStructure.unpaddedLengthBits
-            }
-            if (activeDecodeTargetsBitmask != null &&
-                (
-                    newTemplateDependencyStructure == null ||
-                        activeDecodeTargetsBitmask != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
-                    )
-            ) {
+            newTemplateDependencyStructure?.let { length += it.unpaddedLengthBits }
+            if (activeDecodeTargetsPresent) {
                 length += structure.decodeTargetCount
             }
             if (customDtis != null) {
@@ -131,28 +221,24 @@ class Av1DependencyDescriptorHeaderExtension(
             return length
         }
 
-    override fun clone(): Av1DependencyDescriptorHeaderExtension {
-        val structureCopy = structure.clone()
-        val newStructure = if (newTemplateDependencyStructure == null) null else structureCopy
-        return Av1DependencyDescriptorHeaderExtension(
-            startOfFrame,
-            endOfFrame,
-            frameDependencyTemplateId,
-            frameNumber,
-            newStructure,
-            activeDecodeTargetsBitmask,
-            // These values are not mutable so it's safe to copy them by reference
-            customDtis,
-            customFdiffs,
-            customChains,
-            structureCopy
-        )
-    }
+    override fun clone(): Av1DependencyDescriptorHeaderExtension = Av1DependencyDescriptorHeaderExtension(
+        startOfFrame,
+        endOfFrame,
+        frameDependencyTemplateId,
+        frameNumber,
+        // The structure is immutable (see Av1TemplateDependencyStructure), so it is shared, as are the lists.
+        newTemplateDependencyStructure,
+        activeDecodeTargetsBitmask,
+        customDtis,
+        customFdiffs,
+        customChains,
+        structure
+    )
 
     fun write(ext: RtpPacket.HeaderExtension) = write(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
 
     fun write(buffer: ByteArray, offset: Int, length: Int) {
-        check(length <= encodedLength) {
+        check(length >= encodedLength) {
             "Cannot write AV1 DD to buffer: buffer length $length must be at least $encodedLength"
         }
         val writer = BitWriter(buffer, offset, length)
@@ -182,12 +268,10 @@ class Av1DependencyDescriptorHeaderExtension(
     }
 
     private fun writeOptionalDescriptorFields(writer: BitWriter) {
+        val newTemplateDependencyStructure = this.newTemplateDependencyStructure
         val templateDependencyStructurePresent = newTemplateDependencyStructure != null
-        val activeDecodeTargetsPresent = activeDecodeTargetsBitmask != null &&
-            (
-                newTemplateDependencyStructure == null ||
-                    activeDecodeTargetsBitmask != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
-                )
+        val activeDecodeTargetsBitmask = this.activeDecodeTargetsBitmask
+        val activeDecodeTargetsPresent = isActiveDecodeTargetsPresent(activeDecodeTargetsBitmask)
 
         val customDtisFlag = customDtis != null
         val customFdiffsFlag = customFdiffs != null
@@ -199,12 +283,10 @@ class Av1DependencyDescriptorHeaderExtension(
         writer.writeBit(customFdiffsFlag)
         writer.writeBit(customChainsFlag)
 
-        if (templateDependencyStructurePresent) {
-            newTemplateDependencyStructure.write(writer)
-        }
+        newTemplateDependencyStructure?.write(writer)
 
-        if (activeDecodeTargetsPresent) {
-            writeActiveDecodeTargets(writer)
+        if (activeDecodeTargetsBitmask != null && activeDecodeTargetsPresent) {
+            writer.writeBits(structure.decodeTargetCount, activeDecodeTargetsBitmask)
         }
 
         if (customDtisFlag) {
@@ -218,10 +300,6 @@ class Av1DependencyDescriptorHeaderExtension(
         if (customChainsFlag) {
             writeFrameChains(writer)
         }
-    }
-
-    private fun writeActiveDecodeTargets(writer: BitWriter) {
-        writer.writeBits(structure.decodeTargetCount, activeDecodeTargetsBitmask!!)
     }
 
     private fun writeFrameDtis(writer: BitWriter) {
@@ -277,12 +355,9 @@ class Av1DependencyDescriptorHeaderExtension(
                     mapper.valueToTree<com.fasterxml.jackson.databind.node.ArrayNode>(it)
                 )
             }
-            activeDecodeTargetsBitmask?.let {
-                if (newTemplateDependencyStructure == null ||
-                    it != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
-                ) {
-                    put("activeDecodeTargets", Integer.toBinaryString(it))
-                }
+            val activeDecodeTargetsBitmask = this@Av1DependencyDescriptorHeaderExtension.activeDecodeTargetsBitmask
+            if (activeDecodeTargetsBitmask != null && isActiveDecodeTargetsPresent(activeDecodeTargetsBitmask)) {
+                put("activeDecodeTargets", Integer.toBinaryString(activeDecodeTargetsBitmask))
             }
         }.toString()
     }
@@ -299,10 +374,14 @@ fun Int.bitsForFdiff() = when {
  * The template information about a stream described by AV1 dependency descriptors.  This is carried in the
  * first packet of a codec video sequence (i.e. the first packet of a keyframe), and is necessary to interpret
  * dependency descriptors carried in subsequent packets of the sequence.
+ *
+ * A structure is immutable, so one instance can be shared by the descriptors of all the packets of the sequence,
+ * the frames which track them, and the parser history, on any thread. A descriptor which is rewritten gets a copy
+ * with a new template ID offset from [withTemplateIdOffset]; see
+ * [Av1DependencyDescriptorHeaderExtension.rewriteTemplateIdOffset].
  */
-@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
-class Av1TemplateDependencyStructure(
-    var templateIdOffset: Int,
+class Av1TemplateDependencyStructure private constructor(
+    val templateIdOffset: Int,
     val templateInfo: List<FrameInfo>,
     val decodeTargetProtectedBy: List<Int>,
     val decodeTargetLayers: List<DecodeTargetLayer>,
@@ -316,21 +395,203 @@ class Av1TemplateDependencyStructure(
     val decodeTargetCount
         get() = decodeTargetLayers.size
 
+    /** The active decode targets bitmask with all the decode targets active. The count can be 32, for which
+     * `(1 shl count) - 1` is 0, because shift amounts are taken modulo 32. */
+    val allDecodeTargetsMask: Int
+        get() = if (decodeTargetCount >= Int.SIZE_BITS) -1 else (1 shl decodeTargetCount) - 1
+
     val chainCount: Int =
         templateInfo.first().chains.size
 
-    init {
-        check(templateInfo.all { it.chains.size == chainCount }) {
-            "Templates have inconsistent chain sizes"
+    /**
+     * Get the index in [templateInfo] of the template with the given frame dependency template ID.
+     * @throws Av1DependencyException if the ID is not a template of this structure. This happens when the sender
+     * has changed to a new structure, and the packet which carried it was lost or delayed.
+     */
+    fun getTemplateIndex(frameDependencyTemplateId: Int): Int {
+        val templateIndex = (frameDependencyTemplateId + 64 - templateIdOffset) % 64
+        if (templateIndex >= templateCount) {
+            val maxTemplate = (templateIdOffset + templateCount - 1) % 64
+            throw Av1DependencyException(
+                "Invalid template ID $frameDependencyTemplateId. " +
+                    "Should be in range $templateIdOffset .. $maxTemplate. " +
+                    "Missed a keyframe?"
+            )
         }
-        check(templateInfo.all { it.temporalId <= maxTemporalId }) {
-            "Incorrect maxTemporalId"
+        return templateIndex
+    }
+
+    companion object {
+        /** The maximum number of templates in a structure: template IDs are 6 bits. */
+        const val MAX_TEMPLATE_COUNT = 64
+
+        /** The maximum spatial ID: the spatial_id field of the AV1 OBU extension header is 2 bits. */
+        const val MAX_SPATIAL_ID = 3
+
+        /** The maximum temporal ID: the temporal_id field of the AV1 OBU extension header is 3 bits. */
+        const val MAX_TEMPORAL_ID = 7
+
+        /**
+         * Read a template dependency structure (template_dependency_structure() in the AV1 RTP specification) from
+         * [reader]. This is the only way a structure is created from a packet; [withTemplateIdOffset] makes a copy.
+         *
+         * @throws Av1DependencyException if the structure exceeds the limits of the specification.
+         * @throws BitReaderOverrunException if the reader runs out of bits.
+         */
+        internal fun read(reader: BitReader): Av1TemplateDependencyStructure = Reader(reader).read()
+    }
+
+    /** Reads one structure. The state accumulated while reading is kept here, so one instance reads one structure. */
+    private class Reader(private val reader: BitReader) {
+        /** A template while it is being read. [build] makes the read-only [FrameInfo] which the structure keeps. */
+        private class TemplateBuilder(val spatialId: Int, val temporalId: Int) {
+            val dti = mutableListOf<DTI>()
+            val fdiff = mutableListOf<Int>()
+            val chains = mutableListOf<Int>()
+
+            fun build() = FrameInfo(spatialId, temporalId, dti.toList(), fdiff.toList(), chains.toList())
         }
-        check(maxRenderResolutions.isEmpty() || maxRenderResolutions.size == maxSpatialId + 1) {
-            "Non-zero number of render resolutions does not match maxSpatialId"
+
+        private val templateInfo = mutableListOf<TemplateBuilder>()
+        private val decodeTargetProtectedBy = mutableListOf<Int>()
+        private val decodeTargetLayers = mutableListOf<DecodeTargetLayer>()
+        private val maxRenderResolutions = mutableListOf<Resolution>()
+
+        private var dtCnt = 0
+        private var maxSpatialId = 0
+        private var maxTemporalId = 0
+
+        private val templateCnt
+            get() = templateInfo.size
+
+        fun read(): Av1TemplateDependencyStructure {
+            val templateIdOffset = reader.bits(6)
+
+            val dtCntMinusOne = reader.bits(5)
+            dtCnt = dtCntMinusOne + 1
+
+            readTemplateLayers()
+            readTemplateDtis()
+            readTemplateFdiffs()
+            readTemplateChains()
+            readDecodeTargetLayers()
+
+            val resolutionsPresent = reader.bitAsBoolean()
+
+            if (resolutionsPresent) {
+                readRenderResolutions()
+            }
+
+            return Av1TemplateDependencyStructure(
+                templateIdOffset,
+                templateInfo.map { it.build() },
+                decodeTargetProtectedBy.toList(),
+                decodeTargetLayers.toList(),
+                maxRenderResolutions.toList(),
+                maxSpatialId,
+                maxTemporalId
+            )
         }
-        check(templateInfo.all { it.spatialId <= maxSpatialId }) {
-            "Incorrect maxSpatialId"
+
+        /**
+         * Read the template layers, and check the limits of the specification. The checks run as the layers are
+         * read, so that a structure which exceeds a limit is rejected for that reason, and not because the fields
+         * which follow (whose sizes depend on the template count) run past the end of the descriptor.
+         */
+        private fun readTemplateLayers() {
+            var temporalId = 0
+            var spatialId = 0
+
+            var nextLayerIdc: Int
+            do {
+                if (templateCnt >= MAX_TEMPLATE_COUNT) {
+                    throw Av1DependencyException(
+                        "Template dependency structure has more than $MAX_TEMPLATE_COUNT templates"
+                    )
+                }
+                templateInfo.add(TemplateBuilder(spatialId, temporalId))
+                nextLayerIdc = reader.bits(2)
+                if (nextLayerIdc == 1) {
+                    temporalId++
+                    if (temporalId > MAX_TEMPORAL_ID) {
+                        throw Av1DependencyException(
+                            "Template dependency structure has a temporal ID above $MAX_TEMPORAL_ID"
+                        )
+                    }
+                    if (maxTemporalId < temporalId) {
+                        maxTemporalId = temporalId
+                    }
+                } else if (nextLayerIdc == 2) {
+                    temporalId = 0
+                    spatialId++
+                    if (spatialId > MAX_SPATIAL_ID) {
+                        throw Av1DependencyException(
+                            "Template dependency structure has a spatial ID above $MAX_SPATIAL_ID"
+                        )
+                    }
+                }
+            } while (nextLayerIdc != 3)
+
+            maxSpatialId = spatialId
+        }
+
+        private fun readTemplateDtis() {
+            for (templateIndex in 0 until templateCnt) {
+                for (dtIndex in 0 until dtCnt) {
+                    templateInfo[templateIndex].dti.add(dtIndex, DTI.fromInt(reader.bits(2)))
+                }
+            }
+        }
+
+        private fun readTemplateFdiffs() {
+            for (templateIndex in 0 until templateCnt) {
+                var fdiffFollowsFlag = reader.bitAsBoolean()
+                while (fdiffFollowsFlag) {
+                    val fdiffMinusOne = reader.bits(4)
+                    templateInfo[templateIndex].fdiff.add(fdiffMinusOne + 1)
+                    fdiffFollowsFlag = reader.bitAsBoolean()
+                }
+            }
+        }
+
+        private fun readTemplateChains() {
+            val chainCount = reader.ns(dtCnt + 1)
+            if (chainCount != 0) {
+                for (dtIndex in 0 until dtCnt) {
+                    decodeTargetProtectedBy.add(dtIndex, reader.ns(chainCount))
+                }
+                for (templateIndex in 0 until templateCnt) {
+                    for (chainIndex in 0 until chainCount) {
+                        templateInfo[templateIndex].chains.add(chainIndex, reader.bits(4))
+                    }
+                }
+            }
+        }
+
+        private fun readDecodeTargetLayers() {
+            for (dtIndex in 0 until dtCnt) {
+                var spatialId = 0
+                var temporalId = 0
+                for (templateIndex in 0 until templateCnt) {
+                    if (templateInfo[templateIndex].dti[dtIndex] != DTI.NOT_PRESENT) {
+                        if (templateInfo[templateIndex].spatialId > spatialId) {
+                            spatialId = templateInfo[templateIndex].spatialId
+                        }
+                        if (templateInfo[templateIndex].temporalId > temporalId) {
+                            temporalId = templateInfo[templateIndex].temporalId
+                        }
+                    }
+                }
+                decodeTargetLayers.add(dtIndex, DecodeTargetLayer(spatialId, temporalId))
+            }
+        }
+
+        private fun readRenderResolutions() {
+            for (spatialId in 0..maxSpatialId) {
+                val widthMinus1 = reader.bits(16)
+                val heightMinus1 = reader.bits(16)
+                maxRenderResolutions.add(spatialId, Resolution(widthMinus1 + 1, heightMinus1 + 1))
+            }
         }
     }
 
@@ -359,16 +620,26 @@ class Av1TemplateDependencyStructure(
             return length
         }
 
-    fun clone(): Av1TemplateDependencyStructure = Av1TemplateDependencyStructure(
-        templateIdOffset,
-        // These objects are not mutable so it's safe to copy them by reference
-        templateInfo,
-        decodeTargetProtectedBy,
-        decodeTargetLayers,
-        maxRenderResolutions,
-        maxSpatialId,
-        maxTemporalId
-    )
+    /** A copy of this structure with the template ID offset [templateIdOffset], or this structure if it already has
+     * that offset. */
+    fun withTemplateIdOffset(templateIdOffset: Int): Av1TemplateDependencyStructure =
+        if (templateIdOffset == this.templateIdOffset) {
+            this
+        } else {
+            require(templateIdOffset in 0 until MAX_TEMPLATE_COUNT) {
+                "Template ID offset $templateIdOffset is not a 6-bit template ID"
+            }
+            Av1TemplateDependencyStructure(
+                templateIdOffset,
+                // The lists are read-only, so they can be shared.
+                templateInfo,
+                decodeTargetProtectedBy,
+                decodeTargetLayers,
+                maxRenderResolutions,
+                maxSpatialId,
+                maxTemporalId
+            )
+        }
 
     fun write(writer: BitWriter) {
         writer.writeBits(6, templateIdOffset)
@@ -470,7 +741,7 @@ class Av1TemplateDependencyStructure(
      * contained in that DT.
      */
     fun getDtBitmaskForDt(dt: Int): Int {
-        var mask = (1 shl decodeTargetCount) - 1
+        var mask = allDecodeTargetsMask
         templateInfo.forEach { frameInfo ->
             frameInfo.dti.forEachIndexed { i, dti ->
                 if (frameInfo.dti[dt] == DTI.NOT_PRESENT && dti != DTI.NOT_PRESENT) {
@@ -537,300 +808,178 @@ fun nsBits(n: Int, v: Int): Int {
     return w
 }
 
-class Av1DependencyDescriptorReader(
-    buffer: ByteArray,
-    offset: Int,
-    val length: Int,
-) {
-    private var startOfFrame = false
-    private var endOfFrame = false
-    private var frameDependencyTemplateId = 0
-    private var frameNumber = 0
+/**
+ * Parses AV1 dependency descriptors, for [Av1DependencyDescriptorHeaderExtension.parse] and
+ * [Av1DependencyDescriptorStatelessSubset.parse]. Each call works on its own [BitReader] and in locals.
+ */
+private object Av1DependencyDescriptorParser {
+    /** The fields at the start of every descriptor (mandatory_descriptor_fields() in the specification). */
+    private class MandatoryFields(
+        val startOfFrame: Boolean,
+        val endOfFrame: Boolean,
+        val frameDependencyTemplateId: Int,
+        val frameNumber: Int
+    )
 
-    private var customDtis: List<DTI>? = null
-    private var customFdiffs: List<Int>? = null
-    private var customChains: List<Int>? = null
+    fun parseStateless(buffer: ByteArray, offset: Int, length: Int): Av1DependencyDescriptorStatelessSubset =
+        readFields(buffer, offset, length) { reader ->
+            val mandatory = reader.readMandatoryDescriptorFields()
+            var newTemplateDependencyStructure: Av1TemplateDependencyStructure? = null
 
-    private var localTemplateDependencyStructure: Av1TemplateDependencyStructure? = null
-    private var templateDependencyStructure: Av1TemplateDependencyStructure? = null
+            if (length > 3) {
+                val templateDependencyStructurePresent = reader.bitAsBoolean()
 
-    private var activeDecodeTargetsBitmask: Int? = null
+                /* activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, and customChainsFlag;
+                 * none of these fields are parseable statelessly.
+                 */
+                reader.skipBits(4)
 
-    private val reader = BitReader(buffer, offset, length)
-
-    constructor(ext: RtpPacket.HeaderExtension) :
-        this(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
-
-    /** Parse those parts of the dependency descriptor that can be parsed statelessly, i.e. without an external
-     * template dependency structure.  The returned object will not be a complete representation of the
-     * dependency descriptor, because some fields need the external structure to be parseable.
-     */
-    fun parseStateless(): Av1DependencyDescriptorStatelessSubset {
-        reset()
-        readMandatoryDescriptorFields()
-
-        if (length > 3) {
-            val templateDependencyStructurePresent = reader.bitAsBoolean()
-
-            /* activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, and customChainsFlag;
-             * none of these fields are parseable statelessly.
-             */
-            reader.skipBits(4)
-
-            if (templateDependencyStructurePresent) {
-                localTemplateDependencyStructure = readTemplateDependencyStructure()
+                if (templateDependencyStructurePresent) {
+                    newTemplateDependencyStructure = Av1TemplateDependencyStructure.read(reader)
+                }
             }
+            Av1DependencyDescriptorStatelessSubset(
+                mandatory.startOfFrame,
+                mandatory.endOfFrame,
+                mandatory.frameDependencyTemplateId,
+                mandatory.frameNumber,
+                newTemplateDependencyStructure,
+            )
         }
-        return Av1DependencyDescriptorStatelessSubset(
-            startOfFrame,
-            endOfFrame,
-            frameDependencyTemplateId,
-            frameNumber,
-            localTemplateDependencyStructure,
-        )
-    }
 
-    /** Parse the dependency descriptor in the context of [dep], the currently-applicable template dependency
-     * structure.*/
-    fun parse(dep: Av1TemplateDependencyStructure?): Av1DependencyDescriptorHeaderExtension {
-        reset()
-        readMandatoryDescriptorFields()
+    fun parse(
+        buffer: ByteArray,
+        offset: Int,
+        length: Int,
+        dep: Av1TemplateDependencyStructure?
+    ): Av1DependencyDescriptorHeaderExtension = readFields(buffer, offset, length) { reader ->
+        val mandatory = reader.readMandatoryDescriptorFields()
         if (length > 3) {
-            readExtendedDescriptorFields(dep)
+            reader.readExtendedDescriptorFields(mandatory, dep)
         } else {
             if (dep == null) {
                 throw Av1DependencyException("No external dependency structure specified for non-first packet")
             }
-            templateDependencyStructure = dep
+            /* See readExtendedDescriptorFields: a template ID which is not in the structure means the structure
+             * is stale. */
+            dep.getTemplateIndex(mandatory.frameDependencyTemplateId)
+            Av1DependencyDescriptorHeaderExtension(
+                mandatory.startOfFrame,
+                mandatory.endOfFrame,
+                mandatory.frameDependencyTemplateId,
+                mandatory.frameNumber,
+                newTemplateDependencyStructure = null,
+                activeDecodeTargetsBitmask = null,
+                customDtis = null,
+                customFdiffs = null,
+                customChains = null,
+                structure = dep
+            )
         }
+    }
+
+    /**
+     * Run [block] with a reader positioned at the start of the descriptor, and convert a read past the end of the
+     * descriptor into an [Av1DependencyException]. This happens when the descriptor is truncated, or when it does
+     * not match the template dependency structure it is parsed with (the sender changed to a new structure, and the
+     * packet which carried it was lost). An [Av1DependencyException] thrown by [block] passes through. Other
+     * exceptions are not converted: they indicate a bug, not unparseable input.
+     */
+    private inline fun <T> readFields(buffer: ByteArray, offset: Int, length: Int, block: (BitReader) -> T): T {
+        try {
+            return block(BitReader(buffer, offset, length))
+        } catch (e: BitReaderOverrunException) {
+            throw Av1DependencyException(
+                "Dependency descriptor of $length bytes is too short for its fields: ${e.message}"
+            )
+        }
+    }
+
+    private fun BitReader.readMandatoryDescriptorFields(): MandatoryFields {
+        val startOfFrame = bitAsBoolean()
+        val endOfFrame = bitAsBoolean()
+        val frameDependencyTemplateId = bits(6)
+        val frameNumber = bits(16)
+        return MandatoryFields(startOfFrame, endOfFrame, frameDependencyTemplateId, frameNumber)
+    }
+
+    private fun BitReader.readExtendedDescriptorFields(
+        mandatory: MandatoryFields,
+        dep: Av1TemplateDependencyStructure?
+    ): Av1DependencyDescriptorHeaderExtension {
+        val templateDependencyStructurePresent = bitAsBoolean()
+        val activeDecodeTargetsPresent = bitAsBoolean()
+        val customDtisFlag = bitAsBoolean()
+        val customFdiffsFlag = bitAsBoolean()
+        val customChainsFlag = bitAsBoolean()
+
+        val newTemplateDependencyStructure: Av1TemplateDependencyStructure?
+        val structure: Av1TemplateDependencyStructure
+        if (templateDependencyStructurePresent) {
+            newTemplateDependencyStructure = Av1TemplateDependencyStructure.read(this)
+            structure = newTemplateDependencyStructure
+        } else {
+            newTemplateDependencyStructure = null
+            structure = dep
+                ?: throw Av1DependencyException("No external dependency structure specified for non-first packet")
+        }
+        val activeDecodeTargetsBitmask = if (activeDecodeTargetsPresent) {
+            bits(structure.decodeTargetCount)
+        } else if (templateDependencyStructurePresent) {
+            structure.allDecodeTargetsMask
+        } else {
+            null
+        }
+
+        /* The spec (frame_dependency_definition()) checks the template index before it reads the custom DTIs,
+         * fdiffs and chains, because their sizes come from the structure. If the template ID is not in the
+         * structure, the structure is stale, and the custom fields must not be read with it. */
+        structure.getTemplateIndex(mandatory.frameDependencyTemplateId)
+
+        val customDtis = if (customDtisFlag) readFrameDtis(structure) else null
+        val customFdiffs = if (customFdiffsFlag) readFrameFdiffs() else null
+        val customChains = if (customChainsFlag) readFrameChains(structure) else null
+
         return Av1DependencyDescriptorHeaderExtension(
-            startOfFrame,
-            endOfFrame,
-            frameDependencyTemplateId,
-            frameNumber,
-            localTemplateDependencyStructure,
+            mandatory.startOfFrame,
+            mandatory.endOfFrame,
+            mandatory.frameDependencyTemplateId,
+            mandatory.frameNumber,
+            newTemplateDependencyStructure,
             activeDecodeTargetsBitmask,
             customDtis,
             customFdiffs,
             customChains,
-            templateDependencyStructure!!
+            structure
         )
     }
 
-    private fun reset() = reader.reset()
-
-    private fun readMandatoryDescriptorFields() {
-        startOfFrame = reader.bitAsBoolean()
-        endOfFrame = reader.bitAsBoolean()
-        frameDependencyTemplateId = reader.bits(6)
-        frameNumber = reader.bits(16)
-    }
-
-    private fun readExtendedDescriptorFields(dep: Av1TemplateDependencyStructure?) {
-        val templateDependencyStructurePresent = reader.bitAsBoolean()
-        val activeDecodeTargetsPresent = reader.bitAsBoolean()
-        val customDtisFlag = reader.bitAsBoolean()
-        val customFdiffsFlag = reader.bitAsBoolean()
-        val customChainsFlag = reader.bitAsBoolean()
-
-        if (templateDependencyStructurePresent) {
-            localTemplateDependencyStructure = readTemplateDependencyStructure()
-            templateDependencyStructure = localTemplateDependencyStructure
-        } else {
-            if (dep == null) {
-                throw Av1DependencyException("No external dependency structure specified for non-first packet")
-            }
-            templateDependencyStructure = dep
-        }
-        if (activeDecodeTargetsPresent) {
-            activeDecodeTargetsBitmask = reader.bits(templateDependencyStructure!!.decodeTargetCount)
-        } else if (templateDependencyStructurePresent) {
-            activeDecodeTargetsBitmask = (1 shl templateDependencyStructure!!.decodeTargetCount) - 1
+    private fun BitReader.readFrameDtis(structure: Av1TemplateDependencyStructure): List<DTI> =
+        List(structure.decodeTargetCount) {
+            DTI.fromInt(bits(2))
         }
 
-        if (customDtisFlag) {
-            customDtis = readFrameDtis()
-        }
-        if (customFdiffsFlag) {
-            customFdiffs = readFrameFdiffs()
-        }
-        if (customChainsFlag) {
-            customChains = readFrameChains()
-        }
-    }
-
-    /* Data for template dependency structure */
-    private var templateIdOffset: Int = 0
-    private val templateInfo = mutableListOf<TemplateFrameInfo>()
-    private val decodeTargetProtectedBy = mutableListOf<Int>()
-    private val decodeTargetLayers = mutableListOf<DecodeTargetLayer>()
-    private val maxRenderResolutions = mutableListOf<Resolution>()
-
-    private var dtCnt = 0
-
-    private fun resetDependencyStructureInfo() {
-        /* These fields are assembled incrementally when parsing a dependency structure; reset them
-         * in case we're running a parser more than once.
-         */
-        templateCnt = 0
-        templateInfo.clear()
-        decodeTargetProtectedBy.clear()
-        decodeTargetLayers.clear()
-        maxRenderResolutions.clear()
-    }
-
-    private fun readTemplateDependencyStructure(): Av1TemplateDependencyStructure {
-        resetDependencyStructureInfo()
-
-        templateIdOffset = reader.bits(6)
-
-        val dtCntMinusOne = reader.bits(5)
-        dtCnt = dtCntMinusOne + 1
-
-        readTemplateLayers()
-        readTemplateDtis()
-        readTemplateFdiffs()
-        readTemplateChains()
-        readDecodeTargetLayers()
-
-        val resolutionsPresent = reader.bitAsBoolean()
-
-        if (resolutionsPresent) {
-            readRenderResolutions()
-        }
-
-        return Av1TemplateDependencyStructure(
-            templateIdOffset,
-            templateInfo.toList(),
-            decodeTargetProtectedBy.toList(),
-            decodeTargetLayers.toList(),
-            maxRenderResolutions.toList(),
-            maxSpatialId,
-            maxTemporalId
-        )
-    }
-
-    private var templateCnt = 0
-    private var maxSpatialId = 0
-    private var maxTemporalId = 0
-
-    @SuppressFBWarnings(
-        value = ["SF_SWITCH_NO_DEFAULT"],
-        justification = "Artifact of generated Kotlin code."
-    )
-    private fun readTemplateLayers() {
-        var temporalId = 0
-        var spatialId = 0
-
-        var nextLayerIdc: Int
-        do {
-            templateInfo.add(templateCnt, TemplateFrameInfo(spatialId, temporalId))
-            templateCnt++
-            nextLayerIdc = reader.bits(2)
-            if (nextLayerIdc == 1) {
-                temporalId++
-                if (maxTemporalId < temporalId) {
-                    maxTemporalId = temporalId
-                }
-            } else if (nextLayerIdc == 2) {
-                temporalId = 0
-                spatialId++
-            }
-        } while (nextLayerIdc != 3)
-
-        check(templateInfo.size == templateCnt)
-
-        maxSpatialId = spatialId
-    }
-
-    private fun readTemplateDtis() {
-        for (templateIndex in 0 until templateCnt) {
-            for (dtIndex in 0 until dtCnt) {
-                templateInfo[templateIndex].dti.add(dtIndex, DTI.fromInt(reader.bits(2)))
-            }
-        }
-    }
-
-    private fun readFrameDtis(): List<DTI> = List(templateDependencyStructure!!.decodeTargetCount) {
-        DTI.fromInt(reader.bits(2))
-    }
-
-    private fun readTemplateFdiffs() {
-        for (templateIndex in 0 until templateCnt) {
-            var fdiffCnt = 0
-            var fdiffFollowsFlag = reader.bitAsBoolean()
-            while (fdiffFollowsFlag) {
-                val fdiffMinusOne = reader.bits(4)
-                templateInfo[templateIndex].fdiff.add(fdiffCnt, fdiffMinusOne + 1)
-                fdiffCnt++
-                fdiffFollowsFlag = reader.bitAsBoolean()
-            }
-            check(fdiffCnt == templateInfo[templateIndex].fdiffCnt)
-        }
-    }
-
-    private fun readFrameFdiffs(): List<Int> = buildList {
-        var nextFdiffSize = reader.bits(2)
+    private fun BitReader.readFrameFdiffs(): List<Int> = buildList {
+        var nextFdiffSize = bits(2)
         while (nextFdiffSize != 0) {
-            val fdiffMinus1 = reader.bits(4 * nextFdiffSize)
+            val fdiffMinus1 = bits(4 * nextFdiffSize)
             add(fdiffMinus1 + 1)
-            nextFdiffSize = reader.bits(2)
+            nextFdiffSize = bits(2)
         }
     }
 
-    private fun readTemplateChains() {
-        val chainCount = reader.ns(dtCnt + 1)
-        if (chainCount != 0) {
-            for (dtIndex in 0 until dtCnt) {
-                decodeTargetProtectedBy.add(dtIndex, reader.ns(chainCount))
-            }
-            for (templateIndex in 0 until templateCnt) {
-                for (chainIndex in 0 until chainCount) {
-                    templateInfo[templateIndex].chains.add(chainIndex, reader.bits(4))
-                }
-                check(templateInfo[templateIndex].chains.size == chainCount)
-            }
+    private fun BitReader.readFrameChains(structure: Av1TemplateDependencyStructure): List<Int> =
+        List(structure.chainCount) {
+            bits(8)
         }
-    }
-
-    private fun readFrameChains(): List<Int> = List(templateDependencyStructure!!.chainCount) {
-        reader.bits(8)
-    }
-
-    private fun readDecodeTargetLayers() {
-        for (dtIndex in 0 until dtCnt) {
-            var spatialId = 0
-            var temporalId = 0
-            for (templateIndex in 0 until templateCnt) {
-                if (templateInfo[templateIndex].dti[dtIndex] != DTI.NOT_PRESENT) {
-                    if (templateInfo[templateIndex].spatialId > spatialId) {
-                        spatialId = templateInfo[templateIndex].spatialId
-                    }
-                    if (templateInfo[templateIndex].temporalId > temporalId) {
-                        temporalId = templateInfo[templateIndex].temporalId
-                    }
-                }
-            }
-            decodeTargetLayers.add(dtIndex, DecodeTargetLayer(spatialId, temporalId))
-        }
-        check(decodeTargetLayers.size == dtCnt)
-    }
-
-    private fun readRenderResolutions() {
-        for (spatialId in 0..maxSpatialId) {
-            val widthMinus1 = reader.bits(16)
-            val heightMinus1 = reader.bits(16)
-            maxRenderResolutions.add(spatialId, Resolution(widthMinus1 + 1, heightMinus1 + 1))
-        }
-    }
 }
 
-open class FrameInfo(
+class FrameInfo(
     val spatialId: Int,
     val temporalId: Int,
-    open val dti: List<DTI>,
-    open val fdiff: List<Int>,
-    open val chains: List<Int>
+    val dti: List<DTI>,
+    val fdiff: List<Int>,
+    val chains: List<Int>
 ) {
     val fdiffCnt
         get() = fdiff.size
@@ -879,16 +1028,6 @@ open class FrameInfo(
         get() = dti.withIndex().filter { (_, dti) -> dti != DTI.NOT_PRESENT }.map { (i, _) -> i }
 }
 
-/* The only thing this changes from its parent class is to make the lists mutable, so the parent equals() is fine. */
-@SuppressFBWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
-class TemplateFrameInfo(
-    spatialId: Int,
-    temporalId: Int,
-    override val dti: MutableList<DTI> = mutableListOf(),
-    override val fdiff: MutableList<Int> = mutableListOf(),
-    override val chains: MutableList<Int> = mutableListOf()
-) : FrameInfo(spatialId, temporalId, dti, fdiff, chains)
-
 class DecodeTargetLayer(
     val spatialId: Int,
     val temporalId: Int
@@ -931,6 +1070,7 @@ enum class DTI(val dti: Int) {
 
 fun List<DTI>.toShortString(): String = joinToString(separator = "") { it.toShortString() }
 
-class Av1DependencyException(msg: String) : RuntimeException(msg)
+/** A dependency descriptor, or a template dependency structure, which cannot be parsed. */
+open class Av1DependencyException(msg: String, cause: Throwable? = null) : RuntimeException(msg, cause)
 
 fun <T> List<T>.toIndexedMap(): Map<Int, T> = mapIndexed { i, t -> i to t }.toMap()

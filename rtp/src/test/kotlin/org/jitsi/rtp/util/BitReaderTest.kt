@@ -104,27 +104,47 @@ class BitReaderTest : ShouldSpec() {
             clone.remainingBits() shouldBe 0
 
             bitReader.bits(8) shouldBe 0b1010_1010
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 clone.bits(8)
+            }
+        }
+
+        context("Reading a whole word at once") {
+            should("read 32 bits as an Int") {
+                val reader = BitReader(ByteArray(4) { 0xAA.toByte() })
+                reader.bits(32) shouldBe 0xAAAAAAAA.toInt()
+                reader.remainingBits() shouldBe 0
+            }
+            should("read 64 bits as a Long") {
+                val reader = BitReader(ByteArray(8) { 0xAA.toByte() })
+                reader.bitsLong(64) shouldBe 0xAAAAAAAAAAAAAAAAUL.toLong()
+                reader.remainingBits() shouldBe 0
+            }
+            should("reject a count above the width of the result, or below zero") {
+                val reader = BitReader(ByteArray(16))
+                shouldThrow<IllegalArgumentException> { reader.bits(33) }
+                shouldThrow<IllegalArgumentException> { reader.bits(-1) }
+                shouldThrow<IllegalArgumentException> { reader.bitsLong(65) }
+                shouldThrow<IllegalArgumentException> { reader.bitsLong(-1) }
             }
         }
 
         context("Throwing exception when reading past the bounds") {
             bitReader.skipBits(bits)
             bitReader.remainingBits() shouldBe 0
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 bitReader.bitAsBoolean()
             }
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 bitReader.bit()
             }
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 bitReader.bits(4)
             }
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 bitReader.leb128()
             }
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 BitReader(byteArrayOf(0b1111_0000.toByte())).leb128()
             }
         }

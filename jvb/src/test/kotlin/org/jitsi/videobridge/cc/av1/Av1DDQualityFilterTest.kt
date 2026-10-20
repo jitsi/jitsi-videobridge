@@ -23,7 +23,7 @@ import io.kotest.matchers.shouldBe
 import jakarta.xml.bind.DatatypeConverter
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
-import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
+import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging
@@ -1010,7 +1010,7 @@ private open class DDBasedGenerator(
 
     init {
         val dd = DatatypeConverter.parseHexBinary(ddHex)
-        structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+        structure = Av1DependencyDescriptorHeaderExtension.parse(dd, 0, dd.size, null).structure
     }
 
     override fun hasNext(): Boolean = frameCount < TOTAL_FRAMES
@@ -1172,7 +1172,7 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
 
         init {
             val dd = DatatypeConverter.parseHexBinary("800001800214eaa860414d141020842701df010d")
-            structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+            structure = Av1DependencyDescriptorHeaderExtension.parse(dd, 0, dd.size, null).structure
         }
     }
 }
@@ -1271,9 +1271,9 @@ private class PerEncodingKeyframeGenerator(val av1FrameMaps: HashMap<Long, Av1DD
 
         init {
             val dd = DatatypeConverter.parseHexBinary("800001800214eaa860414d141020842701df010d")
-            structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+            structure = Av1DependencyDescriptorHeaderExtension.parse(dd, 0, dd.size, null).structure
             val single = DatatypeConverter.parseHexBinary("80000180003a410180ef808680")
-            singleLayerStructure = Av1DependencyDescriptorReader(single, 0, single.size).parse(null).structure
+            singleLayerStructure = Av1DependencyDescriptorHeaderExtension.parse(single, 0, single.size, null).structure
         }
     }
 }

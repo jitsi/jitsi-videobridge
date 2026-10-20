@@ -45,6 +45,7 @@ import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
+import org.jitsi.videobridge.ssrcs
 import org.jitsi.videobridge.util.TaskPools
 import java.time.Instant
 
@@ -68,12 +69,14 @@ class RelayedEndpoint(
             // Register relayed sources with the conference's audio subscription manager, so local clients can
             // subscribe to them (Include/Exclude resolve their names) and relayed synthetic sources are suppressed
             // for "All" subscriptions, the same as local sources.
-            conference.removeAudioSources(oldValue.filterNot { value.contains(it) }.toSet())
+            val removed = oldValue.filterNot { value.contains(it) }.toSet()
+            conference.removeAudioSources(removed)
             conference.addAudioSources(value.filterNot { oldValue.contains(it) }.toSet())
             value.forEach {
                 streamInformationStore.addReceiveSsrc(it.ssrc, MediaType.AUDIO)
                 conference.addEndpointSsrc(this, it.ssrc)
             }
+            conference.ssrcsRemoved(removed.map { it.ssrc })
         }
 
     private val streamInformationStore: StreamInformationStore = StreamInformationStoreImpl()
@@ -178,6 +181,7 @@ class RelayedEndpoint(
         get() = _mediaSources.getMediaSources()
         set(value) {
             applyVideoTypeCache(value)
+            val oldSsrcs = _mediaSources.getMediaSources().ssrcs()
             val changed = _mediaSources.setMediaSources(value)
             val mergedMediaSources = _mediaSources.getMediaSources()
             val signaledMediaSources = value.copy()
@@ -193,6 +197,7 @@ class RelayedEndpoint(
                         }
                     }
                 }
+                conference.ssrcsRemoved(oldSsrcs - mergedMediaSources.ssrcs())
             }
         }
 

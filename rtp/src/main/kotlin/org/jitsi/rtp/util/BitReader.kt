@@ -42,12 +42,16 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
 
     fun remainingBits(): Int = byteBound * 8 - offset
 
-    /** Read a single bit from the buffer, as a boolean, incrementing the offset. */
+    /** Read a single bit from the buffer, as a boolean, incrementing the offset.
+     * @throws BitReaderOverrunException if the read is past the end of the buffer.
+     */
     fun bitAsBoolean(): Boolean {
         val byteIdx = offset / 8
         val bitIdx = offset % 8
-        check(byteIdx < byteBound) {
-            "offset $offset ($byteIdx/$bitIdx) invalid in buffer of length $byteLength after offset $byteOffset"
+        if (byteIdx >= byteBound) {
+            throw BitReaderOverrunException(
+                "offset $offset ($byteIdx/$bitIdx) invalid in buffer of length $byteLength after offset $byteOffset"
+            )
         }
         val byte = buf[byteIdx]
         val mask = (1 shl (7 - bitIdx)).toByte()
@@ -59,9 +63,10 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
     /** Read a single bit from the buffer, as an integer, incrementing the offset. */
     fun bit() = if (bitAsBoolean()) 1 else 0
 
-    /** Read [n] bits from the buffer, returning them as an unsigned integer. */
+    /** Read [n] bits from the buffer, returning them as an unsigned integer. With [n] = 32 the result is the bit
+     * pattern, which is negative if the first bit is set. */
     fun bits(n: Int): Int {
-        require(n < Int.SIZE_BITS)
+        require(n in 0..Int.SIZE_BITS) { "cannot read $n bits" }
 
         var ret = 0
 
@@ -74,9 +79,10 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
         return ret
     }
 
-    /** Read [n] bits from the buffer, returning them as an unsigned long. */
+    /** Read [n] bits from the buffer, returning them as an unsigned long. With [n] = 64 the result is the bit
+     * pattern, which is negative if the first bit is set. */
     fun bitsLong(n: Int): Long {
-        require(n < Long.SIZE_BITS)
+        require(n in 0..Long.SIZE_BITS) { "cannot read $n bits" }
 
         var ret = 0L
 
@@ -133,3 +139,6 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
         offset = byteOffset * 8
     }
 }
+
+/** Thrown when a [BitReader] is asked to read past the end of its buffer. */
+class BitReaderOverrunException(msg: String) : IllegalStateException(msg)

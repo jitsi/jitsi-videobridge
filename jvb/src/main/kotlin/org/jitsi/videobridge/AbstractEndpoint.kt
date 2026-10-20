@@ -412,3 +412,7 @@ abstract class AbstractEndpoint protected constructor(
         fun sourcesChanged()
     }
 }
+
+/** All SSRCs (of all encodings, including secondary SSRCs) of these sources. */
+internal fun Array<MediaSourceDesc>.ssrcs(): Set<Long> =
+    flatMap { source -> source.rtpEncodings.flatMap { it.ssrcs } }.toSet()

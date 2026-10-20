@@ -55,6 +55,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.concurrent.PeriodicRunnable
@@ -103,6 +104,7 @@ import java.security.SecureRandom
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.Collections
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
@@ -359,7 +361,12 @@ class Endpoint @JvmOverloads constructor(
                 }
             }
 
-            is AudioRtpPacket -> if (doSsrcRewriting) audioSsrcs.rewriteRtp(packet)
+            is AudioRtpPacket -> {
+                // A packet that was not rewritten has an SSRC that the receiver does not know, so it is not useful.
+                if (doSsrcRewriting && !audioSsrcs.rewriteRtp(packet)) {
+                    return null
+                }
+            }
 
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
@@ -409,6 +416,15 @@ class Endpoint @JvmOverloads constructor(
     private val sendSsrcs = mutableSetOf<Long>()
 
     /**
+     * SSRCs for which we have already logged that no properties were found, so that the message is logged once per
+     * SSRC (at a higher level) instead of for every packet. Bounded: the worst case of eviction is logging again for
+     * an SSRC seen long ago. An SSRC is also removed when its source is removed (see [remoteSsrcsRemoved]), so that
+     * a packet received after the removal is logged again.
+     */
+    internal val loggedUnknownSsrcs: MutableSet<Long> =
+        Collections.synchronizedSet(LRUCache.lruSet(MAX_LOGGED_UNKNOWN_SSRCS, true))
+
+    /**
      * Next allocated send SSRC, when allocating serially (off by default).
      */
     private var nextSendSsrc = 777000001L
@@ -452,9 +468,11 @@ class Endpoint @JvmOverloads constructor(
         get() = transceiver.getMediaSources()
         set(value) {
             applyVideoTypeCache(value)
-            val wasEmpty = transceiver.getMediaSources().isEmpty()
+            val oldSources = transceiver.getMediaSources()
+            val wasEmpty = oldSources.isEmpty()
             if (transceiver.setMediaSources(value)) {
                 eventEmitter.fireEvent { sourcesChanged() }
+                conference.ssrcsRemoved(oldSources.ssrcs() - transceiver.getMediaSources().ssrcs())
             }
             if (wasEmpty) {
                 sendAllVideoConstraints()
@@ -473,6 +491,7 @@ class Endpoint @JvmOverloads constructor(
             conference.addAudioSources(addedDescs)
             field = newValue
             audioSourcesChanged(newValue)
+            conference.ssrcsRemoved(removedDescs.map { it.ssrc })
         }
 
     private fun setupIceTransport() {
@@ -746,7 +765,7 @@ class Endpoint @JvmOverloads constructor(
             {
                 if (!isExpired) {
                     if (!messageTransport.isConnected) {
-                        logger.error("EndpointMessageTransport still not connected.")
+                        logger.warn("EndpointMessageTransport still not connected.")
                         VideobridgeMetrics.numEndpointsNoMessageTransportAfterDelay.inc()
                     }
                 }
@@ -942,6 +961,19 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
+     * Logs that no source properties were found for [ssrc]. This is called for every packet of an unknown SSRC (which
+     * is not necessarily an error on our side, e.g. the sender may be sending before the source is signaled), so the
+     * first occurrence for an SSRC is logged at WARN and the rest at DEBUG.
+     */
+    private fun logNoPropertiesFound(ssrc: Long) {
+        if (loggedUnknownSsrcs.add(ssrc)) {
+            logger.warn("No properties found for SSRC $ssrc. Further occurrences are logged at debug level.")
+        } else {
+            logger.debug { "No properties found for SSRC $ssrc." }
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? {
@@ -952,7 +984,7 @@ class Endpoint @JvmOverloads constructor(
                 }
             }
         }
-        logger.error { "No properties found for SSRC $ssrc." }
+        logNoPropertiesFound(ssrc)
         return null
     }
 
@@ -961,14 +993,27 @@ class Endpoint @JvmOverloads constructor(
      */
     override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
         conference.getEndpointBySsrc(ssrc)?.let { ep ->
-            return when (ep) {
+            when (ep) {
                 is Endpoint -> ep.audioSources
                 is RelayedEndpoint -> ep.audioSources
                 else -> emptyList()
-            }.find { it.ssrc == ssrc }
+            }.find { it.ssrc == ssrc }?.let { return it }
         }
-        logger.error { "No properties found for SSRC $ssrc." }
+        logNoPropertiesFound(ssrc)
         return null
+    }
+
+    /**
+     * Notifies this endpoint that the SSRCs [ssrcs] of another endpoint were removed (their sources were removed, or
+     * the endpoint expired). Forgets their state, so that a later packet from one of them is looked up (and logged)
+     * again.
+     */
+    fun remoteSsrcsRemoved(ssrcs: Collection<Long>) {
+        if (doSsrcRewriting) {
+            audioSsrcs.removeReceiveSsrcs(ssrcs)
+            videoSsrcs.removeReceiveSsrcs(ssrcs)
+        }
+        loggedUnknownSsrcs.removeAll(ssrcs.toSet())
     }
 
     /**
@@ -1240,6 +1285,9 @@ class Endpoint @JvmOverloads constructor(
     }
 
     companion object {
+        /** The maximum number of SSRCs remembered in [loggedUnknownSsrcs]. */
+        private const val MAX_LOGGED_UNKNOWN_SSRCS = 100
+
         private val droppedPacketsMetric = VideobridgeMetricsContainer.instance.registerCounter(
             "srtp_send_queue_dropped_packets",
             "Number of packets dropped out of the Endpoint SRTP send queue."

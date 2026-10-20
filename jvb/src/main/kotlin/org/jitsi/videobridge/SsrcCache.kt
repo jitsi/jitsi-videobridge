@@ -411,6 +411,16 @@ abstract class SsrcCache(
     }
 
     /**
+     * Forget the remote SSRCs [ssrcs] (e.g. because their sources were removed), so that the next packet from one of
+     * them is looked up again.
+     */
+    fun removeReceiveSsrcs(ssrcs: Collection<Long>) {
+        synchronized(sendSources) {
+            receivedSsrcs.keys.removeAll(ssrcs.toSet())
+        }
+    }
+
+    /**
      * Assign send SSRCs to the given sources. Any remapped SSRCs will be notified to the client.
      */
     fun activate(sources: List<MediaSourceDesc>) {
@@ -458,6 +468,14 @@ abstract class SsrcCache(
      * @return whether to send this packet.
      */
     fun rewriteRtp(packet: RtpPacket, start: Boolean = true): Boolean {
+        if (packet is Av1DDPacket && packet.descriptor == null) {
+            /* The frame number and template ID of the packet cannot be rewritten, and the receiver cannot use the
+             * packet with the original values. The source projection does not accept such a packet, so this is not
+             * expected. */
+            logger.debug { "Not sending an AV1 DD packet without a descriptor: $packet" }
+            return false
+        }
+
         val remappings = mutableListOf<SendSource>()
         var send = false
 
@@ -731,7 +749,7 @@ private class Av1DDCodecState : CodecState {
         val descriptor = packet.descriptor
         requireNotNull(descriptor) { "AV1 Packet being routed must have non-null descriptor" }
         this.lastFrameNum = packet.frameNumber
-        this.nextTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
+        this.nextTemplateIdx = (descriptor.structure.templateIdOffset + descriptor.structure.templateCount) % 64
     }
 
     override fun getDeltas(otherState: CodecState?): CodecDeltas? {
@@ -771,8 +789,7 @@ private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int)
         descriptor.frameNumber = RtpUtils.applySequenceNumberDelta(descriptor.frameNumber, frameNumDelta)
         descriptor.frameDependencyTemplateId =
             applyTemplateIdDelta(descriptor.frameDependencyTemplateId, templateIdDelta)
-        descriptor.structure.templateIdOffset =
-            applyTemplateIdDelta(descriptor.structure.templateIdOffset, templateIdDelta)
+        descriptor.rewriteTemplateIdOffset(applyTemplateIdDelta(descriptor.structure.templateIdOffset, templateIdDelta))
 
         packet.reencodeDdExt()
     }

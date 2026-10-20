@@ -20,6 +20,7 @@ import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSServerProtocol
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
+import org.bouncycastle.tls.TlsTimeoutException
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -51,7 +52,10 @@ class DtlsServer(
                 )
             }
         } catch (t: Throwable) {
-            logger.cerror { "Error during DTLS connection: $t" }
+            // A handshake timeout is logged by the caller, which handles it.
+            if (t !is TlsTimeoutException) {
+                logger.cerror { "Error during DTLS connection: $t" }
+            }
             throw t
         }
     }

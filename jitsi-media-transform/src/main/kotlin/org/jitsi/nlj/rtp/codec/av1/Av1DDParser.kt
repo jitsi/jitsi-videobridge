@@ -52,14 +52,14 @@ class Av1DDParser(
 
         val priorEntry = history.get(packet.sequenceNumber)
 
-        val priorStructure = priorEntry?.value?.structure?.clone()
+        val priorStructure = priorEntry?.value?.structure
 
         val av1Packet = Av1DDPacket(packet, av1DdExtId, priorStructure, logger)
 
         val newStructure = av1Packet.descriptor?.newTemplateDependencyStructure
         if (newStructure != null) {
             val structureChanged = newStructure.templateIdOffset != priorStructure?.templateIdOffset
-            history.insert(packet.sequenceNumber, Av1DdInfo(newStructure.clone(), structureChanged))
+            history.insert(packet.sequenceNumber, Av1DdInfo(newStructure, structureChanged))
             logger.debug {
                 "Inserting new structure with templates ${newStructure.templateIdOffset} .. " +
                     "${(newStructure.templateIdOffset + newStructure.templateCount - 1) % 64} " +
@@ -146,7 +146,10 @@ class Av1DDParser(
 class TemplateHistory(minHistory: Int) {
     private val indexTracker = RtpSequenceIndexTracker()
     private val history = TreeCache<Av1DdInfo>(minHistory)
-    private var latestDecodeTargets = -1
+
+    /** The last active decode targets bitmask seen, or null if none was seen. With 32 decode targets the bitmask
+     * with all targets active is -1, so -1 cannot be the sentinel. */
+    private var latestDecodeTargets: Int? = null
     private var latestDecodeTargetIndex = -1L
 
     fun get(seqNo: Int): Map.Entry<Long, Av1DdInfo>? {

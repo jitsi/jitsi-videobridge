@@ -154,6 +154,10 @@ internal class ArrayCacheTest : ShouldSpec() {
             fakeClock.elapse(100.ms)
             arrayCache.getContainer(dataOlder.index)!!.timeAdded shouldBe time3
             arrayCache.getContainer(data1.index)!!.timeAdded shouldBe time1
+
+            // updateTimeAdded does not change the time of insertion.
+            arrayCache.getContainer(dataOlder.index)!!.timeInserted shouldBe time2
+            arrayCache.getContainer(data1.index)!!.timeInserted shouldBe time1
         }
     }
 }
