@@ -260,6 +260,10 @@ internal class Exporter(
      * speaker without measuring audio levels itself. Only agent connects get them: no other peer type has a use for
      * them, and a third-party recorder might not tolerate an unknown event. Like the audio, the list is limited to
      * the sources this connect exports.
+     *
+     * The agent's own audio counts for dominant speaker, but its synthetic source is never in the list, so the first
+     * entry is the top human: the agent is not told it is the dominant speaker, and under the `dominant` fan-in it
+     * keeps hearing the last human while it talks. The list is therefore empty while only the agent has spoken.
      */
     fun speakersChanged(recentSpeakers: List<String>, silence: Boolean) {
         if (type != Connect.Types.AGENT) return
