@@ -59,8 +59,8 @@ class EndpointTest : ConfigTest() {
     private fun withEndpoints(block: ((PacketInfo) -> PacketInfo?) -> Unit) {
         val conference = Conference(videobridge, "id", name, null, false)
         try {
-            val sender = conference.createLocalEndpoint("sender", true, false, false, false, false, false)
-            val receiver = conference.createLocalEndpoint("receiver", true, true, false, false, false, false)
+            val sender = conference.createLocalEndpoint("sender", true, false, false, false, false, false, false)
+            val receiver = conference.createLocalEndpoint("receiver", true, true, false, false, false, false, false)
 
             sender.addReceiveSsrc(NAMED_SSRC, MediaType.AUDIO)
             sender.addReceiveSsrc(UNNAMED_SSRC, MediaType.AUDIO)

@@ -111,8 +111,8 @@ class ReceiveSsrcRemovalTest : ConfigTest() {
     private fun withEndpoints(block: (Endpoint, Endpoint) -> Unit) {
         val conference = Conference(videobridge, "id", name, null, false)
         try {
-            val sender = conference.createLocalEndpoint("sender", true, false, false, false, false, false)
-            val receiver = conference.createLocalEndpoint("receiver", true, true, false, false, false, false)
+            val sender = conference.createLocalEndpoint("sender", true, false, false, false, false, false, false)
+            val receiver = conference.createLocalEndpoint("receiver", true, true, false, false, false, false, false)
             sender.addReceiveSsrc(AUDIO_SSRC, MediaType.AUDIO)
             block(sender, receiver)
         } finally {

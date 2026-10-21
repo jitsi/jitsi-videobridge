@@ -138,6 +138,12 @@ class Endpoint @JvmOverloads constructor(
      * Whether diarization is requested for this endpoint's audio, as signaled via the colibri2 `diarize` attribute.
      */
     override val diarize: Boolean,
+    /**
+     * Whether this is a synthetic endpoint: a bridge-side entity that owns synthetic (injected) sources, e.g. a
+     * voice agent, and has no media transport of its own.
+     * TODO: skip the ICE agent, DTLS transport, transceiver and bandwidth probing, which a synthetic endpoint never uses.
+     */
+    override val synthetic: Boolean = false,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,
@@ -146,6 +152,9 @@ class Endpoint @JvmOverloads constructor(
 
     /** The time at which this endpoint was created */
     val creationTime = clock.instant()
+
+    /** Synthetic endpoints: when [shouldExpire] last saw a human endpoint in the conference; the backstop runs from here. */
+    private var lastHumanSeen: Instant = creationTime
 
     private val sctpHandler = if (sctpConfig.enabled) DcSctpHandler() else null
 
@@ -1031,6 +1040,24 @@ class Endpoint @JvmOverloads constructor(
      * To find out whether the endpoint should be expired, we check the activity timestamps from the transceiver.
      */
     override fun shouldExpire(): Boolean {
+        if (synthetic) {
+            // A synthetic endpoint has no transport, so the ICE/activity checks below don't apply. It is expired
+            // explicitly via colibri; as a backstop against lost signaling, allow expiry once no human endpoint,
+            // local or relayed, has been in the conference for epTimeout: a synthetic endpoint alone doesn't keep
+            // the conference alive, but a momentary gap (a reload, a re-invite, a relay being re-created) must not
+            // kill it, since jicofo is not told of an expiry.
+            val now = clock.instant()
+            if (conference.endpoints.any { it !== this && !it.synthetic }) {
+                lastHumanSeen = now
+                return false
+            }
+            val alone = Duration.between(lastHumanSeen, now)
+            if (alone > epTimeout) {
+                logger.warn("Allowing to expire because no human endpoint has been in the conference for $alone.")
+                return true
+            }
+            return false
+        }
         if (iceTransport.hasFailed()) {
             logger.warn("Allowing to expire because ICE failed.")
             return true

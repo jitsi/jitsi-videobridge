@@ -245,13 +245,15 @@ class ExporterWrapperTest : ShouldSpec() {
                 verify(exactly = 1) { f["a"].update(listOf("s1", "s2"), listOf("s1.en", "s2.fr")) }
                 verify(exactly = 0) { f["a"].stop() }
             }
-            should("not update for an identical re-signaled connect") {
+            should("not update or restart for an identical re-signaled connect") {
                 val f = Fixture()
                 f.wrapper.applyConnects(listOf(connect("a", create = true, exports = listOf("s1"))))
 
                 f.wrapper.applyConnects(listOf(connect("a", exports = listOf("s1"))))
 
                 verify(exactly = 0) { f["a"].update(any(), any()) }
+                // So an exporter that closed terminally (see ExporterTest) is never resurrected by a re-signal.
+                verify(exactly = 0) { f["a"].start() }
             }
             should("not treat reordered source names as a change") {
                 val f = Fixture()
@@ -318,6 +320,32 @@ class ExporterWrapperTest : ShouldSpec() {
             }
         }
 
+        context("Speakers") {
+            should("pass the speaker order to every running exporter") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true), connect("b", create = true)))
+
+                f.wrapper.speakersChanged(listOf("s2", "s1"), silence = false)
+
+                verify(exactly = 1) { f["a"].speakersChanged(listOf("s2", "s1"), false) }
+                verify(exactly = 1) { f["b"].speakersChanged(listOf("s2", "s1"), false) }
+            }
+            should("start a new exporter from nobody speaking, in silence") {
+                val f = Fixture()
+
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
+
+                verify(exactly = 1) { f["a"].speakersChanged(emptyList(), true) }
+            }
+            should("start a new exporter from the order reported before it was created") {
+                val f = Fixture()
+                f.wrapper.speakersChanged(listOf("s1"), silence = false)
+
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
+
+                verify(exactly = 1) { f["a"].speakersChanged(listOf("s1"), false) }
+            }
+        }
         context("Debug state") {
             should("tag each exporter's debug info with its connect id") {
                 val f = Fixture()

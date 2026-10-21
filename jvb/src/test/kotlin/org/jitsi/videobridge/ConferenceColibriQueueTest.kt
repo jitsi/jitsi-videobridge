@@ -58,7 +58,7 @@ class ConferenceColibriQueueTest : ConfigTest() {
         context("A request queued when the conference expires is answered with conference_not_found") {
             val conference = newConference()
             try {
-                conference.createLocalEndpoint("a", true, false, false, false, false, false)
+                conference.createLocalEndpoint("a", true, false, false, false, false, false, false)
                 val metricBefore = ColibriQueue.expiredConferenceRequestsMetric.get()
 
                 // Block the handler thread inside the first request's callback, so the second request is guaranteed
@@ -109,7 +109,7 @@ class ConferenceColibriQueueTest : ConfigTest() {
         context("Removing the last endpoint does not expire the conference while other requests are queued") {
             val conference = newConference()
             try {
-                conference.createLocalEndpoint("a", true, false, false, false, false, false)
+                conference.createLocalEndpoint("a", true, false, false, false, false, false, false)
 
                 // Block the handler thread in the first request's callback, so that both of the following requests
                 // are queued before the second one (which removes the last endpoint) is handled.
@@ -159,7 +159,7 @@ class ConferenceColibriQueueTest : ConfigTest() {
         context("An error response which leaves the conference empty expires it") {
             val conference = newConference()
             try {
-                conference.createLocalEndpoint("a", true, false, false, false, false, false)
+                conference.createLocalEndpoint("a", true, false, false, false, false, false, false)
 
                 // Queue the next two requests behind a blocking one, so that the removal of the last endpoint
                 // defers the expiration to the request after it, which fails.
@@ -198,7 +198,7 @@ class ConferenceColibriQueueTest : ConfigTest() {
             conference.expire()
 
             shouldThrow<Conference.ConferenceExpiredException> {
-                conference.createLocalEndpoint("a", true, false, false, false, false, false)
+                conference.createLocalEndpoint("a", true, false, false, false, false, false, false)
             }
             shouldThrow<Conference.ConferenceExpiredException> {
                 conference.createRelay("relay-id", "mesh-id", true, true)

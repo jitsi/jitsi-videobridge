@@ -304,6 +304,12 @@ public class Conference
      */
     private final AtomicBoolean loggedNoAudioLevelExtension = new AtomicBoolean(false);
 
+    /** Whether we logged that an agent's injected audio has no owner endpoint (so it can't rank as a speaker). */
+    private final AtomicBoolean loggedNoAgentOwner = new AtomicBoolean(false);
+
+    /** Whether we logged a failure to feed an agent's audio level to speech activity. */
+    private final AtomicBoolean loggedLevelChangedFailure = new AtomicBoolean(false);
+
     /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
      */
@@ -648,6 +654,7 @@ public class Conference
             logger.info("Recent speakers changed: " + recentSpeakersIds + ", dominant speaker changed: "
                     + dominantSpeakerChanged + " silence:" + silence);
             broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds, silence));
+            exporter.speakersChanged(getAudioSourceNames(recentSpeakers), silence);
 
             if (dominantSpeakerChanged && !silence)
             {
@@ -658,6 +665,55 @@ public class Conference
                 }
             }
         }
+    }
+
+    /**
+     * Feeds an injected agent packet's audio level to speech activity, so a talking bot can be the dominant speaker.
+     * A side effect of the injection: a failure here is logged once and never drops the packet.
+     */
+    private void feedAgentSpeechActivity(AudioSourceDesc source, String sourceName, int audioLevel)
+    {
+        AbstractEndpoint owner = source.getOwner() != null ? getEndpoint(source.getOwner()) : null;
+        if (owner == null)
+        {
+            if (loggedNoAgentOwner.compareAndSet(false, true))
+            {
+                logger.warn("Injected agent audio for " + sourceName + " has no owner endpoint; the agent can not "
+                    + "become the dominant speaker.");
+            }
+            return;
+        }
+        try
+        {
+            speechActivity.levelChanged(owner, Math.max(0, 127 - audioLevel));
+        }
+        catch (Exception e)
+        {
+            if (loggedLevelChangedFailure.compareAndSet(false, true))
+            {
+                logger.warn("Failed to feed an agent's audio level to speech activity", e);
+            }
+        }
+    }
+
+    /**
+     * The names of the endpoints' own (non-synthetic) audio sources, in the endpoints' order. Exported audio is
+     * tagged with these names, so this is how the speaker order is passed to an export peer.
+     */
+    private static List<String> getAudioSourceNames(List<AbstractEndpoint> endpoints)
+    {
+        List<String> names = new ArrayList<>();
+        for (AbstractEndpoint endpoint : endpoints)
+        {
+            for (AudioSourceDesc source : endpoint.getAudioSources())
+            {
+                if (!source.getSynthetic() && source.getSourceName() != null)
+                {
+                    names.add(source.getSourceName());
+                }
+            }
+        }
+        return names;
     }
 
     /**
@@ -867,7 +923,8 @@ public class Conference
             boolean doMidDemux,
             boolean visitor,
             boolean privateAddresses,
-            boolean diarize)
+            boolean diarize,
+            boolean synthetic)
     {
         if (isExpired())
         {
@@ -881,7 +938,8 @@ public class Conference
 
         // Construct outside the lock (this is slow), then add under it.
         final Endpoint endpoint = new Endpoint(
-                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
+                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize,
+                synthetic);
         return addLocalEndpoint(endpoint, visitor);
     }
 
@@ -1593,11 +1651,16 @@ public class Conference
             }
         }
 
-        // Synthetic sources (e.g. bridge-generated translated audio) don't participate in speech activity /
-        // loudest-speaker selection, and must not be dropped by loudest-only filtering -- they're still forwarded
-        // to relays and to endpoints that explicitly subscribe to them.
+        // Synthetic sources must not be dropped by loudest-only filtering: they're forwarded to relays and to the
+        // endpoints that explicitly subscribe to them. A voice agent's audio does count for speech activity, so a
+        // talking bot can be the dominant speaker like anyone else (this is the path for an agent hosted on another
+        // bridge, arriving over a relay); translated audio never does.
         if (source != null && source.getSynthetic())
         {
+            if (source.getKind() == SyntheticSourceKind.AGENT)
+            {
+                speechActivity.levelChanged(endpoint, level);
+            }
             return false;
         }
 
@@ -1822,8 +1885,6 @@ public class Conference
                 // Optional RFC 6464 audio level, so clients can show a level indicator for the synthetic source.
                 // The producer computes it from the PCM it encoded (the bridge never decodes the Opus). Absent in
                 // media from producers that predate the field, in which case the packet has no extension, as before.
-                // The level never feeds speech activity: this packet enters via handleIncomingPacket, not an
-                // endpoint's receive pipeline, and levelChanged exempts synthetic sources arriving over a relay.
                 Integer audioLevel = media.getAudioLevel();
                 if (audioLevel != null)
                 {
@@ -1837,6 +1898,14 @@ public class Conference
                     {
                         logger.warn("Injected media carries an audio level but no ssrc-audio-level extension is "
                             + "negotiated; not adding it.");
+                    }
+
+                    // This packet enters via handleIncomingPacket, not an endpoint's receive pipeline, so feed speech
+                    // activity here for a voice agent, with the same loudness the receive pipeline derives (127 is
+                    // silence on the wire), so a talking bot can be the dominant speaker. Translated audio never is.
+                    if (source.getKind() == SyntheticSourceKind.AGENT)
+                    {
+                        feedAgentSpeechActivity(source, sourceName, audioLevel);
                     }
                 }
 
@@ -1859,7 +1928,8 @@ public class Conference
          * Handles a synthetic source's sending-state change, derived from the {@code start}/{@code stop} mediajson
          * events a translator sends to bracket a "talk" of translated audio. Resolves the named synthetic source
          * (dropping the change if it isn't a known synthetic source, like {@link #handleMediaEvent}) and broadcasts
-         * a {@link SyntheticSourceSendingChangeEvent} to the conference's clients (and relays).
+         * a {@link SyntheticSourceSendingChangeEvent}, carrying the source's kind, to the conference's clients (and
+         * relays).
          *
          * @param sourceName the synthetic source whose sending state changed
          * @param sending    true if the source started sending, false if it stopped
@@ -1890,7 +1960,9 @@ public class Conference
                 // the client (lib-jitsi-meet) validates 0..0xFFFFFFFF, so send the low 32 bits. This also matches the
                 // wrapped timestamp the client sees on this source's injected media.
                 long rtpTimestamp = timestamp & 0xFFFFFFFFL;
-                broadcastMessage(new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp), true);
+                broadcastMessage(
+                        new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp, source.getKind()),
+                        true);
             }
             catch (Exception e)
             {

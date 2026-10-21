@@ -22,20 +22,122 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.ConfigTest
 import org.jitsi.config.withNewConfig
+import org.jitsi.utils.MediaType
+import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayedEndpoint
+import org.jitsi.videobridge.relay.SyntheticSourceKind
+import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
+import org.jitsi.xmpp.extensions.colibri2.Capability
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.Endpoints
+import org.jitsi.xmpp.extensions.colibri2.Media
+import org.jitsi.xmpp.extensions.colibri2.MediaSource
+import org.jitsi.xmpp.extensions.colibri2.Sources
+import org.jitsi.xmpp.extensions.colibri2.Transport
+import org.jitsi.xmpp.extensions.jingle.PayloadTypePacketExtension
+import org.jitsi.xmpp.extensions.jingle.RTPHdrExtPacketExtension
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
+import org.jxmpp.jid.impl.JidCreate
+import java.net.URI
 
+/**
+ * Tests for [Colibri2ConferenceHandler]: the [SyntheticSourceKind] it gives a synthetic audio source, which follows
+ * from whether the endpoint owning the source is synthetic, and its answer when the conference expires mid-request.
+ */
 class Colibri2ConferenceHandlerTest : ConfigTest() {
+    private val conference = Conference(
+        mockk<Videobridge>(relaxed = true),
+        "id",
+        JidCreate.entityBareFrom("room@example.com"),
+        null,
+        false
+    )
+    private val handler = Colibri2ConferenceHandler(conference, LoggerImpl("test"))
+
+    /** Handles [iq], asserting it was accepted. */
+    private fun handle(iq: ConferenceModifyIQ) {
+        handler.handleConferenceModifyIQ(iq).first.type shouldBe IQ.Type.result
+    }
+
     init {
+        context("The kind of a synthetic audio source") {
+            context("of a local endpoint") {
+                should("be agent when the endpoint is synthetic") {
+                    handle(
+                        endpointRequest(createEndpoint("agent", synthetic = true, audioSource("agent-a0", 1L, true)))
+                    )
+
+                    conference.getLocalEndpoint("agent").shouldNotBeNull().audioSources shouldBe listOf(
+                        AudioSourceDesc(1L, "agent", "agent-a0", synthetic = true, kind = SyntheticSourceKind.AGENT)
+                    )
+                }
+                should("be translation when the endpoint is regular, and unset for a regular source") {
+                    handle(
+                        endpointRequest(
+                            createEndpoint(
+                                "ep",
+                                synthetic = false,
+                                audioSource("ep-a0", 1L, synthetic = false),
+                                audioSource("ep-a0.hi", 2L, synthetic = true)
+                            )
+                        )
+                    )
+
+                    conference.getLocalEndpoint("ep").shouldNotBeNull().audioSources shouldBe listOf(
+                        AudioSourceDesc(1L, "ep", "ep-a0"),
+                        AudioSourceDesc(2L, "ep", "ep-a0.hi", synthetic = true, kind = SyntheticSourceKind.TRANSLATION)
+                    )
+                }
+            }
+            context("of a relayed endpoint") {
+                should("follow the synthetic-endpoint capability of its relay create, also on a later update") {
+                    withNewConfig(RELAY_CONFIG) {
+                        handle(
+                            relayRequest(
+                                create = true,
+                                createEndpoint("agent", synthetic = true, audioSource("agent-a0", 1L, true)),
+                                createEndpoint(
+                                    "ep",
+                                    synthetic = false,
+                                    audioSource("ep-a0", 2L, synthetic = false),
+                                    audioSource("ep-a0.hi", 3L, synthetic = true)
+                                )
+                            )
+                        )
+
+                        val relay = conference.getRelay(RELAY_ID).shouldNotBeNull()
+                        relay.getEndpoint("agent").shouldNotBeNull().apply {
+                            synthetic shouldBe true
+                            audioSources shouldBe listOf(
+                                AudioSourceDesc(1L, "agent", "agent-a0", true, SyntheticSourceKind.AGENT)
+                            )
+                        }
+                        relay.getEndpoint("ep").shouldNotBeNull().apply {
+                            synthetic shouldBe false
+                            audioSources shouldBe listOf(
+                                AudioSourceDesc(2L, "ep", "ep-a0"),
+                                AudioSourceDesc(3L, "ep", "ep-a0.hi", true, SyntheticSourceKind.TRANSLATION)
+                            )
+                        }
+
+                        // An update doesn't repeat the capability; the kind still follows the endpoint.
+                        handle(relayRequest(create = false, updateEndpoint("agent", audioSource("agent-a1", 4L, true))))
+                        relay.getEndpoint("agent").shouldNotBeNull().audioSources shouldBe listOf(
+                            AudioSourceDesc(4L, "agent", "agent-a1", true, SyntheticSourceKind.AGENT)
+                        )
+                    }
+                }
+            }
+        }
         context("A relay's remote endpoints can not be added because the conference expired") {
             withNewConfig("videobridge.relay.enabled=true") {
                 val relayedEndpoint = mockk<RelayedEndpoint>(relaxed = true) {
@@ -76,5 +178,108 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 }
             }
         }
+
+        context("A synthetic endpoint created with media, as jicofo signals it") {
+            val media = Media.getBuilder().setType(MediaType.AUDIO)
+                .addPayloadType(
+                    PayloadTypePacketExtension().apply {
+                        setId(111)
+                        setName("opus")
+                        setClockrate(48000)
+                        setChannels(2)
+                    }
+                )
+                .addRtpHdrExt(
+                    RTPHdrExtPacketExtension().apply {
+                        setID("1")
+                        setURI(URI("urn:ietf:params:rtp-hdrext:ssrc-audio-level"))
+                    }
+                )
+                .build()
+            val endpoint = Colibri2Endpoint.getBuilder().apply {
+                setId("agent")
+                setCreate(true)
+                addCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
+                addCapability(Capability.CAP_SYNTHETIC_ENDPOINT)
+                setSources(sources(arrayOf(audioSource("agent-a0", 1L, true))))
+                addMedia(media)
+            }.build()
+            handler.handleConferenceModifyIQ(endpointRequest(endpoint)).first.type shouldBe IQ.Type.result
+
+            should("itself supply the payload type and audio-level extension the injected audio needs") {
+                // Injection looks these up on the local endpoints, so an agent alone on its bridge (humans relayed
+                // in) depends on its own media.
+                val agent = conference.getLocalEndpoint("agent").shouldNotBeNull()
+                agent.getOpusPayloadType().shouldNotBeNull().pt shouldBe 111
+                agent.getAudioLevelExtensionId() shouldBe 1
+            }
+        }
+    }
+
+    private companion object {
+        const val RELAY_ID = "relay"
+        val RELAY_CONFIG = """
+            videobridge.relay.enabled = true
+            videobridge.relay.relay-id = "test-relay"
+            videobridge.relay.region = "test-region"
+        """.trimIndent()
+
+        /** An audio media source with a single SSRC, as jicofo signals it. */
+        fun audioSource(name: String, ssrc: Long, synthetic: Boolean): MediaSource = MediaSource.getBuilder()
+            .setType(MediaType.AUDIO)
+            .setId(name)
+            .setSynthetic(synthetic)
+            .addSource(
+                SourcePacketExtension().apply {
+                    this.ssrc = ssrc
+                    this.name = name
+                }
+            )
+            .build()
+
+        fun sources(mediaSources: Array<out MediaSource>): Sources = Sources.getBuilder().apply {
+            mediaSources.forEach { addMediaSource(it) }
+        }.build()
+
+        /** An endpoint create as jicofo sends it: a synthetic endpoint has no transport, a regular one does. */
+        fun createEndpoint(id: String, synthetic: Boolean, vararg mediaSources: MediaSource): Colibri2Endpoint =
+            Colibri2Endpoint.getBuilder().apply {
+                setId(id)
+                setCreate(true)
+                addCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
+                if (synthetic) {
+                    addCapability(Capability.CAP_SYNTHETIC_ENDPOINT)
+                } else {
+                    setTransport(Transport.getBuilder().apply { setIceControlling(true) }.build())
+                }
+                setSources(sources(mediaSources))
+            }.build()
+
+        /** An update of an existing endpoint's sources, which (as from jicofo) repeats none of the capabilities. */
+        fun updateEndpoint(id: String, vararg mediaSources: MediaSource): Colibri2Endpoint =
+            Colibri2Endpoint.getBuilder().apply {
+                setId(id)
+                setSources(sources(mediaSources))
+            }.build()
+
+        fun endpointRequest(endpoint: Colibri2Endpoint): ConferenceModifyIQ = ConferenceModifyIQ.builder("id").apply {
+            setMeetingId("meeting")
+            addEndpoint(endpoint)
+        }.build()
+
+        fun relayRequest(create: Boolean, vararg endpoints: Colibri2Endpoint): ConferenceModifyIQ =
+            ConferenceModifyIQ.builder("id").apply {
+                setMeetingId("meeting")
+                addRelay(
+                    Colibri2Relay.getBuilder().apply {
+                        setId(RELAY_ID)
+                        if (create) {
+                            setCreate(true)
+                            setTransport(Transport.getBuilder().apply { setIceControlling(true) }.build())
+                        }
+                        setEndpoints(Endpoints.getBuilder().apply { endpoints.forEach { addEndpoint(it) } }.build())
+                    }.build()
+                )
+            }.build()
     }
 }

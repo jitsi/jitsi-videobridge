@@ -30,6 +30,7 @@ import org.jitsi.mediajson.PingEvent
 import org.jitsi.mediajson.PongEvent
 import org.jitsi.mediajson.SessionEndEvent
 import org.jitsi.mediajson.SourcesEvent
+import org.jitsi.mediajson.SpeakersEvent
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.mediajson.StopEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
@@ -77,6 +78,17 @@ internal class Exporter(
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
+
+    /** Set by a terminal close from the peer; the exporter then stays closed until its connect is expired. */
+    @Volatile
+    private var terminalClose: TerminalClose? = null
+
+    @Volatile
+    private var reconnectExhausted = false
+
+    /** The conference's recent speakers as last reported by [speakersChanged]; null until the first report. */
+    @Volatile
+    private var speakers: Speakers? = null
 
     private var connectionOpenedAtMs: Long = 0
 
@@ -127,15 +139,29 @@ internal class Exporter(
             }
 
             session = null
-            logger.info("Websocket closed with status $statusCode, reason: $reason")
             stopPing()
             val internalError = statusCode == 1011
             if (internalError) {
                 webSocketInternalErrors.inc()
                 instanceWebSocketInternalErrors.incrementAndGet()
             }
-            if (!isShuttingDown.get()) {
-                scheduleReconnect()
+            if (statusCode == CLOSE_AGENT_ENDED || statusCode == CLOSE_ENDPOINT_UNREACHABLE) {
+                terminalClose = TerminalClose(statusCode, reason)
+                // A reconnect already scheduled by an error or a ping timeout must not redial either.
+                cancelReconnect()
+                val message = "Websocket closed with terminal status $statusCode, reason: $reason. Not reconnecting."
+                if (statusCode == CLOSE_ENDPOINT_UNREACHABLE) {
+                    // The dial to the agent endpoint failed (or the agent broke the contract): worth an operator's eye.
+                    endpointUnreachableCount.inc()
+                    logger.warn(message)
+                } else {
+                    logger.info(message)
+                }
+            } else {
+                logger.info("Websocket closed with status $statusCode, reason: $reason")
+                if (!isShuttingDown.get()) {
+                    scheduleReconnect()
+                }
             }
         }
 
@@ -150,6 +176,7 @@ internal class Exporter(
             if (exports.isNotEmpty() || requests.isNotEmpty()) {
                 sendSources()
             }
+            sendSpeakers()
             sendInfo()
         }
 
@@ -172,7 +199,8 @@ internal class Exporter(
         }
     }
 
-    private val recorderWebSocket = RecorderWebSocket()
+    /** Internal (rather than private) so [ExporterTest] can install a mock session without opening a socket. */
+    internal val recorderWebSocket = RecorderWebSocket()
 
     private var serializer: MediaJsonSerializer? = null
 
@@ -188,28 +216,67 @@ internal class Exporter(
     fun isConnected() = recorderWebSocket.isConnected
 
     /**
-     * Whether to forward this packet to this exporter: it must be audio from a source we export. An empty [exports]
-     * list means "export all audio"; otherwise only audio from a source named in [exports] is wanted. Either way the
-     * SSRC must resolve to a signaled source: audio from an unknown (e.g. not-yet-signaled) SSRC isn't routed to
-     * receivers, so it isn't exported either.
+     * Whether to forward this packet to this exporter: it must be audio from a source we export. A connect that
+     * produces synthetic audio (non-empty [requests]: a voice agent or translator) exports only the sources named in
+     * [exports], so an empty list means "export nothing" until participants are explicitly listed. A connect with no
+     * [requests] (transcriber, recorder) keeps the rule that an empty [exports] list means "export all audio". Either
+     * way the SSRC must resolve to a signaled source: audio from an unknown (e.g. not-yet-signaled) SSRC isn't routed
+     * to receivers, so it isn't exported either.
      */
     override fun wants(packet: PacketInfo): Boolean {
         if (!isConnected()) return false
         val audioPacket = packet.packet as? AudioRtpPacket ?: return false
         val sourceName = eventHandler.getAudioSourceName(audioPacket.ssrc) ?: return false
-        return exports.isEmpty() || sourceName in exports
+        return exportsSource(sourceName)
     }
+
+    /** Whether audio from the source with this name is exported to the peer (see [wants]). */
+    private fun exportsSource(sourceName: String) = (exports.isEmpty() && requests.isEmpty()) || sourceName in exports
 
     /**
      * Apply an update to the connect with this exporter's URL. Only the exported/requested source names may change
      * on a running exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
      */
     fun update(exports: List<String>, requests: List<String>) {
-        logger.info("Updating exports=$exports requests=$requests")
+        if (terminalClose != null || reconnectExhausted) {
+            logger.warn(
+                "Updating exports=$exports requests=$requests on a connect that will not reconnect " +
+                    "(terminal close ${terminalClose?.code}, reconnects exhausted $reconnectExhausted); " +
+                    "the peer will not get them."
+            )
+        } else {
+            logger.info("Updating exports=$exports requests=$requests")
+        }
         this.exports = exports
         this.requests = requests
         // If we're connected, propagate the change now; otherwise it will be sent when the connection opens.
         sendSources()
+        // The speakers the peer may know about follow the exports.
+        sendSpeakers()
+    }
+
+    /**
+     * Pass on the conference's recent speakers, the dominant speaker first, so the peer can follow the dominant
+     * speaker without measuring audio levels itself. Only agent connects get them: no other peer type has a use for
+     * them, and a third-party recorder might not tolerate an unknown event. Like the audio, the list is limited to
+     * the sources this connect exports.
+     *
+     * The agent's own audio counts for dominant speaker, but its synthetic source is never in the list, so the first
+     * entry is the top human: the agent is not told it is the dominant speaker, and under the `dominant` fan-in it
+     * keeps hearing the last human while it talks. The list is therefore empty while only the agent has spoken.
+     */
+    fun speakersChanged(recentSpeakers: List<String>, silence: Boolean) {
+        if (type != Connect.Types.AGENT) return
+        speakers = Speakers(recentSpeakers, silence)
+        sendSpeakers()
+    }
+
+    /** Send the exported part of the current speaker order to the peer. No-op if not connected or not yet known. */
+    private fun sendSpeakers() {
+        val session = recorderWebSocket.session ?: return
+        val speakers = speakers ?: return
+        val exported = speakers.order.filter { exportsSource(it) }
+        session.sendText(SpeakersEvent(exported, speakers.silence).toJson(), Callback.NOOP)
     }
 
     /** Send the current exported/requested source names to the peer. No-op if not currently connected. */
@@ -392,16 +459,20 @@ internal class Exporter(
     }
 
     private fun scheduleReconnect() {
-        if (isShuttingDown.get()) {
+        if (isShuttingDown.get() || terminalClose != null) {
             return
         }
 
         val attempt = reconnectAttempts.incrementAndGet()
-        maxReconnectAttempts?.let {
-            if (attempt > it) {
-                logger.warn("Max reconnection attempts ($it) reached, giving up")
-                return
-            }
+        val maxAttempts = listOfNotNull(
+            maxReconnectAttempts,
+            agentMaxReconnectAttempts.takeIf { type == Connect.Types.AGENT }
+        ).minOrNull()
+        if (maxAttempts != null && attempt > maxAttempts) {
+            reconnectExhausted = true
+            reconnectsExhaustedCount.inc()
+            logger.warn("Max reconnection attempts ($maxAttempts) reached, giving up")
+            return
         }
 
         val delayMs = getDelayMs(attempt)
@@ -409,7 +480,7 @@ internal class Exporter(
 
         cancelReconnect()
         reconnectFuture = TaskPools.SCHEDULED_POOL.schedule({
-            if (!isShuttingDown.get()) {
+            if (!isShuttingDown.get() && terminalClose == null) {
                 try {
                     logger.info("Attempting reconnection (attempt $attempt)")
                     webSocketClient.connect(recorderWebSocket, url, createUpgradeRequest())
@@ -460,9 +531,12 @@ internal class Exporter(
         put("type", type.toString().lowercase())
         putArray("exports").apply { exports.forEach { add(it) } }
         putArray("requests").apply { requests.forEach { add(it) } }
+        speakers?.let { put("speakers", it.order.toString()) }
         put("is_connected", isConnected())
         put("is_shutting_down", isShuttingDown.get())
         put("reconnect_attempts", reconnectAttempts.get())
+        put("reconnect_exhausted", reconnectExhausted)
+        terminalClose?.let { putObject("terminal_close").put("code", it.code).put("reason", it.reason) }
         put("packets_sent", instancePacketsSent.get())
         put("websocket_failures", instanceWebSocketFailures.get())
         put("websocket_internal_errors", instanceWebSocketInternalErrors.get())
@@ -482,7 +556,18 @@ internal class Exporter(
         }
     }
 
+    private class TerminalClose(val code: Int, val reason: String?)
+
+    /** The conference's recent speakers, the dominant speaker first, and whether it is currently silent. */
+    private data class Speakers(val order: List<String>, val silence: Boolean)
+
     companion object {
+        /** Terminal close code (opus-transcriber-proxy AGENT_PROTOCOL.md): the agent sent `end`; do not redial. */
+        const val CLOSE_AGENT_ENDED = 4001
+
+        /** Terminal close code (opus-transcriber-proxy AGENT_PROTOCOL.md): endpoint dial failed; do not redial. */
+        const val CLOSE_ENDPOINT_UNREACHABLE = 4002
+
         private val webSocketClient = WebSocketClient().apply {
             idleTimeout = WebsocketServiceConfig.config.idleTimeout
             start()
@@ -507,6 +592,16 @@ internal class Exporter(
         private val webSocketInternalErrors = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_websocket_internal_errors",
             "Number of websocket connection which were connected but closed with code 1011"
+        )
+
+        private val endpointUnreachableCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_endpoint_unreachable",
+            "Number of agent connects the peer closed because the agent endpoint could not be dialed (code 4002)"
+        )
+
+        private val reconnectsExhaustedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_reconnects_exhausted",
+            "Number of exporters that gave up reconnecting after the maximum number of attempts"
         )
 
         private val startsCount = VideobridgeMetricsContainer.instance.registerCounter(
@@ -551,6 +646,10 @@ internal class Exporter(
 
         private val maxReconnectAttempts: Int? by optionalconfig {
             "videobridge.exporter.max-reconnect-attempts".from(JitsiConfig.newConfig)
+        }
+
+        private val agentMaxReconnectAttempts: Int by config {
+            "videobridge.exporter.agent-max-reconnect-attempts".from(JitsiConfig.newConfig)
         }
 
         private val baseDelay: Duration by config {
