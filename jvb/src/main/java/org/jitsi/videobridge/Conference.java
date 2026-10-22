@@ -586,12 +586,15 @@ public class Conference
         {
             return createConferenceNotFoundError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId());
         }
+        logger.info(() -> "RECV colibri2 request: " + Colibri2UtilKt.toRedactedXml(conferenceModifyIQ));
         Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(conferenceModifyIQ);
+        IQ response = p.getFirst();
+        logger.info("SENT colibri2 response: " + response.toXML());
         if (p.getSecond())
         {
             videobridge.expireConference(this);
         }
-        return p.getFirst();
+        return response;
     }
 
     /**

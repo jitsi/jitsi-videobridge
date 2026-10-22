@@ -20,6 +20,8 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import io.mockk.verify
 import org.jitsi.ConfigTest
 import org.jitsi.nlj.stats.DelayStats
@@ -29,6 +31,7 @@ import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.Sources
+import org.jitsi.xmpp.util.RedactColibri
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.jxmpp.jid.impl.JidCreate
@@ -212,6 +215,22 @@ class ConferenceColibriQueueTest : ConfigTest() {
             conference.expire()
 
             conference.handleConferenceModifyIQ(emptyModify("8")).shouldBeConferenceNotFound()
+        }
+
+        context("A request is answered normally when redacting it for the log fails") {
+            mockkObject(RedactColibri.Companion)
+            try {
+                every { RedactColibri.redactHttpHeaderValues(any()) } throws RuntimeException("no transformer")
+
+                // Each empty request expires its (empty) conference, so use one per path.
+                var response: IQ? = null
+                newConference().handleColibriRequest(colibriRequest(emptyModify("9")) { response = it }) shouldBe true
+                response.shouldNotBeNull().type shouldBe IQ.Type.result
+
+                newConference().handleConferenceModifyIQ(emptyModify("10")).type shouldBe IQ.Type.result
+            } finally {
+                unmockkObject(RedactColibri.Companion)
+            }
         }
     }
 

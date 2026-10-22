@@ -18,6 +18,9 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import org.jitsi.config.withNewConfig
 import org.jitsi.videobridge.colibri2.createConferenceAlreadyExistsError
 import org.jitsi.videobridge.colibri2.createConferenceNotFoundError
@@ -26,6 +29,7 @@ import org.jitsi.videobridge.colibri2.toRedactedXml
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.IqProviderUtils
+import org.jitsi.xmpp.util.RedactColibri
 import org.jivesoftware.smack.util.PacketParserUtils
 
 class Colibri2UtilTest : ShouldSpec({
@@ -75,24 +79,32 @@ class Colibri2UtilTest : ShouldSpec({
             xml shouldNotContain "203.0.113.7"
             xml shouldContain "ip=\"xx.xx.xx.xx\""
         }
-        should("redact the header values only when configured") {
+        should("not redact the header values when configured not to") {
             withNewConfig("videobridge.redact-colibri-http-headers=false") {
                 val xml = request.toRedactedXml()
                 xml shouldContain "value=\"s3cret-token\""
                 xml shouldNotContain "203.0.113.7"
             }
-            withNewConfig("videobridge.redact-colibri-http-headers=true") {
-                request.toRedactedXml() shouldNotContain "s3cret-token"
-            }
         }
-        should("redact the remote addresses only when configured") {
+        should("not redact the remote addresses when configured not to") {
             withNewConfig("videobridge.redact-remote-addresses=false") {
                 val xml = request.toRedactedXml()
                 xml shouldContain "ip=\"203.0.113.7\""
                 xml shouldNotContain "s3cret-token"
             }
-            withNewConfig("videobridge.redact-remote-addresses=true") {
-                request.toRedactedXml() shouldNotContain "203.0.113.7"
+        }
+        should("stand in a placeholder, never the raw XML, when redaction fails") {
+            mockkObject(RedactColibri.Companion)
+            try {
+                every { RedactColibri.redactHttpHeaderValues(any()) } throws RuntimeException("no transformer")
+
+                val xml = request.toRedactedXml()
+                xml shouldNotContain "s3cret-token"
+                xml shouldNotContain "203.0.113.7"
+                xml shouldContain "conference-modify id for meeting m could not be redacted"
+                xml shouldContain "no transformer"
+            } finally {
+                unmockkObject(RedactColibri.Companion)
             }
         }
         should("not be needed for an error response, which echoes only the empty conference-modify element") {
