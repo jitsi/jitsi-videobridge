@@ -386,16 +386,7 @@ public class Conference
      */
     private static String redactedRequestXml(XmppConnection.ColibriRequest request)
     {
-        String reqStr = request.getRequest().toXML().toString();
-        if (VideobridgeConfig.getRedactColibriHttpHeaders())
-        {
-            reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
-        }
-        if (VideobridgeConfig.getRedactRemoteAddresses())
-        {
-            reqStr = RedactColibri.Companion.redactIp(reqStr);
-        }
-        return reqStr;
+        return Colibri2UtilKt.toRedactedXml(request.getRequest());
     }
 
     /**
