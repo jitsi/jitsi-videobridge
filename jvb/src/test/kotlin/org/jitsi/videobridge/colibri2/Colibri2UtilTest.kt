@@ -27,6 +27,7 @@ import org.jitsi.videobridge.colibri2.createConferenceNotFoundError
 import org.jitsi.videobridge.colibri2.createFeatureNotImplementedError
 import org.jitsi.videobridge.colibri2.toRedactedXml
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
+import org.jitsi.xmpp.extensions.colibri2.ConferenceModifiedIQ
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.IqProviderUtils
 import org.jitsi.xmpp.util.RedactColibri
@@ -107,11 +108,20 @@ class Colibri2UtilTest : ShouldSpec({
                 unmockkObject(RedactColibri.Companion)
             }
         }
+        // Conference logs its responses unredacted, which relies on the next two: neither kind of response carries
+        // the request's connects or candidates.
         should("not be needed for an error response, which echoes only the empty conference-modify element") {
-            // Conference logs its responses unredacted, which relies on this.
             val xml = createFeatureNotImplementedError(request, "not supported").toXML().toString()
             xml shouldContain "feature-not-implemented"
             xml shouldContain "<conference-modify"
+            xml shouldNotContain "s3cret-token"
+            xml shouldNotContain "203.0.113.7"
+        }
+        should("not be needed for a success response, which takes only the request's addressing") {
+            val xml = ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(request)).build()
+                .toXML().toString()
+            xml shouldContain "<conference-modified"
+            xml shouldContain "id='id'"
             xml shouldNotContain "s3cret-token"
             xml shouldNotContain "203.0.113.7"
         }
