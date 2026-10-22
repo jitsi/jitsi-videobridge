@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.stats.DelayStats
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.colibri2.toRedactedXml
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.Companion.config
@@ -300,7 +301,13 @@ class XmppConnection : IQListener {
          * The callback to use to send the response.
          */
         val callback: (IQ) -> Unit
-    )
+    ) {
+        /**
+         * The request as XML for log lines, redacted as configured. Computed once and shared by every log line
+         * about this request.
+         */
+        val redactedXml: String by lazy { request.toRedactedXml() }
+    }
 
     companion object {
         private val FEATURES = arrayOf(

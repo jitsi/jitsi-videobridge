@@ -18,19 +18,28 @@ package org.jitsi.videobridge.colibri2
 import org.jitsi.videobridge.VideobridgeConfig
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
+import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.util.RedactColibri
 import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
+import javax.xml.transform.TransformerException
 
-/** The IQ as XML for a log line, with the connects' HTTP header values and remote addresses redacted as configured. */
-fun IQ.toRedactedXml(): String {
+/**
+ * The request as XML for a log line, with the connects' HTTP header values and remote addresses redacted as
+ * configured. Failing to redact must not fail the request, so a placeholder stands in for the XML then.
+ */
+fun ConferenceModifyIQ.toRedactedXml(): String {
     var xml = toXML().toString()
-    if (VideobridgeConfig.redactColibriHttpHeaders) {
-        xml = RedactColibri.redactHttpHeaderValues(xml)
-    }
-    if (VideobridgeConfig.redactRemoteAddresses) {
-        xml = RedactColibri.redactIp(xml)
+    try {
+        if (VideobridgeConfig.redactColibriHttpHeaders) {
+            xml = RedactColibri.redactHttpHeaderValues(xml)
+        }
+        if (VideobridgeConfig.redactRemoteAddresses) {
+            xml = RedactColibri.redactIp(xml)
+        }
+    } catch (e: TransformerException) {
+        return "[conference-modify $stanzaId for meeting $meetingId could not be redacted: $e]"
     }
     return xml
 }
