@@ -15,11 +15,25 @@
  */
 package org.jitsi.videobridge.colibri2
 
+import org.jitsi.videobridge.VideobridgeConfig
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
+import org.jitsi.xmpp.util.RedactColibri
 import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
+
+/** The IQ as XML for a log line, with the connects' HTTP header values and remote addresses redacted as configured. */
+fun IQ.toRedactedXml(): String {
+    var xml = toXML().toString()
+    if (VideobridgeConfig.redactColibriHttpHeaders) {
+        xml = RedactColibri.redactHttpHeaderValues(xml)
+    }
+    if (VideobridgeConfig.redactRemoteAddresses) {
+        xml = RedactColibri.redactIp(xml)
+    }
+    return xml
+}
 
 fun createConferenceAlreadyExistsError(iq: IQ, conferenceId: String) = createError(
     iq,

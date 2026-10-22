@@ -129,7 +129,7 @@ class Colibri2ConferenceHandler(
         val error = createEndpointNotFoundError(conferenceModifyIQ, e.endpointId)
         Pair(error, false)
     } catch (e: FeatureNotImplementedException) {
-        logger.warn("Unsupported request (${e.message}): ${conferenceModifyIQ.toXML()}")
+        logger.warn("Unsupported request (${e.message}): ${conferenceModifyIQ.toRedactedXml()}")
         Pair(createFeatureNotImplementedError(conferenceModifyIQ, e.message), false)
     } catch (e: IqProcessingException) {
         // Item not found conditions are assumed to be less critical, as they often happen in case a request
