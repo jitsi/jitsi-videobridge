@@ -427,7 +427,11 @@ class KeyframeRequester @JvmOverloads constructor(
         val pkt = when {
             streamInformationStore.supportsPli -> {
                 numPlisGenerated++
-                RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build()
+                RtcpFbPliPacketBuilder(
+                    mediaSourceSsrc = mediaSsrc
+                ).apply {
+                    localSsrc?.let { rtcpHeader.senderSsrc = it }
+                }.build()
             }
 
             streamInformationStore.supportsFir -> {
@@ -435,7 +439,9 @@ class KeyframeRequester @JvmOverloads constructor(
                 RtcpFbFirPacketBuilder(
                     mediaSenderSsrc = mediaSsrc,
                     firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
-                ).build()
+                ).apply {
+                    localSsrc?.let { rtcpHeader.senderSsrc = it }
+                }.build()
             }
 
             else -> {
