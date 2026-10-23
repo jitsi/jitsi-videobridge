@@ -18,23 +18,35 @@ package org.jitsi.videobridge
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import io.mockk.verify
 import org.jitsi.ConfigTest
 import org.jitsi.nlj.stats.DelayStats
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.colibri2.Colibri2ConferenceHandler
 import org.jitsi.videobridge.xmpp.XmppConnection
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
+import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
+import org.jitsi.xmpp.extensions.colibri2.Connect
 import org.jitsi.xmpp.extensions.colibri2.Sources
+import org.jitsi.xmpp.util.RedactColibri
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.jxmpp.jid.impl.JidCreate
+import java.net.URI
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.logging.Handler
+import java.util.logging.LogRecord
 
 /**
  * Tests that a colibri request accepted by a [Conference] is always answered, even if the conference expires before
@@ -212,6 +224,83 @@ class ConferenceColibriQueueTest : ConfigTest() {
             conference.expire()
 
             conference.handleConferenceModifyIQ(emptyModify("8")).shouldBeConferenceNotFound()
+        }
+
+        context("The log lines carry the redacted request, on both colibri paths") {
+            // An endpoint and a relay in one request is unsupported, so the request is logged, warned about and
+            // rejected without its connect ever being applied.
+            fun unsupportedRequestWithSecret(stanzaId: String): ConferenceModifyIQ {
+                val connect = Connect(
+                    id = "agent-1",
+                    url = URI("wss://relay.example.com/agent"),
+                    protocol = Connect.Protocols.MEDIAJSON,
+                    type = Connect.Types.AGENT,
+                    audio = true,
+                    create = true
+                ).apply { addHttpHeader("X-Agent-Token", "s3cret-token") }
+                return ConferenceModifyIQ.builder(stanzaId).apply {
+                    setMeetingId(meetingId)
+                    addEndpoint(Colibri2Endpoint.getBuilder().apply { setId("e") }.build())
+                    addRelay(Colibri2Relay.getBuilder().apply { setId("r") }.build())
+                    addConnect(connect)
+                }.build()
+            }
+
+            val records = CopyOnWriteArrayList<String>()
+            val capture = object : Handler() {
+                override fun publish(record: LogRecord) {
+                    records.add("${record.level}: ${record.message}")
+                }
+                override fun flush() = Unit
+                override fun close() = Unit
+            }
+            // Conference creates its own logger, so capture at the java.util.logging loggers it and the handler
+            // delegate to.
+            val julLoggers = listOf(Conference::class.java.name, Colibri2ConferenceHandler::class.java.name)
+                .map { java.util.logging.Logger.getLogger(it) }
+            julLoggers.forEach { it.addHandler(capture) }
+            try {
+                var response: IQ? = null
+                newConference().handleColibriRequest(
+                    colibriRequest(unsupportedRequestWithSecret("redact-q")) { response = it }
+                ) shouldBe true
+                response.shouldNotBeNull().type shouldBe IQ.Type.error
+
+                newConference().handleConferenceModifyIQ(unsupportedRequestWithSecret("redact-s")).type shouldBe
+                    IQ.Type.error
+            } finally {
+                julLoggers.forEach { it.removeHandler(capture) }
+            }
+
+            val requestLines =
+                records.filter { it.contains("RECV colibri2 request") || it.contains("Unsupported request") }
+            // The queued path logs RECV and the warning; the synchronous path logs RECV, the warning and SENT. The
+            // redacted XML comes out of the transform with double-quoted attributes.
+            requestLines.count { it.contains("RECV colibri2 request") && it.contains("id=\"redact-q\"") } shouldBe 1
+            requestLines.count { it.contains("RECV colibri2 request") && it.contains("id=\"redact-s\"") } shouldBe 1
+            requestLines.count { it.contains("Unsupported request") } shouldBe 2
+            requestLines.forEach {
+                it shouldContain "name=\"X-Agent-Token\""
+                it shouldContain "value=\"[redacted]\""
+                it shouldNotContain "s3cret-token"
+            }
+            records.filter { it.contains("colibri2") }.forEach { it shouldNotContain "s3cret-token" }
+        }
+
+        context("A request is answered normally when redacting it for the log fails") {
+            mockkObject(RedactColibri.Companion)
+            try {
+                every { RedactColibri.redactHttpHeaderValues(any()) } throws RuntimeException("no transformer")
+
+                // Each empty request expires its (empty) conference, so use one per path.
+                var response: IQ? = null
+                newConference().handleColibriRequest(colibriRequest(emptyModify("9")) { response = it }) shouldBe true
+                response.shouldNotBeNull().type shouldBe IQ.Type.result
+
+                newConference().handleConferenceModifyIQ(emptyModify("10")).type shouldBe IQ.Type.result
+            } finally {
+                unmockkObject(RedactColibri.Companion)
+            }
         }
     }
 

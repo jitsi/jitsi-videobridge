@@ -214,6 +214,23 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 agent.getAudioLevelExtensionId() shouldBe 1
             }
         }
+        context("A request the bridge does not support") {
+            should("be rejected as feature-not-implemented, before anything is applied") {
+                // Both an endpoint and a relay in one request.
+                val request = ConferenceModifyIQ.builder("id").apply {
+                    setMeetingId("meeting")
+                    addEndpoint(createEndpoint("ep", synthetic = false, audioSource("ep-a0", 1L, false)))
+                    addRelay(Colibri2Relay.getBuilder().apply { setId(RELAY_ID) }.build())
+                }.build()
+
+                val response = handler.handleConferenceModifyIQ(request).first
+                response.type shouldBe IQ.Type.error
+                response.error.condition shouldBe StanzaError.Condition.feature_not_implemented
+                val reason = response.error.getExtension<Colibri2Error>(Colibri2Error.ELEMENT, Colibri2Error.NAMESPACE)
+                reason.shouldNotBeNull().reason shouldBe Colibri2Error.Reason.FEATURE_NOT_IMPLEMENTED
+                conference.getLocalEndpoint("ep") shouldBe null
+            }
+        }
     }
 
     private companion object {

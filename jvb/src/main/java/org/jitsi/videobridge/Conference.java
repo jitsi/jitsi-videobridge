@@ -382,14 +382,6 @@ public class Conference
     }
 
     /**
-     * @return the XML of the request, with the HTTP header values and/or remote addresses redacted as configured.
-     */
-    private static String redactedRequestXml(XmppConnection.ColibriRequest request)
-    {
-        return Colibri2UtilKt.toRedactedXml(request.getRequest());
-    }
-
-    /**
      * Handles a colibri request taken from {@link #colibriQueue}. Package-private for tests.
      * @return {@code true} (the request was processed, or answered with an error).
      */
@@ -412,7 +404,7 @@ public class Conference
                 ColibriQueue.failConferenceNotFound(request, logger);
                 return true;
             }
-            logger.info(() -> "RECV colibri2 request: " + redactedRequestXml(request));
+            logger.info(() -> "RECV colibri2 request: " + request.getRedactedXml());
             long start = System.currentTimeMillis();
             Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
             IQ response = p.getFirst();
@@ -425,7 +417,7 @@ public class Conference
             if (processingDelay > 100)
             {
                 logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
-                        + totalDelay + " ms): " + redactedRequestXml(request));
+                        + totalDelay + " ms): " + request.getRedactedXml());
             }
             logger.info("SENT colibri2 response: " + response.toXML());
             request.getCallback().invoke(response);
@@ -594,12 +586,15 @@ public class Conference
         {
             return createConferenceNotFoundError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId());
         }
+        logger.info(() -> "RECV colibri2 request: " + Colibri2UtilKt.toRedactedXml(conferenceModifyIQ));
         Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(conferenceModifyIQ);
+        IQ response = p.getFirst();
+        logger.info("SENT colibri2 response: " + response.toXML());
         if (p.getSecond())
         {
             videobridge.expireConference(this);
         }
-        return p.getFirst();
+        return response;
     }
 
     /**
