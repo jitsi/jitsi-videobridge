@@ -28,7 +28,8 @@ echo "Current tag name: $TAG_NAME"
 if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1
 then
   git tag -a "$TAG_NAME" -m "Tagged automatically by Jenkins"
-  git push origin "$TAG_NAME"
+  # DRY_RUN=1 builds the package without pushing anything
+  [ -n "${DRY_RUN}" ] || git push origin "$TAG_NAME"
 else
   echo "Tag: $TAG_NAME already exists."
 fi
@@ -66,6 +67,7 @@ echo "-----"
 ls -l ../{*.changes,*.deb,*.buildinfo}
 echo "-----"
 
-# Let's try deploying
+# The version of the new package, used to build the jitsi-meet meta package
 cd ..
-([ ! -x deploy.sh ] || ./deploy.sh "jvb" $VERSION )
+echo "NEW_COMPONENT_NAME=jitsi-videobridge" > jvb-version.properties
+echo "NEW_COMPONENT_VER=$VERSION" >> jvb-version.properties
