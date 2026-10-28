@@ -169,11 +169,7 @@ class RelayedEndpoint(
         )
     }
 
-    fun relayMessageTransportConnected() {
-        maxReceiverVideoConstraints.forEach { (sourceName, constraints) ->
-            sendVideoConstraints(sourceName, constraints)
-        }
-    }
+    fun relayMessageTransportConnected() = sendAllVideoConstraints()
 
     private val _mediaSources = MediaSources()
 

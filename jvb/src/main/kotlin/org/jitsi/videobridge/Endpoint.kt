@@ -670,12 +670,6 @@ class Endpoint @JvmOverloads constructor(
         audioSsrcs.sendAllMappings()
     }
 
-    private fun sendAllVideoConstraints() {
-        maxReceiverVideoConstraints.forEach { (sourceName, constraints) ->
-            sendVideoConstraints(sourceName, constraints)
-        }
-    }
-
     /**
      * Handle a DTLS app packet (that is, a packet of some other protocol sent
      * over DTLS) which has just been received.
