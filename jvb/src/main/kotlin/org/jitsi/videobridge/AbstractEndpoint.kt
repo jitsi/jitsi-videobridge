@@ -299,8 +299,9 @@ abstract class AbstractEndpoint protected constructor(
     }
 
     /**
-     * Sends the current max video constraints for every source of this endpoint. Used when the transport to the
-     * endpoint (re)connects, or when the endpoint's sources become known, since earlier sends may have been lost.
+     * Sends the current max video constraints for every source of this endpoint. A send with no transport channel
+     * open, or for a source the endpoint has not signaled yet, is dropped, so this is called when the transport
+     * (re)connects and when the endpoint's first sources are signaled to deliver what was dropped.
      */
     protected fun sendAllVideoConstraints() {
         synchronized(maxReceiverVideoConstraints) {
@@ -359,6 +360,11 @@ abstract class AbstractEndpoint protected constructor(
     /**
      * Notifies this instance that the max video constraints that the bridge needs to receive from a source of this
      * endpoint has changed. Each implementation handles this notification differently.
+     *
+     * Called with the monitor of the max receiver video constraints map held, so that sends stay ordered with
+     * updates (see [receiverVideoConstraintsChanged]). Implementations must not block, and must not take a lock
+     * that another thread could hold while calling into this endpoint's constraints (for example a transport lock
+     * held across its connected callback).
      *
      * @param sourceName the name of the media source
      * @param maxVideoConstraints the max video constraints that the bridge needs to receive from the source
