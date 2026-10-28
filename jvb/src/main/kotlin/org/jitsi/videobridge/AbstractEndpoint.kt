@@ -300,8 +300,9 @@ abstract class AbstractEndpoint protected constructor(
 
     /**
      * Sends the current max video constraints for every source of this endpoint. A send with no transport channel
-     * open, or for a source the endpoint has not signaled yet, is dropped, so this is called when the transport
-     * (re)connects and when the endpoint's first sources are signaled to deliver what was dropped.
+     * open is dropped, so this is called when the transport (re)connects to deliver what was dropped. [Endpoint]
+     * also drops a send for a source it has not signaled yet, so it calls this when its first sources are signaled
+     * as well.
      */
     protected fun sendAllVideoConstraints() {
         synchronized(maxReceiverVideoConstraints) {
