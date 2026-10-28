@@ -107,8 +107,13 @@ abstract class AbstractEndpoint protected constructor(
      *
      * Stores the maximum set of constraints applied by all receivers for each media source sent by this endpoint.
      * The client needs to send _at least_ this for a media source to satisfy all its receivers.
+     *
+     * Updates to this map ([receiverVideoConstraintsChanged]) and re-sends of its contents
+     * ([sendAllVideoConstraints]) each hold the map's monitor across both the read or write and the send, so that
+     * the messages sent to the endpoint are ordered consistently with the map: a re-send that runs concurrently with
+     * an update can not send a stale value after the update sent the new one.
      */
-    protected var maxReceiverVideoConstraints = mutableMapOf<String, VideoConstraints>()
+    private val maxReceiverVideoConstraints = mutableMapOf<String, VideoConstraints>()
 
     protected val eventEmitter: EventEmitter<EventHandler> = SyncEventEmitter()
 
@@ -258,7 +263,10 @@ abstract class AbstractEndpoint protected constructor(
             receiverVideoConstraints.set<ObjectNode>(sourceName, receiverConstraints.getDebugState())
         }
         set<ObjectNode>("receiver_video_constraints", receiverVideoConstraints)
-        put("max_receiver_video_constraints", HashMap(maxReceiverVideoConstraints).toString())
+        put(
+            "max_receiver_video_constraints",
+            synchronized(maxReceiverVideoConstraints) { HashMap(maxReceiverVideoConstraints) }.toString()
+        )
         put("expired", isExpired)
         put("stats_id", statsId)
     }
@@ -280,11 +288,27 @@ abstract class AbstractEndpoint protected constructor(
      * (Currently we only support constraining the height, and not frame rate.)
      */
     private fun receiverVideoConstraintsChanged(sourceName: String, newMaxHeight: Int) {
-        val oldReceiverMaxVideoConstraints = maxReceiverVideoConstraints[sourceName]
         val newReceiverMaxVideoConstraints = VideoConstraints(newMaxHeight, -1.0)
-        if (newReceiverMaxVideoConstraints != oldReceiverMaxVideoConstraints) {
-            maxReceiverVideoConstraints[sourceName] = newReceiverMaxVideoConstraints
-            sendVideoConstraints(sourceName, newReceiverMaxVideoConstraints)
+        synchronized(maxReceiverVideoConstraints) {
+            val oldReceiverMaxVideoConstraints = maxReceiverVideoConstraints[sourceName]
+            if (newReceiverMaxVideoConstraints != oldReceiverMaxVideoConstraints) {
+                maxReceiverVideoConstraints[sourceName] = newReceiverMaxVideoConstraints
+                sendVideoConstraints(sourceName, newReceiverMaxVideoConstraints)
+            }
+        }
+    }
+
+    /**
+     * Sends the current max video constraints for every source of this endpoint. A send with no transport channel
+     * open is dropped, so this is called when the transport (re)connects to deliver what was dropped. [Endpoint]
+     * also drops a send for a source it has not signaled yet, so it calls this when its first sources are signaled
+     * as well.
+     */
+    protected fun sendAllVideoConstraints() {
+        synchronized(maxReceiverVideoConstraints) {
+            maxReceiverVideoConstraints.forEach { (sourceName, constraints) ->
+                sendVideoConstraints(sourceName, constraints)
+            }
         }
     }
 
@@ -337,6 +361,11 @@ abstract class AbstractEndpoint protected constructor(
     /**
      * Notifies this instance that the max video constraints that the bridge needs to receive from a source of this
      * endpoint has changed. Each implementation handles this notification differently.
+     *
+     * Called with the monitor of the max receiver video constraints map held, so that sends stay ordered with
+     * updates (see [receiverVideoConstraintsChanged]). Implementations must not block, and must not take a lock
+     * that another thread could hold while calling into this endpoint's constraints (for example a transport lock
+     * held across its connected callback).
      *
      * @param sourceName the name of the media source
      * @param maxVideoConstraints the max video constraints that the bridge needs to receive from the source

@@ -670,12 +670,6 @@ class Endpoint @JvmOverloads constructor(
         audioSsrcs.sendAllMappings()
     }
 
-    private fun sendAllVideoConstraints() {
-        maxReceiverVideoConstraints.forEach { (sourceName, constraints) ->
-            sendVideoConstraints(sourceName, constraints)
-        }
-    }
-
     /**
      * Handle a DTLS app packet (that is, a packet of some other protocol sent
      * over DTLS) which has just been received.
@@ -1375,7 +1369,11 @@ class Endpoint @JvmOverloads constructor(
                 // Post the rest of the task here because the current context is
                 // holding a lock inside the SctpSocket which can cause a deadlock
                 // if two endpoints are trying to send datachannel messages to one
-                // another (with stats broadcasting it can happen often)
+                // another (with stats broadcasting it can happen often).
+                // This must stay asynchronous: data channel open handling runs from this
+                // queue and re-sends the max receiver video constraints while holding
+                // their lock, and sends take the SCTP lock, so handling it here would
+                // invert the lock order against a constraints update that is sending.
                 incomingDataChannelMessagesQueue.add(PacketInfo(dataChannelPacket))
             } catch (e: Throwable) {
                 logger.warn("Exception processing SCTP message", e)
