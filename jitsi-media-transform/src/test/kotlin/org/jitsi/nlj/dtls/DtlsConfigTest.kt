@@ -20,6 +20,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.bouncycastle.tls.CipherSuite
+import org.bouncycastle.tls.ProtocolVersion
 import org.jitsi.config.withNewConfig
 import org.jitsi.metaconfig.ConfigException
 
@@ -62,6 +63,53 @@ class DtlsConfigTest : ShouldSpec() {
             context("Wrong type") {
                 withNewConfig("jmt.dtls.cipher-suites = 42") {
                     shouldThrow<ConfigException> { DtlsConfig.config.cipherSuites }
+                }
+            }
+        }
+        context("MTU") {
+            context("By default") {
+                DtlsConfig.config.mtu shouldBe 1200
+            }
+            context("Too small") {
+                withNewConfig("jmt.dtls.mtu = 100") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.mtu }
+                }
+            }
+        }
+        context("DTLS 1.3 enabled") {
+            context("By default") {
+                DtlsConfig.config.dtls13Enabled shouldBe true
+                DtlsConfig.config.supportedVersions.toList() shouldBe
+                    listOf(ProtocolVersion.DTLSv13, ProtocolVersion.DTLSv12)
+            }
+            context("When disabled") {
+                withNewConfig("jmt.dtls.enable-dtls13 = false") {
+                    DtlsConfig.config.dtls13Enabled shouldBe false
+                    DtlsConfig.config.supportedVersions.toList() shouldBe listOf(ProtocolVersion.DTLSv12)
+                    // The post-quantum key exchange requires DTLS 1.3
+                    DtlsConfig.config.postQuantumKeyExchangeEnabled shouldBe true
+                    DtlsConfig.config.offerPostQuantumKeyExchange shouldBe false
+                }
+            }
+        }
+        context("Post-quantum key exchange") {
+            context("By default") {
+                DtlsConfig.config.postQuantumKeyExchangeEnabled shouldBe true
+                DtlsConfig.config.offerPostQuantumKeyExchange shouldBe true
+            }
+            context("When disabled") {
+                withNewConfig("jmt.dtls.enable-post-quantum-key-exchange = false") {
+                    DtlsConfig.config.offerPostQuantumKeyExchange shouldBe false
+                }
+            }
+        }
+        context("Unsigned certificates") {
+            context("By default") {
+                DtlsConfig.config.useAlgUnsigned shouldBe true
+            }
+            context("When disabled") {
+                withNewConfig("jmt.dtls.use-alg-unsigned = false") {
+                    DtlsConfig.config.useAlgUnsigned shouldBe false
                 }
             }
         }

@@ -19,6 +19,9 @@ package org.jitsi.nlj.dtls
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import org.bouncycastle.tls.NamedGroup
+import org.bouncycastle.tls.ProtocolVersion
+import org.jitsi.config.setNewConfig
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.transform.node.PcapWriter
@@ -32,6 +35,7 @@ import kotlin.concurrent.thread
 
 class DtlsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+
     private val debugEnabled = true
     private val pcapEnabled = false
     private val logger = StdoutLogger(_level = Level.OFF)
@@ -42,9 +46,14 @@ class DtlsTest : ShouldSpec() {
         }
     }
 
-    init {
+    /**
+     * Runs a full DTLS handshake between two [DtlsStack]s wired directly to each other, exchanges a message in
+     * each direction over the resulting connection, and returns the two stacks (server first).
+     */
+    private fun handshakeAndExchangeData(): Pair<DtlsStack, DtlsStack> {
         val dtlsServer = DtlsStack(logger).apply { actAsServer() }
         val dtlsClient = DtlsStack(logger).apply { actAsClient() }
+
         val pcapWriter = if (pcapEnabled) PcapWriter(logger, "/tmp/dtls-test.pcap") else null
 
         dtlsClient.remoteFingerprints = mapOf(
@@ -70,8 +79,8 @@ class DtlsTest : ShouldSpec() {
                 val receivedStr = StandardCharsets.UTF_8.decode(packetData).toString()
                 debug("Server received message: '$receivedStr'")
                 serverReceivedData.complete(receivedStr)
-                val serverToClientData = serverToClientMessage.toByteArray()
 
+                val serverToClientData = serverToClientMessage.toByteArray()
                 dtlsServer.sendApplicationData(serverToClientData, 0, serverToClientData.size)
             }
         }
@@ -113,14 +122,71 @@ class DtlsTest : ShouldSpec() {
         serverReceivedData.get(5, TimeUnit.SECONDS) shouldBe clientToServerMessage
         clientReceivedData.get(5, TimeUnit.SECONDS) shouldBe serverToClientMessage
 
-        // The peer re-signals its setup attribute with transport updates long after the handshake, so the role is
-        // re-applied then. It must not replace the role that negotiated this connection.
-        val serverRole = dtlsServer.role
-        dtlsServer.actAsServer() shouldBe false
-        (dtlsServer.role === serverRole) shouldBe true
+        return Pair(dtlsServer, dtlsClient)
+    }
 
-        val clientRole = dtlsClient.role
-        dtlsClient.actAsClient() shouldBe false
-        (dtlsClient.role === clientRole) shouldBe true
+    /**
+     * Like the standard test helper for overriding the config, but resets the config even if [block] throws, so a
+     * failure doesn't leak the config into other tests.
+     */
+    private inline fun withConfig(config: String, block: () -> Unit) {
+        setNewConfig(config, loadDefaults = true)
+        try {
+            block()
+        } finally {
+            setNewConfig("", loadDefaults = true)
+        }
+    }
+
+    init {
+        context("With the default configuration") {
+            val (dtlsServer, dtlsClient) = handshakeAndExchangeData()
+
+            should("negotiate DTLS 1.3") {
+                dtlsServer.negotiatedProtocolVersion shouldBe ProtocolVersion.DTLSv13
+                dtlsClient.negotiatedProtocolVersion shouldBe ProtocolVersion.DTLSv13
+            }
+
+            should("negotiate the X25519MLKEM768 post-quantum hybrid key exchange") {
+                dtlsServer.negotiatedGroup shouldBe NamedGroup.X25519MLKEM768
+                dtlsClient.negotiatedGroup shouldBe NamedGroup.X25519MLKEM768
+            }
+
+            should("keep the role that negotiated the connection when it is re-applied") {
+                // The peer re-signals its setup attribute with transport updates long after the handshake, so the
+                // role is re-applied then. It must not replace the role that negotiated this connection.
+                val serverRole = dtlsServer.role
+                dtlsServer.actAsServer() shouldBe false
+                (dtlsServer.role === serverRole) shouldBe true
+
+                val clientRole = dtlsClient.role
+                dtlsClient.actAsClient() shouldBe false
+                (dtlsClient.role === clientRole) shouldBe true
+            }
+        }
+
+        context("With DTLS 1.3 disabled") {
+            withConfig("jmt.dtls.enable-dtls13 = false") {
+                val (dtlsServer, dtlsClient) = handshakeAndExchangeData()
+
+                should("negotiate DTLS 1.2") {
+                    dtlsServer.negotiatedProtocolVersion shouldBe ProtocolVersion.DTLSv12
+                    dtlsClient.negotiatedProtocolVersion shouldBe ProtocolVersion.DTLSv12
+                }
+            }
+        }
+
+        context("With the post-quantum key exchange disabled") {
+            withConfig("jmt.dtls.enable-post-quantum-key-exchange = false") {
+                val (dtlsServer, dtlsClient) = handshakeAndExchangeData()
+
+                should("negotiate DTLS 1.3 with X25519") {
+                    dtlsServer.negotiatedProtocolVersion shouldBe ProtocolVersion.DTLSv13
+                    dtlsClient.negotiatedProtocolVersion shouldBe ProtocolVersion.DTLSv13
+                    dtlsServer.negotiatedGroup shouldBe NamedGroup.x25519
+                    dtlsClient.negotiatedGroup shouldBe NamedGroup.x25519
+                }
+            }
+        }
     }
 }
