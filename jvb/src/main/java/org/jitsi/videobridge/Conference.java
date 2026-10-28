@@ -1209,7 +1209,7 @@ public class Conference
         ssrcsRemoved(ssrcs);
         audioSubscriptionManager.removeEndpoint(endpoint.getId());
         audioSubscriptionManager.removeSources(new HashSet<>(endpoint.getAudioSources()));
-        endpointsChanged(removedEndpoint.getVisitor());
+        endpointsChanged(!removedEndpoint.getVisitor());
     }
 
     /**
