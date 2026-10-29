@@ -518,6 +518,12 @@ public class EndpointMessageTransport
             return null;
         }
 
+        if (Conference.TRANSCRIBER_ID.equals(endpoint.getId()))
+        {
+            getLogger().warn("Not forwarding endpoint message from an endpoint with the transcriber ID");
+            return null;
+        }
+
         // First insert/overwrite the "from" to prevent spoofing.
         String from = endpoint.getId();
         message.setFrom(from);

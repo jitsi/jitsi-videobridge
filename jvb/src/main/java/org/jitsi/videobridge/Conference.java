@@ -322,6 +322,12 @@ public class Conference
     private static final int SYNTHETIC_SOURCE_LOG_CACHE_SIZE = 1000;
 
     /**
+     * The "from" the bridge puts on the transcription results it broadcasts. Endpoints with this ID can not send
+     * endpoint messages, so that their messages can not be confused with the bridge's.
+     */
+    public static final String TRANSCRIBER_ID = "transcriber";
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID.
@@ -1791,7 +1797,7 @@ public class Conference
             {
                 EndpointMessage endpointMessage = new EndpointMessage("");
                 endpointMessage.put("msgPayload", event);
-                endpointMessage.put("from", "transcriber");
+                endpointMessage.put("from", TRANSCRIBER_ID);
 
                 broadcastMessage(endpointMessage, true);
             }
