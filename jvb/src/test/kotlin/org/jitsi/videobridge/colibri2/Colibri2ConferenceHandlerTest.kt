@@ -214,6 +214,17 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 agent.getAudioLevelExtensionId() shouldBe 1
             }
         }
+        context("An endpoint with the transcriber ID") {
+            should("be rejected as bad-request (not conflict, which jicofo handles as a bridge failure)") {
+                val response = handler.handleConferenceModifyIQ(
+                    endpointRequest(createEndpoint(Conference.TRANSCRIBER_ID, synthetic = false))
+                ).first
+
+                response.type shouldBe IQ.Type.error
+                response.error.condition shouldBe StanzaError.Condition.bad_request
+                conference.getLocalEndpoint(Conference.TRANSCRIBER_ID) shouldBe null
+            }
+        }
         context("A request the bridge does not support") {
             should("be rejected as feature-not-implemented, before anything is applied") {
                 // Both an endpoint and a relay in one request.
