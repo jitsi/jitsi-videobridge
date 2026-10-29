@@ -25,10 +25,16 @@ import org.jitsi.videobridge.message.EndpointMessage
 
 class EndpointMessageTransportTest : ShouldSpec() {
     init {
+        context("The transcriber ID") {
+            should("be the value clients match on") {
+                // The bridge's transcription results carry it as from, and lib-jitsi-meet compares it as a literal.
+                Conference.TRANSCRIBER_ID shouldBe "transcriber"
+            }
+        }
         context("Forwarding a broadcast endpoint message") {
-            should("forward it with the sender's ID as from") {
+            should("forward it with the sender's ID as from, overwriting a from set by the sender") {
                 val (conference, transport) = setup("abcdef01")
-                val message = EndpointMessage("")
+                val message = EndpointMessage("").apply { from = Conference.TRANSCRIBER_ID }
 
                 transport.endpointMessage(message)
 
@@ -44,6 +50,17 @@ class EndpointMessageTransportTest : ShouldSpec() {
             }
         }
         context("Forwarding a 1:1 endpoint message") {
+            should("send it to the target with the sender's ID as from") {
+                val (conference, transport) = setup("abcdef01")
+                val target = mockk<Endpoint>(relaxed = true)
+                every { conference.getEndpoint("abcdef02") } returns target
+                val message = EndpointMessage("abcdef02")
+
+                transport.endpointMessage(message)
+
+                verify(exactly = 1) { target.sendMessage(message) }
+                message.from shouldBe "abcdef01"
+            }
             should("drop it when the sender's ID is the transcriber ID") {
                 val (conference, transport) = setup(Conference.TRANSCRIBER_ID)
                 val target = mockk<Endpoint>(relaxed = true)

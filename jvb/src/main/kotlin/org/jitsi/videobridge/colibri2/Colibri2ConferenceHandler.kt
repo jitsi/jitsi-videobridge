@@ -186,6 +186,11 @@ class Colibri2ConferenceHandler(
         }
 
         val endpoint = if (c2endpoint.create) {
+            if (c2endpoint.id == Conference.TRANSCRIBER_ID) {
+                // bad_request rather than conflict: jicofo handles a conflict as the bridge being out of sync and
+                // moves the whole conference, while a bad_request only fails this participant.
+                throw IqProcessingException(Condition.bad_request, "Endpoint ID ${c2endpoint.id} is reserved")
+            }
             if (conference.getLocalEndpoint(c2endpoint.id) != null) {
                 throw IqProcessingException(Condition.conflict, "Endpoint with ID ${c2endpoint.id} already exists")
             }

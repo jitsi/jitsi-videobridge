@@ -322,8 +322,10 @@ public class Conference
     private static final int SYNTHETIC_SOURCE_LOG_CACHE_SIZE = 1000;
 
     /**
-     * The "from" the bridge puts on the transcription results it broadcasts. Endpoints with this ID can not send
-     * endpoint messages, so that their messages can not be confused with the bridge's.
+     * The value of {@code from} on the transcription results the bridge broadcasts. Clients match on this string, so
+     * it cannot change independently of lib-jitsi-meet. The ID is reserved: endpoints with it are not created (see
+     * {@link #createLocalEndpoint}), and messages from a local endpoint with it are dropped by
+     * {@link EndpointMessageTransport#endpointMessage}.
      */
     public static final String TRANSCRIBER_ID = "transcriber";
 
@@ -921,6 +923,10 @@ public class Conference
         if (isExpired())
         {
             throw new ConferenceExpiredException(getID());
+        }
+        if (TRANSCRIBER_ID.equals(id))
+        {
+            throw new IllegalArgumentException("Endpoint ID " + id + " is reserved");
         }
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint != null)
@@ -1797,7 +1803,7 @@ public class Conference
             {
                 EndpointMessage endpointMessage = new EndpointMessage("");
                 endpointMessage.put("msgPayload", event);
-                endpointMessage.put("from", TRANSCRIBER_ID);
+                endpointMessage.setFrom(TRANSCRIBER_ID);
 
                 broadcastMessage(endpointMessage, true);
             }

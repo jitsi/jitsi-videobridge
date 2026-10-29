@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.assertions.nondeterministic.continually
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
@@ -53,6 +54,18 @@ class ConferenceTest : ConfigTest() {
                     DebugStateMode.entries.forEach { mode ->
                         getDebugState(mode, null).shouldBeValidJsonConf()
                     }
+                } finally {
+                    expire()
+                }
+            }
+        }
+        context("A local endpoint with the transcriber ID") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                try {
+                    shouldThrow<IllegalArgumentException> {
+                        createLocalEndpoint(Conference.TRANSCRIBER_ID, true, false, false, false, false, false, false)
+                    }
+                    endpointCount shouldBe 0
                 } finally {
                     expire()
                 }

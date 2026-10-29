@@ -82,6 +82,12 @@ public class EndpointMessageTransport
     private final Endpoint endpoint;
 
     /**
+     * Whether we logged dropping an endpoint message because this endpoint has the transcriber ID, so that it is
+     * logged once rather than per message.
+     */
+    private final AtomicBoolean loggedTranscriberIdDrop = new AtomicBoolean(false);
+
+    /**
      * Initializes a new {@link EndpointMessageTransport} instance.
      * @param endpoint the associated {@link Endpoint}.
      */
@@ -518,9 +524,13 @@ public class EndpointMessageTransport
             return null;
         }
 
+        // Conference.createLocalEndpoint does not create endpoints with this ID; this is a second check.
         if (Conference.TRANSCRIBER_ID.equals(endpoint.getId()))
         {
-            getLogger().warn("Not forwarding endpoint message from an endpoint with the transcriber ID");
+            if (loggedTranscriberIdDrop.compareAndSet(false, true))
+            {
+                getLogger().warn("Not forwarding endpoint messages from an endpoint with the transcriber ID");
+            }
             return null;
         }
 

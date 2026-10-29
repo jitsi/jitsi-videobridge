@@ -33,4 +33,8 @@ This type of messages could be used by the clients for sending JSON objects to t
 ```
 
 
-The only modification made by Jitsi Videobridge before the message is forwarded is adding `from` property to it. The value of this property is the endpoint id of the sender of the message.
+The only modification made by Jitsi Videobridge before the message is forwarded is setting the `from` property to the endpoint id of the sender of the message, overwriting any `from` the sender included.
+
+Jitsi Videobridge does not forward messages from visitor endpoints. The endpoint id `transcriber` is reserved: Jitsi Videobridge does not create an endpoint with it (a request to create one is rejected with `bad-request`), and does not forward messages from an endpoint with it.
+
+Jitsi Videobridge itself also sends `EndpointMessage`s with `from: "transcriber"`. They carry the transcription results Jitsi Videobridge receives from a transcriber, in `msgPayload`, and are sent to all endpoints in the conference.
