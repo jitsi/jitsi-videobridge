@@ -21,6 +21,7 @@ import java.util.concurrent.*;
 
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.relay.*;
 
 import static org.jitsi.videobridge.VideobridgeExpireThreadConfig.config;
 
@@ -48,8 +49,8 @@ public class VideobridgeExpireThread
             VideobridgeExpireThread.class.getSimpleName());
 
     /**
-     * The executor used to expire the individual {@link AbstractEndpoint}s
-     * or {@link Conference}s.
+     * The executor used to expire the individual {@link AbstractEndpoint}s,
+     * {@link Relay}s or {@link Conference}s.
      */
     private static final Executor EXPIRE_EXECUTOR
         = ExecutorUtils.newCachedThreadPool(
@@ -135,7 +136,7 @@ public class VideobridgeExpireThread
      * <tt>Channel</tt>s expired if they have been inactive for more than their
      * advertised <tt>expire</tt> number of seconds
      */
-    private void expire(Videobridge videobridge)
+    void expire(Videobridge videobridge)
     {
         logger.debug("Running expire()");
         for (Conference conference : videobridge.getConferences())
@@ -156,6 +157,14 @@ public class VideobridgeExpireThread
                     {
                         logger.info("Expiring endpoint " + endpoint.getId());
                         EXPIRE_EXECUTOR.execute(endpoint::expire);
+                    }
+                }
+                for (Relay relay : conference.getRelays())
+                {
+                    if (relay.shouldExpire())
+                    {
+                        logger.info("Expiring relay " + relay.getId());
+                        EXPIRE_EXECUTOR.execute(relay::expire);
                     }
                 }
             }

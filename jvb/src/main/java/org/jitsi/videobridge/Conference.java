@@ -52,6 +52,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jxmpp.jid.*;
 
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -195,9 +196,21 @@ public class Conference
     }
 
     /**
-     * The time when this {@link Conference} was created.
+     * The clock used for {@link #creationTime}, {@link #lastLocalEndpointTime} and {@link #shouldExpire()}.
      */
-    private final long creationTime = System.currentTimeMillis();
+    @NotNull
+    private final Clock clock;
+
+    /**
+     * The time when this {@link Conference} was created, in milliseconds from the epoch of {@link #clock}.
+     */
+    private final long creationTime;
+
+    /**
+     * The last time this {@link Conference} is known to have had a local endpoint ({@link #creationTime} until the
+     * first local endpoint expires), in milliseconds from the epoch of {@link #clock}. See {@link #shouldExpire()}.
+     */
+    private volatile long lastLocalEndpointTime;
 
     /**
      * The shim which handles Colibri v2 related logic for this conference (translates colibri v2 signaling into the
@@ -345,6 +358,19 @@ public class Conference
                       @Nullable String meetingId,
                       boolean isRtcStatsEnabled)
     {
+        this(videobridge, id, conferenceName, meetingId, isRtcStatsEnabled, Clock.systemUTC());
+    }
+
+    public Conference(Videobridge videobridge,
+                      String id,
+                      @Nullable EntityBareJid conferenceName,
+                      @Nullable String meetingId,
+                      boolean isRtcStatsEnabled,
+                      @NotNull Clock clock)
+    {
+        this.clock = Objects.requireNonNull(clock, "clock");
+        this.creationTime = clock.millis();
+        this.lastLocalEndpointTime = creationTime;
         this.meetingId = meetingId;
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         this.isRtcStatsEnabled = isRtcStatsEnabled;
@@ -853,7 +879,7 @@ public class Conference
      */
     private void updateStatisticsOnExpire()
     {
-        long durationSeconds = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
+        long durationSeconds = Math.round((clock.millis() - creationTime) / 1000d);
 
         VideobridgeMetrics.conferencesCompleted.inc();
         VideobridgeMetrics.totalConferenceSeconds.add(durationSeconds);
@@ -978,7 +1004,7 @@ public class Conference
         }
 
         // Construct outside the lock (this is slow), then add under it. See expire().
-        final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort);
+        final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort, clock);
         synchronized (relaysById)
         {
             if (isExpired())
@@ -1208,6 +1234,7 @@ public class Conference
         if (removedEndpoint instanceof Endpoint)
         {
             // The removed endpoint was a local Endpoint as opposed to a RelayedEndpoint.
+            lastLocalEndpointTime = clock.millis();
             updateEndpointsCache();
             endpointsById.values().forEach(e -> e.otherEndpointExpired(removedEndpoint));
             videobridge.localEndpointExpired(removedEndpoint.getVisitor());
@@ -1404,14 +1431,48 @@ public class Conference
     }
 
     /**
+     * Whether this {@link Conference} is ready to be expired by the bridge itself, i.e. without jicofo telling it to.
+     * <p>
+     * Normally jicofo expires the conference explicitly. This is a backstop for when it does not (it crashed, hung or
+     * restarted and lost its state), and it is the only thing that stops a conference from living until the bridge
+     * restarts. Local endpoints expire on their own when their client goes away (see
+     * {@link Endpoint#shouldExpire()}). {@link RelayedEndpoint}s and {@link Relay}s do not: a relayed endpoint has no
+     * activity of its own to judge, and a relay to a live peer bridge keeps exchanging ICE consent checks even when
+     * nobody is left on either side. So a conference whose local endpoints are all gone, but which still has relays
+     * with relayed endpoints, has to be expired here, or it (and its relays, their ICE agents, sockets and threads) is
+     * leaked. Expiring the conference expires its relays and relayed endpoints.
+     * <p>
+     * In some topologies a bridge is a pure relay between two meshes, with no local endpoints of its own. Such a
+     * conference must not be expired by this backstop, since that would silently break the conference. It is
+     * recognised by being in more than one mesh, and is left alone: it leaks if jicofo loses track of it. That is the
+     * preferred failure mode until there is a reliable signal for "this relay still serves participants", which would
+     * let the same backstop apply to it. See doc/relay.md.
+     *
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
     public boolean shouldExpire()
     {
-        // Allow a conference to have no endpoints in the first 20 seconds.
-        return getEndpointCount() == 0
-                && !inMultipleMeshes()
-                && (System.currentTimeMillis() - creationTime > 20000);
+        if (inMultipleMeshes())
+        {
+            // A bridge between meshes legitimately has no local endpoints. See above.
+            return false;
+        }
+
+        long now = clock.millis();
+        if (getEndpointCount() == 0)
+        {
+            // Allow a conference to have no endpoints in the first 20 seconds.
+            return now - creationTime > 20000;
+        }
+
+        if (getLocalEndpointCount() == 0)
+        {
+            // Only relayed endpoints are left. Allow a grace period from the time the last local endpoint left
+            // (or from creation), since a local endpoint may be about to be re-created (a reload, a re-invite).
+            return now - lastLocalEndpointTime > VideobridgeExpireThreadConfig.config.getInactivityTimeout().toMillis();
+        }
+
+        return false;
     }
 
     /**
@@ -1711,6 +1772,7 @@ public class Conference
         {
             debugState.put("expired", expired.get());
             debugState.put("creation_time", creationTime);
+            debugState.put("last_local_endpoint_time", lastLocalEndpointTime);
         }
         if (mode == DebugStateMode.FULL || mode == DebugStateMode.STATS)
         {
