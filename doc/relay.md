@@ -60,20 +60,33 @@ them, a conference that has only relayed endpoints lives until the bridge restar
 relays, their ICE agents, their sockets and their threads.
 
 1. The bridge expires a conference that has no local endpoints. It waits for the entity expiration timeout
-   (`videobridge.entity-expiration.timeout`, 1 minute by default) after the last local endpoint left. The
-   expiration of the conference expires its relays and its relayed endpoints. A relayed endpoint has no activity of
-   its own, so the bridge does not expire it directly.
-2. The bridge expires a relay with no incoming activity. ICE consent checks from the peer bridge count as activity,
-   so this applies only when the peer bridge is gone. The bridge also expires a relay whose ICE did not connect
-   in 2 minutes.
+   (`videobridge.entity-expiration.timeout`, 1 minute by default) after the last local endpoint left. The same rule
+   applies to a conference that has no endpoints at all. The expiration of the conference expires its relays and
+   its relayed endpoints. A relayed endpoint has no activity of its own, so the bridge does not expire it directly.
+   The bridge logs a warning and increments the `conferences_expired_with_relays` metric when it expires a
+   conference that still has relays. A non-zero rate of that metric points at a jicofo problem.
+2. The bridge expires a relay whose peer bridge is gone. The signal is the ICE consent check. This bridge sends
+   consent checks to the peer. When the peer answers, ice4j refreshes the consent of the relay. When the peer does not
+   answer for the entity expiration timeout, the relay expires. Media does not count, because RTP and RTCP for relayed
+   endpoints never reach the transceiver of the relay. The bridge also expires a relay whose ICE failed, or did not
+   connect in 2 minutes.
 
-**Known gap.** In some topologies a bridge sits between two meshes and has no local endpoints of its own. The bridge
-recognizes this case when its conference has relays in more than one mesh. It does not apply exception 1 to such a
-conference, because a wrong expiration silently breaks the conference. If jicofo loses track of such a conference,
-the conference leaks until the bridge restarts. This is the preferred failure mode for now.
+**Known gaps.** Two kinds of conference legitimately have no local endpoints. The bridge does not apply exception 1
+to them, because a wrong expiration silently breaks the conference.
+
+- In some topologies a bridge sits between two meshes. The bridge recognizes this case when its conference has
+  relays in more than one mesh.
+- A bridge can host only a synthetic endpoint (a translator) for participants that are all on other bridges. The
+  relayed participants keep the synthetic endpoint alive. The bridge recognizes this case when all its local endpoints
+  are synthetic.
+
+If jicofo loses track of such a conference, the conference leaks until the bridge restarts. This is the preferred
+failure mode for now. The bridge logs a warning once when such a conference would otherwise expire, so that an operator
+can find the leak. When the exemption ends (a relay goes away, or the synthetic endpoint expires), the
+bridge starts a new grace period before it expires the conference.
 
 A better fix needs a reliable signal that a relay still serves participants, for example from jicofo. With that
-signal, the bridge can apply the same backstop to a bridge between meshes.
+signal, the bridge can apply the same backstop to these conferences.
 
 ## Debugging
 Jicofo's debug interface can be used for troubleshooting.

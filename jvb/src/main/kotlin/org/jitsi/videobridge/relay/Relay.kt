@@ -72,7 +72,6 @@ import org.jitsi.utils.NEVER
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.mins
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.utils.sumOf
@@ -114,6 +113,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -171,9 +171,10 @@ class Relay @JvmOverloads constructor(
     private var extmapAllowMixed = false
 
     /**
-     * The indicator which determines whether [expire] has been called on this [Relay].
+     * Whether [expire] has been called on this [Relay]. It can be called from colibri, from [Conference.expire] and
+     * from the expire thread, concurrently.
      */
-    private var expired = false
+    private val expired = AtomicBoolean(false)
 
     /** The time this [Relay] was created, used by [shouldExpire]. */
     val creationTime: Instant = clock.instant()
@@ -902,7 +903,7 @@ class Relay @JvmOverloads constructor(
     fun scheduleRelayMessageTransportTimeout() {
         TaskPools.SCHEDULED_POOL.schedule(
             {
-                if (!expired) {
+                if (!expired.get()) {
                     if (!messageTransport.isConnected) {
                         logger.error("RelayMessageTransport still not connected.")
                         VideobridgeMetrics.numRelaysNoMessageTransportAfterDelay.inc()
@@ -1103,28 +1104,37 @@ class Relay @JvmOverloads constructor(
     }
 
     /**
-     * The last time a packet was received from the peer bridge: RTP, RTCP or an ICE consent check. The ICE part
-     * means a connected relay to a live peer is active even when no media flows.
+     * The last time the peer bridge was seen alive. In practice this is the last time the peer answered one of this
+     * bridge's ICE consent checks (ice4j refreshes consent on the response, see
+     * [IceTransport.EventHandler.consentUpdated]). RTP and RTCP for relayed endpoints go to the [RelayedEndpoint]s
+     * and never reach [transceiver], so only RTCP from an unknown SSRC counts here besides consent. That is enough:
+     * a connected relay to a live peer keeps consent fresh even when no media flows.
      */
     val lastIncomingActivity: Instant
         get() = transceiver.packetIOActivity.lastIncomingActivityInstant
 
     /**
      * Whether this [Relay] should be expired by the bridge itself, because its peer bridge is gone. Mirrors
-     * [Endpoint.shouldExpire]: a relay which never connected is expired [connectTimeout] after creation, and a relay
-     * which has had no incoming activity (not even ICE consent checks) for the entity expiration timeout is expired.
+     * [Endpoint.shouldExpire]: a relay whose ICE failed is expired, a relay which never connected is expired
+     * [Endpoint.epTimeout] after creation, and a relay whose peer has not answered a consent check for the entity
+     * expiration timeout (see [lastIncomingActivity]) is expired.
      *
      * Normally jicofo expires relays. This is a backstop for when it does not, for example because it lost its state
-     * in a restart. A relay to a live peer bridge is never expired by this check, since the peer keeps sending ICE
+     * in a restart. A relay to a live peer bridge is never expired by this check, since the peer keeps answering the
      * consent checks; see [Conference.shouldExpire] for how such a relay goes away.
      */
     fun shouldExpire(): Boolean {
+        if (iceTransport.hasFailed()) {
+            logger.info("Allowing to expire because ICE failed.")
+            return true
+        }
+
         val lastActivity = lastIncomingActivity
         val now = clock.instant()
 
         if (lastActivity == NEVER) {
             val timeSinceCreation = Duration.between(creationTime, now)
-            if (timeSinceCreation > connectTimeout) {
+            if (timeSinceCreation > Endpoint.epTimeout) {
                 logger.info("ICE has neither failed nor connected after $timeSinceCreation, expiring")
                 return true
             }
@@ -1140,7 +1150,9 @@ class Relay @JvmOverloads constructor(
     }
 
     fun expire() {
-        expired = true
+        if (!expired.compareAndSet(false, true)) {
+            return
+        }
         logger.info("Expiring.")
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { it.expire() }
@@ -1174,9 +1186,6 @@ class Relay @JvmOverloads constructor(
     }
 
     companion object {
-        /** How long a relay may stay without ICE connecting before [shouldExpire] gives up on it. */
-        private val connectTimeout = 2.mins
-
         private val droppedPacketsMetric = VideobridgeMetricsContainer.instance.registerCounter(
             "relay_srtp_send_queue_dropped_packets",
             "Number of packets dropped out of the Relay SRTP send queue."

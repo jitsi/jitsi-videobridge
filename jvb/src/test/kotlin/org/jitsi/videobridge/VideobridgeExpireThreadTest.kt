@@ -49,6 +49,8 @@ class VideobridgeExpireThreadTest : ConfigTest() {
 
                     clock.elapse(1.hours)
                     alive.transceiver.packetIOActivity.lastIceActivityInstant = clock.instant()
+                    // The local endpoint shares the conference's clock, so it needs activity too or it expires.
+                    local.transceiver.packetIOActivity.lastIceActivityInstant = clock.instant()
 
                     VideobridgeExpireThread(videobridge).expire(videobridge)
 

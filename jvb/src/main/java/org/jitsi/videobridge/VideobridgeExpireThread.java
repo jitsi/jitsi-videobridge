@@ -128,20 +128,20 @@ public class VideobridgeExpireThread
     }
 
     /**
-     * Expires the {@link Conference}s and/or endpoints of a specific <tt>Videobridge</tt> if they
-     * have been inactive for more than their advertised <tt>expire</tt> number
-     * of seconds.
+     * Expires the {@link Conference}s of a specific {@link Videobridge} which report that they should expire
+     * ({@link Conference#shouldExpire()}), and otherwise the endpoints and relays of each conference which report
+     * that they should ({@link AbstractEndpoint#shouldExpire()}, {@link Relay#shouldExpire()}). Normally jicofo
+     * expires all of these explicitly; this is the backstop for when it does not.
      *
-     * @param videobridge the <tt>Videobridge</tt> which is to have its
-     * <tt>Channel</tt>s expired if they have been inactive for more than their
-     * advertised <tt>expire</tt> number of seconds
+     * @param videobridge the {@link Videobridge} whose conferences, endpoints and relays are to be checked.
      */
     void expire(Videobridge videobridge)
     {
         logger.debug("Running expire()");
         for (Conference conference : videobridge.getConferences())
         {
-            // The Conferences will live an iteration more than the Contents.
+            // A conference is checked as a whole first. Its endpoints and relays are only checked while it stays,
+            // so they live one iteration longer than it would.
             if (conference.shouldExpire())
             {
                 logger.info("Conference "

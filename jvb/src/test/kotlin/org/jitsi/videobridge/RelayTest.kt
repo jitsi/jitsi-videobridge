@@ -48,7 +48,7 @@ class RelayTest : ConfigTest() {
                     conference.expire()
                 }
             }
-            should("not expire a relay while its peer keeps sending ICE consent checks, even without media") {
+            should("not expire a relay while its peer keeps answering ICE consent checks, even without media") {
                 val clock = FakeClock()
                 val conference = Conference(videobridge, "id", name, null, false, clock)
                 val relay = Relay("relay-id", conference, LoggerImpl("test"), "mesh-id", true, true, clock)
@@ -81,19 +81,16 @@ class RelayTest : ConfigTest() {
                     conference.expire()
                 }
             }
-            should("count received RTP as activity") {
+            should("expire only once") {
                 val clock = FakeClock()
                 val conference = Conference(videobridge, "id", name, null, false, clock)
-                val relay = Relay("relay-id", conference, LoggerImpl("test"), "mesh-id", true, true, clock)
+                val relay = conference.createRelay("relay-id", "mesh-id", true, true)
                 try {
-                    clock.elapse(5.mins)
-                    relay.shouldExpire() shouldBe true
-                    relay.transceiver.packetIOActivity.lastRtpPacketReceivedInstant = clock.instant()
-                    relay.shouldExpire() shouldBe false
-                    clock.elapse(61.secs)
-                    relay.shouldExpire() shouldBe true
-                } finally {
                     relay.expire()
+                    conference.getRelay("relay-id") shouldBe null
+                    // A second call (colibri, the conference and the expire thread can race) must be a no-op.
+                    relay.expire()
+                } finally {
                     conference.expire()
                 }
             }
