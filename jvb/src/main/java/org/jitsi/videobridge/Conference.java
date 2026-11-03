@@ -52,6 +52,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jxmpp.jid.*;
 
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -195,9 +196,37 @@ public class Conference
     }
 
     /**
-     * The time when this {@link Conference} was created.
+     * The clock used for {@link #creationTime}, the timestamps below and {@link #shouldExpire()}. Also passed to the
+     * endpoints and relays this conference creates.
      */
-    private final long creationTime = System.currentTimeMillis();
+    @NotNull
+    private final Clock clock;
+
+    /**
+     * The time when this {@link Conference} was created, in milliseconds from the epoch of {@link #clock}.
+     */
+    private final long creationTime;
+
+    /**
+     * The last time a local endpoint expired, or the creation time. Only read while the conference has no local
+     * endpoint other than synthetic ones, so it is the time since which that has been the case. In milliseconds from
+     * the epoch of {@link #clock}. See {@link #shouldExpire()}.
+     */
+    private volatile long localEndpointsAbsentSince;
+
+    /**
+     * The last time {@link #shouldExpire()} found this {@link Conference} exempt from expiring without local endpoints
+     * (it was in multiple meshes, or it had a synthetic local endpoint), or the creation time. In milliseconds from
+     * the epoch of {@link #clock}. The grace period before expiring starts at the later of this and
+     * {@link #localEndpointsAbsentSince}, so that losing the exemption does not expire the conference at once.
+     */
+    private volatile long lastExemptTime;
+
+    /** Whether {@link #shouldExpire()} has logged that this conference is exempt although it would otherwise expire. */
+    private final AtomicBoolean exemptionLogged = new AtomicBoolean(false);
+
+    /** Whether {@link #shouldExpire()} has logged (and counted) that this conference should expire. */
+    private final AtomicBoolean expirationLogged = new AtomicBoolean(false);
 
     /**
      * The shim which handles Colibri v2 related logic for this conference (translates colibri v2 signaling into the
@@ -345,6 +374,20 @@ public class Conference
                       @Nullable String meetingId,
                       boolean isRtcStatsEnabled)
     {
+        this(videobridge, id, conferenceName, meetingId, isRtcStatsEnabled, Clock.systemUTC());
+    }
+
+    public Conference(Videobridge videobridge,
+                      String id,
+                      @Nullable EntityBareJid conferenceName,
+                      @Nullable String meetingId,
+                      boolean isRtcStatsEnabled,
+                      @NotNull Clock clock)
+    {
+        this.clock = Objects.requireNonNull(clock, "clock");
+        this.creationTime = clock.millis();
+        this.localEndpointsAbsentSince = creationTime;
+        this.lastExemptTime = creationTime;
         this.meetingId = meetingId;
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         this.isRtcStatsEnabled = isRtcStatsEnabled;
@@ -853,7 +896,7 @@ public class Conference
      */
     private void updateStatisticsOnExpire()
     {
-        long durationSeconds = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
+        long durationSeconds = Math.round((clock.millis() - creationTime) / 1000d);
 
         VideobridgeMetrics.conferencesCompleted.inc();
         VideobridgeMetrics.totalConferenceSeconds.add(durationSeconds);
@@ -937,7 +980,7 @@ public class Conference
         // Construct outside the lock (this is slow), then add under it.
         final Endpoint endpoint = new Endpoint(
                 id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize,
-                synthetic);
+                synthetic, clock);
         return addLocalEndpoint(endpoint, visitor);
     }
 
@@ -978,7 +1021,7 @@ public class Conference
         }
 
         // Construct outside the lock (this is slow), then add under it. See expire().
-        final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort);
+        final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort, clock);
         synchronized (relaysById)
         {
             if (isExpired())
@@ -1208,6 +1251,7 @@ public class Conference
         if (removedEndpoint instanceof Endpoint)
         {
             // The removed endpoint was a local Endpoint as opposed to a RelayedEndpoint.
+            localEndpointsAbsentSince = clock.millis();
             updateEndpointsCache();
             endpointsById.values().forEach(e -> e.otherEndpointExpired(removedEndpoint));
             videobridge.localEndpointExpired(removedEndpoint.getVisitor());
@@ -1404,14 +1448,96 @@ public class Conference
     }
 
     /**
+     * Whether this {@link Conference} is ready to be expired by the bridge itself, i.e. without jicofo telling it to.
+     * <p>
+     * Normally jicofo expires the conference explicitly. This is a backstop for when it does not (it crashed, hung or
+     * restarted and lost its state), and it is the only thing that stops a conference from living until the bridge
+     * restarts. Local endpoints expire on their own when their client goes away (see
+     * {@link Endpoint#shouldExpire()}). {@link RelayedEndpoint}s and {@link Relay}s do not: a relayed endpoint has no
+     * activity of its own to judge, and a relay to a live peer bridge keeps its ICE consent fresh even when nobody is
+     * left on either side. So a conference whose local endpoints are all gone, but which still has relays with
+     * relayed endpoints, has to be expired here, or it (and its relays, their ICE agents, sockets and threads) is
+     * leaked. Expiring the conference expires its relays and relayed endpoints. The same rule covers a conference
+     * with no endpoints at all.
+     * <p>
+     * The conference expires once it has had no local endpoint (synthetic ones aside, see below) for the entity
+     * expiration timeout. The period is counted from the time the last local endpoint left, not from creation, so
+     * that a reload or a re-invite does not expire the conference under the new endpoint.
+     * <p>
+     * Two kinds of conference legitimately have no local endpoints, and are exempt. Both leak if jicofo loses track
+     * of them. That is the preferred failure mode, since expiring them by mistake would silently break a working
+     * conference, until there is a reliable signal for "this relay still serves participants", which would let the
+     * same backstop apply to them. See doc/relay.md.
+     * <ul>
+     *     <li>In some topologies a bridge is a pure relay between two meshes. It is recognized by being in more
+     *     than one mesh.</li>
+     *     <li>A bridge can host only a synthetic endpoint (a translator) for participants which are all on other
+     *     bridges. A synthetic endpoint is kept alive by relayed humans (see {@link Endpoint#shouldExpire()}), so
+     *     it does not count as a local endpoint here, but it does make the conference exempt.</li>
+     * </ul>
+     * Losing an exemption (a relay goes away and leaves a single mesh, the synthetic endpoint expires) starts a new
+     * grace period rather than expiring the conference at once. An exempt conference which would otherwise have
+     * expired is logged once (at info, since this is expected in deployments with these topologies), so that a
+     * leak can at least be found in the logs.
+     *
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
     public boolean shouldExpire()
     {
-        // Allow a conference to have no endpoints in the first 20 seconds.
-        return getEndpointCount() == 0
-                && !inMultipleMeshes()
-                && (System.currentTimeMillis() - creationTime > 20000);
+        List<Endpoint> localEndpoints = getLocalEndpoints();
+        if (localEndpoints.stream().anyMatch(e -> !e.getSynthetic()))
+        {
+            return false;
+        }
+
+        long now = clock.millis();
+        long timeout = VideobridgeExpireThreadConfig.config.getInactivityTimeout().toMillis();
+        Duration absentFor = Duration.ofMillis(now - localEndpointsAbsentSince);
+        boolean pastGrace = now - Math.max(localEndpointsAbsentSince, lastExemptTime) > timeout;
+
+        String exemption = null;
+        if (inMultipleMeshes())
+        {
+            exemption = "it is in multiple meshes";
+        }
+        else if (!localEndpoints.isEmpty())
+        {
+            exemption = "it has a synthetic local endpoint";
+        }
+        if (exemption != null)
+        {
+            lastExemptTime = now;
+            if (absentFor.toMillis() > timeout && exemptionLogged.compareAndSet(false, true))
+            {
+                // Info, not warn: this is expected once per conference in a deployment which uses these topologies.
+                // It only tells a leak apart from a healthy conference in hindsight.
+                logger.info("Not expiring a conference with no local endpoints for " + absentFor + " because "
+                        + exemption + " (relays=" + relaysById.size() + ", endpoints=" + getEndpointCount()
+                        + "). If jicofo lost track of it, it will leak until the bridge restarts.");
+            }
+            return false;
+        }
+
+        if (!pastGrace)
+        {
+            return false;
+        }
+
+        if (expirationLogged.compareAndSet(false, true))
+        {
+            int relayCount = relaysById.size();
+            if (relayCount > 0)
+            {
+                logger.warn("Expiring a conference with no local endpoints for " + absentFor + ", but with relays="
+                        + relayCount + ", endpoints=" + getEndpointCount() + ". Jicofo should have expired it.");
+                VideobridgeMetrics.conferencesExpiredWithRelays.inc();
+            }
+            else
+            {
+                logger.info("Expiring a conference with no endpoints for " + absentFor + ".");
+            }
+        }
+        return true;
     }
 
     /**
@@ -1711,6 +1837,8 @@ public class Conference
         {
             debugState.put("expired", expired.get());
             debugState.put("creation_time", creationTime);
+            debugState.put("local_endpoints_absent_since", localEndpointsAbsentSince);
+            debugState.put("last_exempt_time", lastExemptTime);
         }
         if (mode == DebugStateMode.FULL || mode == DebugStateMode.STATS)
         {

@@ -43,6 +43,13 @@ object VideobridgeMetrics {
     )
 
     @JvmField
+    val conferencesExpiredWithRelays = metricsContainer.registerCounter(
+        "conferences_expired_with_relays",
+        "The number of conferences the bridge expired on its own because they had no local endpoints while relays " +
+            "remained. Jicofo normally expires these, so a non-zero rate points at a jicofo problem."
+    )
+
+    @JvmField
     val conferencesCreated = metricsContainer.registerCounter(
         "conferences_created",
         "The total number of conferences created on the Videobridge."

@@ -1314,11 +1314,11 @@ class Endpoint @JvmOverloads constructor(
         private val recurringRunnableExecutor = RecurringRunnableExecutor(Endpoint::class.java.simpleName)
 
         /**
-         * How long we'll give an endpoint to either successfully establish
-         * an ICE connection or fail before we expire it.
+         * How long we'll give an endpoint (or a [org.jitsi.videobridge.relay.Relay]) to either successfully
+         * establish an ICE connection or fail before we expire it.
          */
         // TODO: make this configurable
-        private val epTimeout = 2.mins
+        internal val epTimeout = 2.mins
 
         private val timelineCounter = AtomicLong()
         private val timelineFraction: Long by config {

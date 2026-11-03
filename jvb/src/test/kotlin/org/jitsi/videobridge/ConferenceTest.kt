@@ -25,8 +25,10 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
 import org.jitsi.ConfigTest
 import org.jitsi.nlj.DebugStateMode
+import org.jitsi.utils.hours
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.mins
+import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.SyntheticSourceKind
@@ -205,6 +207,228 @@ class ConferenceTest : ConfigTest() {
                     }
                 } finally {
                     expire()
+                }
+            }
+        }
+        context("Expiring a conference") {
+            // The entity expiration timeout is 1 minute by default. It is also the grace period a conference gets
+            // without local endpoints, counted from creation or from the time the last local endpoint left.
+            should("not expire a new conference with no endpoints before the grace period") {
+                val clock = FakeClock()
+                with(Conference(videobridge, "id", name, null, false, clock)) {
+                    try {
+                        shouldExpire() shouldBe false
+                        clock.elapse(59.secs)
+                        shouldExpire() shouldBe false
+                        clock.elapse(2.secs)
+                        shouldExpire() shouldBe true
+                    } finally {
+                        expire()
+                    }
+                }
+            }
+            should("not expire while a local endpoint is present") {
+                val clock = FakeClock()
+                with(Conference(videobridge, "id", name, null, false, clock)) {
+                    try {
+                        createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
+                        clock.elapse(1.hours)
+                        shouldExpire() shouldBe false
+                    } finally {
+                        expire()
+                    }
+                }
+            }
+            should("expire once its last local endpoint is gone, after the grace period") {
+                val clock = FakeClock()
+                with(Conference(videobridge, "id", name, null, false, clock)) {
+                    try {
+                        val local = createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
+                        clock.elapse(1.hours)
+                        local.expire()
+                        endpointCount shouldBe 0
+                        // The grace period is counted from the time the local endpoint left, not from creation.
+                        shouldExpire() shouldBe false
+                        clock.elapse(59.secs)
+                        shouldExpire() shouldBe false
+                        clock.elapse(2.secs)
+                        shouldExpire() shouldBe true
+                    } finally {
+                        expire()
+                    }
+                }
+            }
+            should("restart the grace period when a local endpoint is re-created and leaves again") {
+                // A reload: the old endpoint leaves, a new one is created within the grace period and leaves too.
+                val clock = FakeClock()
+                with(Conference(videobridge, "id", name, null, false, clock)) {
+                    try {
+                        val first = createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
+                        clock.elapse(1.hours)
+                        first.expire()
+
+                        clock.elapse(50.secs)
+                        val second = createLocalEndpoint("abcdabce", true, false, false, false, false, false, false)
+                        clock.elapse(5.secs)
+                        second.expire()
+
+                        // 75 seconds after the first departure, but only 20 after the second.
+                        clock.elapse(20.secs)
+                        shouldExpire() shouldBe false
+                        clock.elapse(45.secs)
+                        shouldExpire() shouldBe true
+                    } finally {
+                        expire()
+                    }
+                }
+            }
+            context("with relays and relayed endpoints") {
+                should("not expire a new conference with only relayed endpoints before the grace period") {
+                    val clock = FakeClock()
+                    with(Conference(videobridge, "id", name, null, false, clock)) {
+                        try {
+                            val relay = createRelay("relay-id", "mesh-id", true, true)
+                            val remote = relay.addRemoteEndpoint("remote", null, emptyList(), emptyList())!!
+                            addEndpoints(setOf(remote))
+                            endpointCount shouldBe 1
+                            localEndpointCount shouldBe 0
+
+                            // The local endpoint for this conference may still be on its way.
+                            clock.elapse(59.secs)
+                            shouldExpire() shouldBe false
+                            clock.elapse(2.secs)
+                            shouldExpire() shouldBe true
+                        } finally {
+                            expire()
+                        }
+                    }
+                }
+                should("not expire while a local endpoint is present, however long") {
+                    val clock = FakeClock()
+                    with(Conference(videobridge, "id", name, null, false, clock)) {
+                        try {
+                            val relay = createRelay("relay-id", "mesh-id", true, true)
+                            val remote = relay.addRemoteEndpoint("remote", null, emptyList(), emptyList())!!
+                            addEndpoints(setOf(remote))
+                            createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
+
+                            clock.elapse(1.hours)
+                            shouldExpire() shouldBe false
+                        } finally {
+                            expire()
+                        }
+                    }
+                }
+                should("expire once the last local endpoint has been gone for the grace period") {
+                    // This is the case where jicofo lost track of the conference: the local endpoint expired on its
+                    // own because its client left, but nobody removed the relayed endpoint or the relay.
+                    val clock = FakeClock()
+                    with(Conference(videobridge, "id", name, null, false, clock)) {
+                        try {
+                            val relay = createRelay("relay-id", "mesh-id", true, true)
+                            val remote = relay.addRemoteEndpoint("remote", null, emptyList(), emptyList())!!
+                            addEndpoints(setOf(remote))
+                            val local = createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
+                            clock.elapse(1.hours)
+
+                            local.expire()
+                            localEndpointCount shouldBe 0
+                            endpointCount shouldBe 1
+                            hasRelays() shouldBe true
+
+                            // The grace period is counted from the time the local endpoint left, not from creation,
+                            // so that a reload or a re-invite does not expire the conference under the new endpoint.
+                            shouldExpire() shouldBe false
+                            clock.elapse(59.secs)
+                            shouldExpire() shouldBe false
+                            clock.elapse(2.secs)
+                            shouldExpire() shouldBe true
+
+                            // Expiring the conference takes the relay and the relayed endpoint with it.
+                            expire()
+                            hasRelays() shouldBe false
+                            endpointCount shouldBe 0
+                            remote.isExpired shouldBe true
+                        } finally {
+                            expire()
+                        }
+                    }
+                }
+                should("not expire a bridge between meshes, even with no local endpoints") {
+                    // A known gap, chosen on purpose: a bridge in more than one mesh may legitimately have no local
+                    // endpoints, and silently expiring it would break the conference. See doc/relay.md.
+                    val clock = FakeClock()
+                    with(Conference(videobridge, "id", name, null, false, clock)) {
+                        try {
+                            val relay1 = createRelay("relay-1", "mesh-1", true, true)
+                            createRelay("relay-2", "mesh-2", true, true)
+                            val remote = relay1.addRemoteEndpoint("remote", null, emptyList(), emptyList())!!
+                            addEndpoints(setOf(remote))
+
+                            clock.elapse(1.hours)
+                            shouldExpire() shouldBe false
+
+                            // Not even with no endpoints at all.
+                            relay1.removeRemoteEndpoint("remote")
+                            endpointCount shouldBe 0
+                            clock.elapse(1.hours)
+                            shouldExpire() shouldBe false
+                        } finally {
+                            expire()
+                        }
+                    }
+                }
+                should("get a new grace period when a bridge between meshes drops to a single mesh") {
+                    // The relay to the other mesh goes away (jicofo replaced it, or its peer died). The conference
+                    // must not expire at once, since it never had a local endpoint and its creation is long past.
+                    val clock = FakeClock()
+                    with(Conference(videobridge, "id", name, null, false, clock)) {
+                        try {
+                            val relay1 = createRelay("relay-1", "mesh-1", true, true)
+                            val relay2 = createRelay("relay-2", "mesh-2", true, true)
+                            val remote = relay1.addRemoteEndpoint("remote", null, emptyList(), emptyList())!!
+                            addEndpoints(setOf(remote))
+                            clock.elapse(1.hours)
+                            shouldExpire() shouldBe false
+
+                            relay2.expire()
+                            hasRelays() shouldBe true
+                            shouldExpire() shouldBe false
+                            clock.elapse(59.secs)
+                            shouldExpire() shouldBe false
+                            clock.elapse(2.secs)
+                            shouldExpire() shouldBe true
+                        } finally {
+                            expire()
+                        }
+                    }
+                }
+                should("not expire a bridge whose only local endpoint is synthetic, while relayed humans remain") {
+                    // A translator placed on a bridge whose human participants are all on other bridges. The relayed
+                    // humans keep the translator alive, and the translator keeps the conference alive. A known gap,
+                    // like the multi-mesh case: it leaks if jicofo lost track of it. See doc/relay.md.
+                    val clock = FakeClock()
+                    with(Conference(videobridge, "id", name, null, false, clock)) {
+                        try {
+                            val relay = createRelay("relay-id", "mesh-id", true, true)
+                            val remote = relay.addRemoteEndpoint("remote", null, emptyList(), emptyList())!!
+                            addEndpoints(setOf(remote))
+                            val bot = createLocalEndpoint("bot", true, false, false, false, false, false, true)
+                            clock.elapse(1.hours)
+                            bot.shouldExpire() shouldBe false
+                            shouldExpire() shouldBe false
+
+                            // Once the translator is gone, the conference gets a grace period and then expires.
+                            bot.expire()
+                            shouldExpire() shouldBe false
+                            clock.elapse(59.secs)
+                            shouldExpire() shouldBe false
+                            clock.elapse(2.secs)
+                            shouldExpire() shouldBe true
+                        } finally {
+                            expire()
+                        }
+                    }
                 }
             }
         }

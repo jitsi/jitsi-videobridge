@@ -68,6 +68,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.NEVER
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -80,6 +81,7 @@ import org.jitsi.videobridge.EncodingsManager
 import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.TransportConfig
+import org.jitsi.videobridge.VideobridgeExpireThreadConfig
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
@@ -106,10 +108,12 @@ import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import java.nio.ByteBuffer
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -141,7 +145,7 @@ class Relay @JvmOverloads constructor(
      */
     iceControlling: Boolean,
     useUniquePort: Boolean,
-    clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC()
 ) : EncodingsManager.EncodingsUpdateListener, PotentialPacketHandler {
 
     /**
@@ -167,9 +171,13 @@ class Relay @JvmOverloads constructor(
     private var extmapAllowMixed = false
 
     /**
-     * The indicator which determines whether [expire] has been called on this [Relay].
+     * Whether [expire] has been called on this [Relay]. It can be called from colibri, from [Conference.expire] and
+     * from the expire thread, concurrently.
      */
-    private var expired = false
+    private val expired = AtomicBoolean(false)
+
+    /** The time this [Relay] was created, used by [shouldExpire]. */
+    val creationTime: Instant = clock.instant()
 
     private val sctpHandler = if (sctpConfig.enabled) DcSctpHandler() else null
 
@@ -895,7 +903,7 @@ class Relay @JvmOverloads constructor(
     fun scheduleRelayMessageTransportTimeout() {
         TaskPools.SCHEDULED_POOL.schedule(
             {
-                if (!expired) {
+                if (!expired.get()) {
                     if (!messageTransport.isConnected) {
                         logger.error("RelayMessageTransport still not connected.")
                         VideobridgeMetrics.numRelaysNoMessageTransportAfterDelay.inc()
@@ -1095,8 +1103,56 @@ class Relay @JvmOverloads constructor(
         }
     }
 
+    /**
+     * The last time the peer bridge was seen alive. In practice this is the last time the peer answered one of this
+     * bridge's ICE consent checks (ice4j refreshes consent on the response, see
+     * [IceTransport.EventHandler.consentUpdated]). RTP and RTCP for relayed endpoints go to the [RelayedEndpoint]s
+     * and never reach [transceiver], so only RTCP from an unknown SSRC counts here besides consent. That is enough:
+     * a connected relay to a live peer keeps consent fresh even when no media flows.
+     */
+    val lastIncomingActivity: Instant
+        get() = transceiver.packetIOActivity.lastIncomingActivityInstant
+
+    /**
+     * Whether this [Relay] should be expired by the bridge itself, because its peer bridge is gone. Mirrors
+     * [Endpoint.shouldExpire]: a relay whose ICE failed is expired, a relay which never connected is expired
+     * [Endpoint.epTimeout] after creation, and a relay whose peer has not answered a consent check for the entity
+     * expiration timeout (see [lastIncomingActivity]) is expired.
+     *
+     * Normally jicofo expires relays. This is a backstop for when it does not, for example because it lost its state
+     * in a restart. A relay to a live peer bridge is never expired by this check, since the peer keeps answering the
+     * consent checks; see [Conference.shouldExpire] for how such a relay goes away.
+     */
+    fun shouldExpire(): Boolean {
+        if (iceTransport.hasFailed()) {
+            logger.info("Allowing to expire because ICE failed.")
+            return true
+        }
+
+        val lastActivity = lastIncomingActivity
+        val now = clock.instant()
+
+        if (lastActivity == NEVER) {
+            val timeSinceCreation = Duration.between(creationTime, now)
+            if (timeSinceCreation > Endpoint.epTimeout) {
+                logger.info("ICE has neither failed nor connected after $timeSinceCreation, expiring")
+                return true
+            }
+            return false
+        }
+
+        val expireTimeout = VideobridgeExpireThreadConfig.config.inactivityTimeout
+        if (Duration.between(lastActivity, now) > expireTimeout) {
+            logger.info("Allowing to expire because of no activity in over $expireTimeout")
+            return true
+        }
+        return false
+    }
+
     fun expire() {
-        expired = true
+        if (!expired.compareAndSet(false, true)) {
+            return
+        }
         logger.info("Expiring.")
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { it.expire() }
