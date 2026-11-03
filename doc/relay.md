@@ -81,8 +81,8 @@ to them, because a wrong expiration silently breaks the conference.
   are synthetic.
 
 If jicofo loses track of such a conference, the conference leaks until the bridge restarts. This is the preferred
-failure mode for now. The bridge logs a warning once when such a conference would otherwise expire, so that an operator
-can find the leak. When the exemption ends (a relay goes away, or the synthetic endpoint expires), the
+failure mode for now. The bridge logs a line once (at info level) when such a conference would otherwise expire, so that an
+operator can find a leak in the logs. When the exemption ends (a relay goes away, or the synthetic endpoint expires), the
 bridge starts a new grace period before it expires the conference.
 
 A better fix needs a reliable signal that a relay still serves participants, for example from jicofo. With that

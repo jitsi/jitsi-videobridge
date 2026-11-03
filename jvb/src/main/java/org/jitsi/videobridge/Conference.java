@@ -1477,7 +1477,8 @@ public class Conference
      * </ul>
      * Losing an exemption (a relay goes away and leaves a single mesh, the synthetic endpoint expires) starts a new
      * grace period rather than expiring the conference at once. An exempt conference which would otherwise have
-     * expired is logged once, so that the leak is at least visible.
+     * expired is logged once (at info, since this is expected in deployments with these topologies), so that a
+     * leak can at least be found in the logs.
      *
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
@@ -1491,7 +1492,7 @@ public class Conference
 
         long now = clock.millis();
         long timeout = VideobridgeExpireThreadConfig.config.getInactivityTimeout().toMillis();
-        long absentFor = now - localEndpointsAbsentSince;
+        Duration absentFor = Duration.ofMillis(now - localEndpointsAbsentSince);
         boolean pastGrace = now - Math.max(localEndpointsAbsentSince, lastExemptTime) > timeout;
 
         String exemption = null;
@@ -1506,9 +1507,11 @@ public class Conference
         if (exemption != null)
         {
             lastExemptTime = now;
-            if (absentFor > timeout && exemptionLogged.compareAndSet(false, true))
+            if (absentFor.toMillis() > timeout && exemptionLogged.compareAndSet(false, true))
             {
-                logger.warn("Not expiring a conference with no local endpoints for " + absentFor + " ms because "
+                // Info, not warn: this is expected once per conference in a deployment which uses these topologies.
+                // It only tells a leak apart from a healthy conference in hindsight.
+                logger.info("Not expiring a conference with no local endpoints for " + absentFor + " because "
                         + exemption + " (relays=" + relaysById.size() + ", endpoints=" + getEndpointCount()
                         + "). If jicofo lost track of it, it will leak until the bridge restarts.");
             }
@@ -1525,13 +1528,13 @@ public class Conference
             int relayCount = relaysById.size();
             if (relayCount > 0)
             {
-                logger.warn("Expiring a conference with no local endpoints for " + absentFor + " ms, but with relays="
+                logger.warn("Expiring a conference with no local endpoints for " + absentFor + ", but with relays="
                         + relayCount + ", endpoints=" + getEndpointCount() + ". Jicofo should have expired it.");
                 VideobridgeMetrics.conferencesExpiredWithRelays.inc();
             }
             else
             {
-                logger.info("Expiring a conference with no endpoints for " + absentFor + " ms.");
+                logger.info("Expiring a conference with no endpoints for " + absentFor + ".");
             }
         }
         return true;
