@@ -17,6 +17,7 @@ package org.jitsi.nlj.dtls
 
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.tls.CipherSuite
+import org.bouncycastle.tls.ProtocolVersion
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
@@ -37,6 +38,49 @@ class DtlsConfig private constructor() {
         }
     }
 
+    /**
+     * The assumed path MTU (including IP and UDP headers), used to size outgoing DTLS datagrams.
+     */
+    val mtu: Int by config {
+        "jmt.dtls.mtu".from(JitsiConfig.newConfig).transformedBy {
+            if (it < 576 || it > 65535) {
+                throw ConfigException.UnableToRetrieve.ConditionNotMet("mtu must be between 576 and 65535")
+            }
+            it
+        }
+    }
+
+    /**
+     * Whether DTLS 1.3 is offered (as a client) and accepted (as a server). DTLS 1.2 is always supported.
+     */
+    val dtls13Enabled: Boolean by config {
+        "jmt.dtls.enable-dtls13".from(JitsiConfig.newConfig)
+    }
+
+    /**
+     * The DTLS protocol versions to offer/accept, in decreasing order of preference.
+     */
+    val supportedVersions: Array<ProtocolVersion>
+        get() = if (dtls13Enabled) {
+            ProtocolVersion.DTLSv13.downTo(ProtocolVersion.DTLSv12)
+        } else {
+            ProtocolVersion.DTLSv12.only()
+        }
+
+    /**
+     * Whether to offer/select the X25519MLKEM768 post-quantum hybrid key exchange (DTLS 1.3 only).
+     */
+    val postQuantumKeyExchangeEnabled: Boolean by config {
+        "jmt.dtls.enable-post-quantum-key-exchange".from(JitsiConfig.newConfig)
+    }
+
+    /**
+     * Whether to actually offer/select the post-quantum hybrid key exchange. It can only be negotiated with
+     * DTLS 1.3, so there is no point offering it when DTLS 1.3 is disabled.
+     */
+    val offerPostQuantumKeyExchange: Boolean
+        get() = dtls13Enabled && postQuantumKeyExchangeEnabled
+
     val localFingerprintHashFunction: String by config {
         "jmt.dtls.local-fingerprint-hash-function".from(JitsiConfig.newConfig).transformedBy {
             validateHashFunction(it)
@@ -52,6 +96,13 @@ class DtlsConfig private constructor() {
             }
             list.map { validateHashFunction(it) }
         }
+    }
+
+    /**
+     * Whether to leave the local certificate unsigned (RFC 9925) rather than self-signing it.
+     */
+    val useAlgUnsigned: Boolean by config {
+        "jmt.dtls.use-alg-unsigned".from(JitsiConfig.newConfig)
     }
 
     companion object {
