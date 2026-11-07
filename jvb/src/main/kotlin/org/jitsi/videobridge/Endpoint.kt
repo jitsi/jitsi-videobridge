@@ -1115,11 +1115,14 @@ class Endpoint @JvmOverloads constructor(
     override fun wants(packetInfo: PacketInfo): Boolean {
         val packet = packetInfo.packet
         if (packet is AudioRtpPacket) {
-            // Every reason to reject an audio packet must go through this call to [AudioSequenceNumberRewriter.dropped],
-            // so that the receiver gets contiguous sequence numbers.
+            // Each reason in wants() to reject an audio packet must go through this call to
+            // [AudioSequenceNumberRewriter.dropped], so that the gap is closed. Packets that are lost later (for
+            // example, when the send queue is full) are not recorded, and the receiver sees them as ordinary loss.
             val wanted = isTransportConnected() && acceptAudio && conference.isEndpointAudioWanted(id, packet.ssrc)
-            if (!wanted) {
-                audioSequenceNumbers.dropped(packet.ssrc, packet.sequenceNumber)
+            if (wanted) {
+                audioSequenceNumbers.accepted(packet.ssrc, packet.sequenceNumber)
+            } else {
+                audioSequenceNumbers.dropped(packet.ssrc)
             }
             return wanted
         }
@@ -1236,6 +1239,7 @@ class Endpoint @JvmOverloads constructor(
         set<ObjectNode>("dtls_transport", dtlsTransport.getDebugState())
         set<ObjectNode>("transceiver", transceiver.debugState(mode))
         put("accept_audio", acceptAudio)
+        set<ObjectNode>("audio_sequence_numbers", audioSequenceNumbers.debugState())
         put("accept_video", acceptVideo)
         put("visitor", visitor)
         put("diarize", diarize)
