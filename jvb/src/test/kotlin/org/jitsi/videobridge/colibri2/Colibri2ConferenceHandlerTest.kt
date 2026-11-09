@@ -248,9 +248,27 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 ep.receivesSsrc(11L) shouldBe true
                 ep.ssrcs shouldContainAll ep.mediaSourceSsrcs()
             }
-            should("cover every SSRC of the sources of a relayed endpoint, including RTX") {
+            should("not include a synthetic source of a local endpoint, while the SSRC still resolves") {
+                // The bridge injects synthetic audio into the conference itself. The endpoint must not be able to
+                // send on that SSRC, but lookups of the SSRC (e.g. for the source name) must still find it.
+                handle(
+                    endpointRequest(
+                        createEndpoint(
+                            "ep",
+                            false,
+                            audioSource("ep-a0", 1L, false),
+                            audioSource("ep-a0.hi", 2L, true)
+                        )
+                    )
+                )
+                val ep = conference.getLocalEndpoint("ep").shouldNotBeNull()
+                ep.receivesSsrc(1L) shouldBe true
+                ep.receivesSsrc(2L) shouldBe false
+                conference.getEndpointBySsrc(2L) shouldBe ep
+            }
+            should("cover every SSRC of the sources of a relayed endpoint, including RTX and synthetic sources") {
                 // The relay routes a packet to the relayed endpoint by the same set, so a gap here would drop all
-                // of the endpoint's media.
+                // of the endpoint's media. Synthetic audio does arrive over a relay.
                 withNewConfig(RELAY_CONFIG) {
                     handle(
                         relayRequest(
@@ -259,6 +277,7 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                                 "ep",
                                 false,
                                 audioSource("ep-a0", 1L, false),
+                                audioSource("ep-a0.hi", 2L, true),
                                 videoSource("ep-v0", listOf(10L), listOf(fid(10L, 11L)))
                             )
                         )
@@ -266,7 +285,7 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                     val ep = conference.getRelay(RELAY_ID).shouldNotBeNull().getEndpoint("ep").shouldNotBeNull()
                     ep.mediaSources.flatMap { it.rtpEncodings.toList() }.flatMap { it.ssrcs } shouldContainAll
                         listOf(10L, 11L)
-                    ep.ssrcs shouldContainAll listOf(1L, 10L, 11L)
+                    ep.ssrcs shouldContainAll listOf(1L, 2L, 10L, 11L)
                 }
             }
             should("cover the SSRCs of a source added later") {
