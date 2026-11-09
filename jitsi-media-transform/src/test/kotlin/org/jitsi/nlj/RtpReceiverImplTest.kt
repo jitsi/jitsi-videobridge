@@ -93,6 +93,7 @@ class RtpReceiverImplTest : ShouldSpec() {
             should("be decrypted and forwarded") {
                 forwarded.size shouldBe 1
                 forwarded[0].packet should haveSameContentAs(SrtpSample.expectedDecryptedRtpPacket)
+                receiver.getStats().numPacketsDroppedUnsignaledSsrc shouldBe 0
             }
         }
 
@@ -103,6 +104,7 @@ class RtpReceiverImplTest : ShouldSpec() {
 
                 should("be dropped") {
                     forwarded.size shouldBe 0
+                    receiver.getStats().numPacketsDroppedUnsignaledSsrc shouldBe 1
                 }
             }
 

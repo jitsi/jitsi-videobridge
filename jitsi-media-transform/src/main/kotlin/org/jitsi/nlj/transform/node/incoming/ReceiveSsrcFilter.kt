@@ -29,30 +29,27 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 
 /**
- * Drops RTP packets whose SSRC the sending endpoint did not signal (i.e. which is not among the receive SSRCs in
- * the [ReadOnlyStreamInformationStore]).
+ * Drops RTP packets whose SSRC is not a receive SSRC of the endpoint (see
+ * [ReadOnlyStreamInformationStore.receiveSsrcs]), i.e. an SSRC that was not signaled for the endpoint at some point
+ * (a receive SSRC is not removed when its source is removed).
  *
- * An endpoint can only send media for the sources that were signaled for it. Without this check, an audio packet
- * is attributed to a source by the SSRC in its header alone, so an endpoint could send audio that the bridge
- * attributes to another endpoint's source (SRTP authenticates the packet with the keys of the sending endpoint, but
- * does not bind the SSRC to them). The video path already dropped a packet that matched no encoding of the
- * endpoint, in [VideoQualityLayerLookup].
- *
- * A packet for an SSRC that is not signaled yet (media arriving before the signaling that describes it) is also
- * dropped. Before this node, such an audio packet reached the conference. The local receivers and the exporters
- * refused it, because they require a known source, but it was still sent to the relays (which dropped it on
- * ingress).
+ * SRTP authenticates a packet with the keys of the endpoint that sent it, but does not bind the SSRC to them. Without
+ * this check, an endpoint can send a packet with the SSRC of a source of another endpoint, and the layers above
+ * attribute the packet to that source. A packet that arrives before the signaling of its source is also dropped.
  */
 class ReceiveSsrcFilter(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
     parentLogger: Logger
 ) : TransformerNode("Receive SSRC filter") {
     private val logger = createChildLogger(parentLogger)
-    private var numPacketsDropped = 0
+
+    /** The number of packets dropped because their SSRC is not a receive SSRC. */
+    var numPacketsDropped = 0
+        private set
 
     /**
-     * The SSRCs for which a drop was logged, so that each is logged once rather than for every packet. Bounded, so
-     * the worst case of eviction is logging again for an SSRC seen long ago.
+     * The SSRCs for which a drop was logged at warning level, so that each is logged at that level once rather than
+     * for every packet. Bounded, so the worst case of eviction is logging again for an SSRC seen long ago.
      */
     private val loggedSsrcs: MutableSet<Long> = LRUCache.lruSet(MAX_LOGGED_SSRCS, true)
 
@@ -64,11 +61,13 @@ class ReceiveSsrcFilter(
 
         numPacketsDropped++
         if (loggedSsrcs.add(ssrc)) {
-            // Debug level: media that arrives before its signaling (e.g. at join or on unmute) takes this path too.
-            logger.debug {
-                "Dropping packets with SSRC $ssrc, which is not a signaled receive SSRC. " +
-                    "Further packets with this SSRC are not logged."
-            }
+            logger.warn(
+                "Dropping packet with SSRC $ssrc, which is not a receive SSRC " +
+                    "(receive SSRCs: ${streamInformationStore.receiveSsrcs}). Further occurrences are logged at " +
+                    "debug level."
+            )
+        } else {
+            logger.debug { "Dropping packet with SSRC $ssrc, which is not a receive SSRC." }
         }
         return null
     }

@@ -34,7 +34,7 @@ class ReceiveSsrcFilterTest : ShouldSpec() {
 
     private val streamInformationStore = StreamInformationStoreImpl()
 
-    // Debug level, so the test runs the code that builds the log line.
+    // Debug level, so the test runs the debug log path for a repeated SSRC too.
     private val filter = ReceiveSsrcFilter(streamInformationStore, StdoutLogger("test", Level.ALL))
     private val forwarded = mutableListOf<PacketInfo>()
 

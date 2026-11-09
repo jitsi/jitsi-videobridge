@@ -44,11 +44,14 @@ data class TransceiverStats(
 data class RtpReceiverStats(
     val incomingStats: IncomingStatisticsSnapshot,
     val packetStreamStats: PacketStreamStats.Snapshot,
-    val videoParserStats: VideoParser.Stats.Snapshot
+    val videoParserStats: VideoParser.Stats.Snapshot,
+    /** The number of RTP packets dropped because their SSRC is not a receive SSRC of the endpoint. */
+    val numPacketsDroppedUnsignaledSsrc: Int = 0
 ) {
     fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("incoming_stats", incomingStats.toJson())
         set<ObjectNode>("packet_stream_stats", packetStreamStats.toJson())
         set<ObjectNode>("video_parser_stats", videoParserStats.toJson())
+        put("num_packets_dropped_unsignaled_ssrc", numPacketsDroppedUnsignaledSsrc)
     }
 }

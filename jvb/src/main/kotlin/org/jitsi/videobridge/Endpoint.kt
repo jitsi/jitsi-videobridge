@@ -1186,6 +1186,9 @@ class Endpoint @JvmOverloads constructor(
         VideobridgeMetrics.layeringChangesReceived.addAndGet(
             transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
         )
+        VideobridgeMetrics.packetsDroppedUnsignaledSsrc.addAndGet(
+            transceiverStats.rtpReceiverStats.numPacketsDroppedUnsignaledSsrc.toLong()
+        )
         val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
             it.mediaType == MediaType.VIDEO
         }.sumOf { it.durationActive }
