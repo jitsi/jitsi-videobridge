@@ -27,12 +27,15 @@ import org.jitsi.nlj.rtp.audioPacketBytes
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
+import java.util.logging.Level
 
 class ReceiveSsrcFilterTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
 
     private val streamInformationStore = StreamInformationStoreImpl()
-    private val filter = ReceiveSsrcFilter(streamInformationStore, StdoutLogger())
+
+    // Debug level, so the test runs the code that builds the log line.
+    private val filter = ReceiveSsrcFilter(streamInformationStore, StdoutLogger("test", Level.ALL))
     private val forwarded = mutableListOf<PacketInfo>()
 
     init {
@@ -55,6 +58,7 @@ class ReceiveSsrcFilterTest : ShouldSpec() {
                 should("be dropped") {
                     forwarded.size shouldBe 0
                     filter.numPacketsDropped() shouldBe 1
+                    filter.statsJson()["num_packets_dropped_unsignaled_ssrc"].asInt() shouldBe 1
                 }
             }
             context("when the endpoint signaled other SSRCs") {
