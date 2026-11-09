@@ -239,8 +239,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(remoteBandwidthEstimator)
                         node(toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_rtp"))
                         // Drop packets with an SSRC the endpoint did not signal, so they reach neither the media
-                        // paths nor the forwarding logic. This node must stay after srtpDecryptWrapper (so an
-                        // unauthenticated packet is not counted here), after tccGenerator and remoteBandwidthEstimator
+                        // paths nor the forwarding logic. This node must stay after srtpDecryptWrapper (so a packet
+                        // from an SSRC that never authenticated is not counted here; SRTP skips the check only for
+                        // a packet marked for discard on a context that authenticated before), after tccGenerator
+                        // and remoteBandwidthEstimator
                         // (so a packet that arrives before the signaling for its source is still acknowledged in the
                         // feedback, as before), and after the pcap writer (so a dump shows the dropped packets). The
                         // pre-SRTP audio level reader above still sees such a packet.
