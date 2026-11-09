@@ -299,6 +299,14 @@ class Colibri2ConferenceHandler(
                 mediaSource.sources.forEach {
                     endpoint.addReceiveSsrc(it.ssrc, mediaSource.type)
                 }
+                // Register the SSRCs of the groups too, so that the receive SSRCs always cover the SSRCs of the
+                // media sources created below (the receive pipeline drops a packet whose SSRC is not a receive
+                // SSRC). MediaSourceFactory takes the secondary SSRCs from the groups, so a source can hold an SSRC
+                // that is only in a group. Jicofo currently lists every group SSRC as a source too, so this is
+                // normally a no-op.
+                mediaSource.ssrcGroups.flatMap { it.sources }.forEach {
+                    endpoint.addReceiveSsrc(it.ssrc, mediaSource.type)
+                }
                 // TODO: remove any old associations for this endpoint
                 mediaSource.ssrcGroups.mapNotNull { it.toSsrcAssociation() }.forEach {
                     addSsrcAssociation(endpoint.id, it)

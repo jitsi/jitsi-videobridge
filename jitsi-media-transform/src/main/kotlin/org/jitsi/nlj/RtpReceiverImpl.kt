@@ -50,6 +50,7 @@ import org.jitsi.nlj.transform.node.incoming.DuplicateTermination
 import org.jitsi.nlj.transform.node.incoming.EncodingLivenessNode
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
+import org.jitsi.nlj.transform.node.incoming.ReceiveSsrcFilter
 import org.jitsi.nlj.transform.node.incoming.RemoteBandwidthEstimator
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
@@ -124,6 +125,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     private val videoMuteNode = VideoMuteNode()
+    private val receiveSsrcFilter = ReceiveSsrcFilter(streamInformationStore, logger)
 
     private val silenceDiscarder = DiscardableDiscarder("Silence discarder", false)
     private val paddingOnlyDiscarder = DiscardableDiscarder("Padding-only discarder", true)
@@ -235,9 +237,16 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(srtpDecryptWrapper)
                         node(tccGenerator)
                         node(remoteBandwidthEstimator)
+                        node(toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_rtp"))
+                        // Drop packets with an SSRC the endpoint did not signal, so they reach neither the media
+                        // paths nor the forwarding logic. This node must stay after srtpDecryptWrapper (so an
+                        // unauthenticated packet is not counted here), after tccGenerator and remoteBandwidthEstimator
+                        // (so a packet that arrives before the signaling for its source is still acknowledged in the
+                        // feedback, as before), and after the pcap writer (so a dump shows the dropped packets). The
+                        // pre-SRTP audio level reader above still sees such a packet.
+                        node(receiveSsrcFilter, condition = { ReceiveSsrcFilter.enabled })
                         // This reads audio levels from packets that use cryptex. TODO: should it go in the Audio path?
                         node(audioLevelReader.postDecryptNode)
-                        node(toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_rtp"))
                         node(statsTracker)
                         node(PaddingTermination(logger))
                         demux("Media Type") {

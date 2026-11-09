@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.colibri2
 
+import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -44,6 +45,7 @@ import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
 import org.jitsi.xmpp.extensions.jingle.PayloadTypePacketExtension
 import org.jitsi.xmpp.extensions.jingle.RTPHdrExtPacketExtension
+import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.jxmpp.jid.impl.JidCreate
@@ -214,6 +216,79 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 agent.getAudioLevelExtensionId() shouldBe 1
             }
         }
+        context("The receive SSRCs of an endpoint") {
+            // The receive pipeline drops a packet whose SSRC is not a receive SSRC, so every SSRC of the endpoint's
+            // sources (which the forwarding logic looks up) must be a receive SSRC.
+            should("cover every SSRC of its audio and video sources, including RTX") {
+                handle(
+                    endpointRequest(
+                        createEndpoint(
+                            "ep",
+                            false,
+                            audioSource("ep-a0", 1L, false),
+                            videoSource("ep-v0", listOf(10L, 11L), listOf(fid(10L, 11L)))
+                        )
+                    )
+                )
+                val ep = conference.getLocalEndpoint("ep").shouldNotBeNull()
+                ep.receivesSsrc(1L) shouldBe true
+                ep.receivesSsrc(10L) shouldBe true
+                ep.receivesSsrc(11L) shouldBe true
+                ep.receivesSsrc(12L) shouldBe false
+                ep.ssrcs shouldContainAll ep.mediaSourceSsrcs()
+            }
+            should("cover an SSRC that a group names but the source list leaves out") {
+                handle(
+                    endpointRequest(
+                        createEndpoint("ep", false, videoSource("ep-v0", listOf(10L), listOf(fid(10L, 11L))))
+                    )
+                )
+                val ep = conference.getLocalEndpoint("ep").shouldNotBeNull()
+                ep.mediaSourceSsrcs() shouldContainAll listOf(10L, 11L)
+                ep.receivesSsrc(11L) shouldBe true
+                ep.ssrcs shouldContainAll ep.mediaSourceSsrcs()
+            }
+            should("cover every SSRC of the sources of a relayed endpoint, including RTX") {
+                // The relay routes a packet to the relayed endpoint by the same set, so a gap here would drop all
+                // of the endpoint's media.
+                withNewConfig(RELAY_CONFIG) {
+                    handle(
+                        relayRequest(
+                            create = true,
+                            createEndpoint(
+                                "ep",
+                                false,
+                                audioSource("ep-a0", 1L, false),
+                                videoSource("ep-v0", listOf(10L), listOf(fid(10L, 11L)))
+                            )
+                        )
+                    )
+                    val ep = conference.getRelay(RELAY_ID).shouldNotBeNull().getEndpoint("ep").shouldNotBeNull()
+                    ep.mediaSources.flatMap { it.rtpEncodings.toList() }.flatMap { it.ssrcs } shouldContainAll
+                        listOf(10L, 11L)
+                    ep.ssrcs shouldContainAll listOf(1L, 10L, 11L)
+                }
+            }
+            should("cover the SSRCs of a source added later") {
+                handle(endpointRequest(createEndpoint("ep", false, audioSource("ep-a0", 1L, false))))
+                val ep = conference.getLocalEndpoint("ep").shouldNotBeNull()
+                ep.receivesSsrc(10L) shouldBe false
+
+                handle(
+                    endpointRequest(
+                        updateEndpoint(
+                            "ep",
+                            audioSource("ep-a0", 1L, false),
+                            videoSource("ep-v0", listOf(10L, 11L), listOf(fid(10L, 11L)))
+                        )
+                    )
+                )
+                ep.receivesSsrc(1L) shouldBe true
+                ep.receivesSsrc(10L) shouldBe true
+                ep.receivesSsrc(11L) shouldBe true
+                ep.ssrcs shouldContainAll ep.mediaSourceSsrcs()
+            }
+        }
         context("An endpoint with the transcriber ID") {
             should("be rejected as bad-request (not conflict, which jicofo handles as a bridge failure)") {
                 val response = handler.handleConferenceModifyIQ(
@@ -264,6 +339,34 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 }
             )
             .build()
+
+        /** A video media source with the given SSRCs and SSRC groups. */
+        fun videoSource(name: String, ssrcs: List<Long>, groups: List<SourceGroupPacketExtension>): MediaSource =
+            MediaSource.getBuilder()
+                .setType(MediaType.VIDEO)
+                .setId(name)
+                .apply {
+                    ssrcs.forEach { ssrc ->
+                        addSource(
+                            SourcePacketExtension().apply {
+                                this.ssrc = ssrc
+                                this.name = name
+                            }
+                        )
+                    }
+                    groups.forEach { addSsrcGroup(it) }
+                }
+                .build()
+
+        /** An RTX (FID) group of [primary] and [rtx]. */
+        fun fid(primary: Long, rtx: Long) = SourceGroupPacketExtension().apply {
+            semantics = SourceGroupPacketExtension.SEMANTICS_FID
+            addSources(listOf(primary, rtx).map { ssrc -> SourcePacketExtension().apply { this.ssrc = ssrc } })
+        }
+
+        /** All SSRCs (primary and secondary) of the endpoint's video sources. */
+        fun org.jitsi.videobridge.Endpoint.mediaSourceSsrcs(): List<Long> =
+            mediaSources.flatMap { it.rtpEncodings.toList() }.flatMap { it.ssrcs }
 
         fun sources(mediaSources: Array<out MediaSource>): Sources = Sources.getBuilder().apply {
             mediaSources.forEach { addMediaSource(it) }
