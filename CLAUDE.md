@@ -25,16 +25,15 @@ mvn test
 # Run tests in a specific module
 cd jvb && mvn test
 
-# Run a specific test class
-mvn test -Dtest=ClassName
+# Run a specific test class from the root. -Dtest also applies to the modules that do not contain the
+# test, and these modules fail with 'No tests matching pattern', so add the flag.
+mvn test -Dtest=ClassName -Dsurefire.failIfNoSpecifiedTests=false
 
 # Run a specific test method
-mvn test -Dtest=ClassName#methodName
+mvn test -Dtest=ClassName#methodName -Dsurefire.failIfNoSpecifiedTests=false
 
-# From the root, -Dtest also applies to modules that do not contain the test, and these modules fail.
-# Add -Dsurefire.failIfNoSpecifiedTests=false to prevent this:
-mvn test -Dtest=ClassName -Dsurefire.failIfNoSpecifiedTests=false
-mvn -pl jitsi-media-transform -am test -Dtest=SomeTest -Dsurefire.failIfNoSpecifiedTests=false
+# Run a test in one module. -am also builds rtp, which does not contain the test, so keep the flag.
+mvn -pl jitsi-media-transform -am test -Dtest=ClassName -Dsurefire.failIfNoSpecifiedTests=false
 
 # Build package (creates archive in jvb/target/)
 mvn install
@@ -55,25 +54,27 @@ mvn exec:exec@ktlint-check
 mvn exec:exec@ktlint-format
 ```
 
-Each module has its own `spotbugs-exclude.xml`, which the module pom sets through `<excludeFilterFile>`. A Kotlin anonymous subclass of a generic collection (for example an anonymous `LRUCache` that overrides `removeEldestEntry`) causes a `UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS` false positive on the synthetic bridge methods (`get`, `getOrDefault`, `remove`). To suppress it, add the pattern to the Kotlin `<Match>` block of the module (the block with `<Source name="~.*\.kt" />`).
-
 ### Building against an unreleased dependency
 
-To build against a local, unreleased version of a dependency, run `mvn install -DskipTests` in the checkout of that dependency. Then set the pin in the root `pom.xml` to its SNAPSHOT version:
+To build against a local, unreleased version of a dependency, run `mvn install -DskipTests` in the checkout of that dependency. Then point this repository at its SNAPSHOT version. `jicoco.version` and `jitsi.utils.version` are properties in the root `pom.xml`. Override them on the command line, for example `mvn -Djicoco.version=1.1-SNAPSHOT install`, and the pom stays unchanged. Repeat the `-D` option on every `mvn` call, including the ktlint calls. The other pins have literal versions, so they need a pom edit:
 
-| Dependency | Pin in the root `pom.xml` | SNAPSHOT version |
+| Dependency | Where it is pinned | SNAPSHOT version |
 |---|---|---|
-| `jitsi-xmpp-extensions` | `<version>` of the `jitsi-xmpp-extensions` dependency (no property) | `1.0-SNAPSHOT` |
-| `jicoco-*` | `<jicoco.version>` | `1.1-SNAPSHOT` |
-| `jitsi-utils` | `<jitsi.utils.version>` | `1.0-SNAPSHOT` |
+| `jicoco-*` | `<jicoco.version>` in the root `pom.xml` | `1.1-SNAPSHOT` |
+| `jitsi-utils` | `<jitsi.utils.version>` in the root `pom.xml` | `1.0-SNAPSHOT` |
+| `jitsi-xmpp-extensions` | `<version>` of the dependency in the root `pom.xml` | `1.0-SNAPSHOT` |
+| `ice4j` | `<version>` of the dependency in the root `pom.xml` | `3.2-SNAPSHOT` |
+| `jitsi-metaconfig` | `<version>` of the dependency in the root `pom.xml` | `1.0-SNAPSHOT` |
+| `jitsi-srtp` | `<version>` of the dependency in `jitsi-media-transform/pom.xml` | `1.1-SNAPSHOT` |
+| `jitsi-dcsctp` | `<version>` of the dependency in `jvb/pom.xml` | the version in the `pom.xml` of that repository |
 
-`jicoco.version` and `jitsi.utils.version` are properties. Override them on the command line to leave the pom unchanged, for example `mvn -Djicoco.version=1.1-SNAPSHOT install`. The version of `jitsi-xmpp-extensions` is not a property, so it needs a pom edit. Do not commit a SNAPSHOT pin. After the dependency PR merges and a new version is tagged, set the pin to the released version.
+Do not commit a SNAPSHOT pin. After the dependency PR merges and a new version is tagged, set the pin to the released version.
+
+The `jicoco.version` pin is a `git describe` version that the release job of jicoco creates. A local build does not create it. `jicoco-mucclient` is published to the Jitsi Maven repository, separately from the other `jicoco` modules, which go to Maven Central. A `jicoco.version` bump resolves only when the version is available in both places.
 
 ## Project Structure
 
-This is a multi-module Maven project with three main modules:
-
-All three modules are in this repository. They are not git submodules. Put a change that spans the modules in one PR. `jicoco`, `jitsi-utils` and `jitsi-xmpp-extensions` are external dependencies, each in its own repository. A change to one of them needs a separate PR in that repository (see "Building against an unreleased dependency").
+This is a multi-module Maven project with three main modules. All three are in this repository. They are not git submodules, so put a change that spans the modules in one PR. `jicoco`, `jitsi-utils` and `jitsi-xmpp-extensions` are external dependencies, each in its own repository. A change to one of them needs a separate PR in that repository (see "Building against an unreleased dependency").
 
 ### 1. `rtp/` - RTP Protocol Layer
 Low-level RTP/RTCP packet handling and parsing.
@@ -162,13 +163,23 @@ Uses Typesafe Config (HOCON format):
 - **jicoco**: Common Jitsi infrastructure (config, metrics, REST)
 - **Jetty**: HTTP server for REST APIs and WebSockets
 - **Smack**: XMPP client library
-- **Jackson**: The `jackson-bom` import in `dependencyManagement` of the root `pom.xml` pins all Jackson artifacts to `jackson.version`. Do not remove it. Without it, Maven mediation among the transitive dependencies selects the `jackson-databind` version. `jackson-databind` 2.18.x drops `@JsonAnySetter` properties of types with a creator constructor, which removes the payload of a forwarded `EndpointMessage`. If JSON serialization looks wrong, first make sure that `mvn dependency:tree | grep jackson-databind` shows only one version.
+- **Jackson**: The root `pom.xml` pins the Jackson version with a `jackson-bom` import (see "Jackson version" below).
+
+### Jackson version
+
+The `jackson-bom` import in `dependencyManagement` of the root `pom.xml` pins all Jackson artifacts to `jackson.version`. Do not remove it. Without it, Maven mediation among the transitive dependencies selects the `jackson-databind` version. `jackson-databind` 2.18.x can drop `@JsonAnySetter` properties of types with a creator constructor, when the any-setter field comes before the creator property in the received JSON. This removes the payload of a forwarded `EndpointMessage`. If JSON serialization looks wrong, first make sure that `mvn dependency:tree | grep jackson-databind` shows only one version. The first run of the dependency plugin needs network access.
 
 ## Testing & CI
 
 Tests are organized by module. When implementing features, consider whether tests are needed and discuss with the user if implementation is non-trivial.
 
-Before you open or update a PR, run `mvn install` from the root after the final change. It runs the tests, checkstyle (`jvb`, `jitsi-media-transform`) and ktlint. In `rtp` and `jitsi-media-transform`, the `verify` phase also runs the spotbugs check. `jvb` has no spotbugs execution. CI runs `resources/build.sh` (`mvn clean verify package`).
+Before you push a code change, run `mvn clean verify` from the root after the final change. It runs the tests, checkstyle (`jvb`, `jitsi-media-transform`) and ktlint. CI runs `resources/build.sh` (`mvn clean verify package`) with `-Pcoverage`, on Java 17, 21 and 25. A build without `clean` can hide a stale-class failure.
+
+In `rtp` and `jitsi-media-transform`, the `verify` phase also runs the spotbugs check. `jvb` has no spotbugs execution. Each module has its own `spotbugs-exclude.xml`, which the module pom sets through `<excludeFilterFile>`. A Kotlin anonymous subclass of a generic collection (for example an anonymous `LRUCache` that overrides `removeEldestEntry`) causes a `UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS` false positive on the synthetic bridge methods (`get`, `getOrDefault`, `remove`). `jitsi-media-transform/spotbugs-exclude.xml` already excludes this pattern in its Kotlin `<Match>` block (the block with `<Source name="~.*\.kt" />`). `rtp/spotbugs-exclude.xml` has no Kotlin-scoped block, so `rtp` needs a new one for the same case.
+
+`cd jvb && mvn test` (and `-pl jvb` without `-am`) takes `rtp` and `jitsi-media-transform` from `~/.m2`, and these can be days old. Build with `-am`, or run `mvn -pl rtp,jitsi-media-transform -am install -DskipTests` first.
+
+Kotest specs have no Surefire test count. In `TEST-<Spec>.xml`, `tests` is `0`, and there is one `<testcase name="">` for each `should` leaf that ran. To check that every leaf ran, compare `grep -c '<testcase' TEST-<Spec>.xml` with `grep -c 'should("' <Spec>.kt`. Use the Maven exit status to decide pass or fail.
 
 Run module-specific tests:
 ```bash
