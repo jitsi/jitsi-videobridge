@@ -31,6 +31,11 @@ mvn test -Dtest=ClassName
 # Run a specific test method
 mvn test -Dtest=ClassName#methodName
 
+# From the root, -Dtest also applies to modules that do not contain the test, and these modules fail.
+# Add -Dsurefire.failIfNoSpecifiedTests=false to prevent this:
+mvn test -Dtest=ClassName -Dsurefire.failIfNoSpecifiedTests=false
+mvn -pl jitsi-media-transform -am test -Dtest=SomeTest -Dsurefire.failIfNoSpecifiedTests=false
+
 # Build package (creates archive in jvb/target/)
 mvn install
 # Output: jvb/target/jitsi-videobridge-2.3-SNAPSHOT-archive.zip
@@ -50,9 +55,25 @@ mvn exec:exec@ktlint-check
 mvn exec:exec@ktlint-format
 ```
 
+Each module has its own `spotbugs-exclude.xml`, which the module pom sets through `<excludeFilterFile>`. A Kotlin anonymous subclass of a generic collection (for example an anonymous `LRUCache` that overrides `removeEldestEntry`) causes a `UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS` false positive on the synthetic bridge methods (`get`, `getOrDefault`, `remove`). To suppress it, add the pattern to the Kotlin `<Match>` block of the module (the block with `<Source name="~.*\.kt" />`).
+
+### Building against an unreleased dependency
+
+To build against a local, unreleased version of a dependency, run `mvn install -DskipTests` in the checkout of that dependency. Then set the pin in the root `pom.xml` to its SNAPSHOT version:
+
+| Dependency | Pin in the root `pom.xml` | SNAPSHOT version |
+|---|---|---|
+| `jitsi-xmpp-extensions` | `<version>` of the `jitsi-xmpp-extensions` dependency (no property) | `1.0-SNAPSHOT` |
+| `jicoco-*` | `<jicoco.version>` | `1.1-SNAPSHOT` |
+| `jitsi-utils` | `<jitsi.utils.version>` | `1.0-SNAPSHOT` |
+
+`jicoco.version` and `jitsi.utils.version` are properties. Override them on the command line to leave the pom unchanged, for example `mvn -Djicoco.version=1.1-SNAPSHOT install`. The version of `jitsi-xmpp-extensions` is not a property, so it needs a pom edit. Do not commit a SNAPSHOT pin. After the dependency PR merges and a new version is tagged, set the pin to the released version.
+
 ## Project Structure
 
 This is a multi-module Maven project with three main modules:
+
+All three modules are in this repository. They are not git submodules. Put a change that spans the modules in one PR. `jicoco`, `jitsi-utils` and `jitsi-xmpp-extensions` are external dependencies, each in its own repository. A change to one of them needs a separate PR in that repository (see "Building against an unreleased dependency").
 
 ### 1. `rtp/` - RTP Protocol Layer
 Low-level RTP/RTCP packet handling and parsing.
@@ -141,10 +162,13 @@ Uses Typesafe Config (HOCON format):
 - **jicoco**: Common Jitsi infrastructure (config, metrics, REST)
 - **Jetty**: HTTP server for REST APIs and WebSockets
 - **Smack**: XMPP client library
+- **Jackson**: The `jackson-bom` import in `dependencyManagement` of the root `pom.xml` pins all Jackson artifacts to `jackson.version`. Do not remove it. Without it, Maven mediation among the transitive dependencies selects the `jackson-databind` version. `jackson-databind` 2.18.x drops `@JsonAnySetter` properties of types with a creator constructor, which removes the payload of a forwarded `EndpointMessage`. If JSON serialization looks wrong, first make sure that `mvn dependency:tree | grep jackson-databind` shows only one version.
 
 ## Testing & CI
 
 Tests are organized by module. When implementing features, consider whether tests are needed and discuss with the user if implementation is non-trivial.
+
+Before you open or update a PR, run `mvn install` from the root after the final change. It runs the tests, checkstyle (`jvb`, `jitsi-media-transform`) and ktlint. In `rtp` and `jitsi-media-transform`, the `verify` phase also runs the spotbugs check. `jvb` has no spotbugs execution. CI runs `resources/build.sh` (`mvn clean verify package`).
 
 Run module-specific tests:
 ```bash
