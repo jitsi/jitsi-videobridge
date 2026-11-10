@@ -238,6 +238,16 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 ep.receivesSsrc(12L) shouldBe false
                 ep.ssrcs shouldContainAll ep.mediaSourceSsrcs()
             }
+            should("cover the primary SSRCs that only a SIM group names") {
+                handle(
+                    endpointRequest(
+                        createEndpoint("ep", false, videoSource("ep-v0", listOf(10L), listOf(sim(10L, 20L, 30L))))
+                    )
+                )
+                val ep = conference.getLocalEndpoint("ep").shouldNotBeNull()
+                ep.mediaSourceSsrcs() shouldContainAll listOf(10L, 20L, 30L)
+                listOf(10L, 20L, 30L).forEach { ep.receivesSsrc(it) shouldBe true }
+            }
             should("cover an SSRC that a group names but the source list leaves out") {
                 handle(
                     endpointRequest(
@@ -385,6 +395,12 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                     groups.forEach { addSsrcGroup(it) }
                 }
                 .build()
+
+        /** A simulcast (SIM) group of [ssrcs]. */
+        fun sim(vararg ssrcs: Long) = SourceGroupPacketExtension().apply {
+            semantics = SourceGroupPacketExtension.SEMANTICS_SIMULCAST
+            addSources(ssrcs.map { ssrc -> SourcePacketExtension().apply { this.ssrc = ssrc } })
+        }
 
         /** An RTX (FID) group of [primary] and [rtx]. */
         fun fid(primary: Long, rtx: Long) = SourceGroupPacketExtension().apply {

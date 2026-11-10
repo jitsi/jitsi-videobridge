@@ -1259,7 +1259,9 @@ public class Conference
 
         relaysById.forEach((i, relay) -> relay.endpointExpired(id));
         // Remove every SSRC mapped to the endpoint, not only its receive SSRCs. The SSRC of a synthetic source of
-        // a local endpoint is mapped to the endpoint, but it is not a receive SSRC.
+        // a local endpoint is mapped to the endpoint, but it is not a receive SSRC. Keep the receive SSRCs in the
+        // set too: a mapping can have moved to another endpoint, and the other endpoints are then still told to
+        // forget the state of the SSRC, as before.
         Set<Long> ssrcs = new HashSet<>(endpoint.getSsrcs());
         endpointsBySsrc.entrySet().removeIf(entry -> {
             if (entry.getValue() == endpoint)

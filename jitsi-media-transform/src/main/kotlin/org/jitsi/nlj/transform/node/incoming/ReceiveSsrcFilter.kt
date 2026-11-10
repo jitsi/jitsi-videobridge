@@ -25,13 +25,15 @@ import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.LRUCache
+import org.jitsi.utils.RateLimit
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import java.time.Clock
+import java.time.Duration
 
 /**
- * Drops RTP packets whose SSRC is not a receive SSRC of the endpoint (see
- * [ReadOnlyStreamInformationStore.receiveSsrcs]), i.e. an SSRC that was not signaled for the endpoint at some point
- * (a receive SSRC is not removed when its source is removed).
+ * Drops RTP packets whose SSRC was never added as a receive SSRC of this endpoint (see
+ * [ReadOnlyStreamInformationStore.receiveSsrcs]).
  *
  * SRTP authenticates a packet with the keys of the endpoint that sent it, but does not bind the SSRC to them. Without
  * this check, an endpoint can send a packet with the SSRC of a source of another endpoint, and the layers above
@@ -39,7 +41,8 @@ import org.jitsi.utils.logging2.createChildLogger
  */
 class ReceiveSsrcFilter(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
+    parentLogger: Logger,
+    clock: Clock = Clock.systemUTC()
 ) : TransformerNode("Receive SSRC filter") {
     private val logger = createChildLogger(parentLogger)
 
@@ -53,6 +56,17 @@ class ReceiveSsrcFilter(
      */
     private val loggedSsrcs: MutableSet<Long> = LRUCache.lruSet(MAX_LOGGED_SSRCS, true)
 
+    /**
+     * Limits the warnings of this filter, so that an endpoint which sends packets with many different SSRCs can not
+     * flood the log. The set above alone only limits the memory.
+     */
+    private val warnRateLimit = RateLimit(
+        defaultMinInterval = Duration.ZERO,
+        maxRequests = MAX_WARNINGS_PER_INTERVAL,
+        interval = WARNING_INTERVAL,
+        clock = clock
+    )
+
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val ssrc = packetInfo.packetAs<RtpPacket>().ssrc
         if (streamInformationStore.receiveSsrcs.contains(ssrc)) {
@@ -60,7 +74,7 @@ class ReceiveSsrcFilter(
         }
 
         numPacketsDropped++
-        if (loggedSsrcs.add(ssrc)) {
+        if (loggedSsrcs.add(ssrc) && warnRateLimit.accept()) {
             logger.warn(
                 "Dropping packet with SSRC $ssrc, which is not a receive SSRC " +
                     "(receive SSRCs: ${streamInformationStore.receiveSsrcs}). Further occurrences are logged at " +
@@ -84,6 +98,10 @@ class ReceiveSsrcFilter(
 
     companion object {
         private const val MAX_LOGGED_SSRCS = 100
+
+        /** At most [MAX_WARNINGS_PER_INTERVAL] warnings in [WARNING_INTERVAL], for each filter. */
+        private const val MAX_WARNINGS_PER_INTERVAL = 3
+        private val WARNING_INTERVAL: Duration = Duration.ofMinutes(1)
 
         /** A kill switch for the filter. See reference.conf. */
         val enabled: Boolean by config("jmt.transceiver.recv.drop-unsignaled-ssrcs".from(JitsiConfig.newConfig))

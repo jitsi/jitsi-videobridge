@@ -297,14 +297,18 @@ class Colibri2ConferenceHandler(
 
             sources.mediaSources.forEach { mediaSource ->
                 mediaSource.sources.forEach {
-                    if (mediaSource.isSynthetic) {
-                        // The bridge generates the media of a synthetic source and injects it into the conference
-                        // directly. It never arrives through the transport of the endpoint. Map the SSRC to the
-                        // endpoint, so that source lookups work, but do not accept it from the endpoint (the receive
-                        // pipeline drops a packet whose SSRC is not a receive SSRC).
-                        conference.addEndpointSsrc(endpoint, it.ssrc)
-                    } else {
-                        endpoint.addReceiveSsrc(it.ssrc, mediaSource.type)
+                    when {
+                        mediaSource.isSynthetic -> {
+                            // The bridge generates the media of a synthetic source and injects it into the
+                            // conference directly. It never arrives through the transport of the endpoint. Map the
+                            // SSRC to the endpoint, so that source lookups work, but do not accept it from the
+                            // endpoint (the receive pipeline drops a packet whose SSRC is not a receive SSRC).
+                            conference.addEndpointSsrc(endpoint, it.ssrc)
+                        }
+
+                        mediaSource.type == MediaType.AUDIO -> endpoint.addReceiveSsrc(it.ssrc, MediaType.AUDIO)
+
+                        // The SSRCs of a video source are registered from its encodings, below.
                     }
                 }
                 // TODO: remove any old associations for this endpoint
@@ -319,10 +323,9 @@ class Colibri2ConferenceHandler(
                 MediaSourceFactory.createMediaSource(it.sources, it.ssrcGroups, c2endpoint.id, it.id, it.isSynthetic)
             }
             endpoint.mediaSources = newMediaSources.toTypedArray()
-            // The receive SSRCs must cover every SSRC of the video sources, which the forwarding logic looks up. A
-            // group can name an SSRC that the source list leaves out, so derive the set from the created encodings
-            // (as RelayedEndpoint does) instead of from the signaling. Jicofo lists every SSRC as a source, so this
-            // is normally a no-op.
+            // The receive SSRCs of the video sources come from the created encodings, as in RelayedEndpoint, so that
+            // they cover every SSRC the forwarding logic looks up. This includes an SSRC that only a group names: a
+            // secondary SSRC (RTX), or a primary one (a member of a SIM group).
             newMediaSources.filterNot { it.synthetic }.forEach { mediaSource ->
                 mediaSource.rtpEncodings.forEach { encoding ->
                     encoding.ssrcs.forEach { endpoint.addReceiveSsrc(it, MediaType.VIDEO) }

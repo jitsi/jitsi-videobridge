@@ -29,6 +29,8 @@ import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.time.FakeClock
+import java.time.Duration
 import java.util.function.Supplier
 import java.util.logging.Level
 
@@ -99,6 +101,17 @@ class ReceiveSsrcFilterTest : ShouldSpec() {
                 recordingLogger.warnings.size shouldBe 2
                 recordingLogger.warnings[0] shouldContain "SSRC $SSRC_A"
                 recordingLogger.warnings[1] shouldContain "SSRC $SSRC_B"
+            }
+            should("warn at most three times a minute, whatever the number of SSRCs") {
+                val recordingLogger = WarningRecordingLogger()
+                val clock = FakeClock()
+                val filter = ReceiveSsrcFilter(streamInformationStore, recordingLogger, clock)
+                (1L..10L).forEach { filter.processPacket(packetInfo(it)) }
+                recordingLogger.warnings.size shouldBe 3
+
+                clock.elapse(Duration.ofSeconds(61))
+                filter.processPacket(packetInfo(11L))
+                recordingLogger.warnings.size shouldBe 4
             }
         }
 
