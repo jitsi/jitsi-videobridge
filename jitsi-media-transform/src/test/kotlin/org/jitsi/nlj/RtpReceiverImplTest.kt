@@ -115,6 +115,7 @@ class RtpReceiverImplTest : ShouldSpec() {
 
                     should("be forwarded") {
                         forwarded.size shouldBe 1
+                        receiver.getStats().numPacketsDroppedUnsignaledSsrc shouldBe 0
                     }
                 }
             }

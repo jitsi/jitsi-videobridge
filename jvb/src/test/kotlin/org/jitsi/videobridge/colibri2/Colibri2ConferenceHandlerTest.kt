@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.colibri2
 
 import io.kotest.matchers.collections.shouldContainAll
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -265,6 +266,11 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 ep.receivesSsrc(1L) shouldBe true
                 ep.receivesSsrc(2L) shouldBe false
                 conference.getEndpointBySsrc(2L) shouldBe ep
+
+                // The mapping of the synthetic SSRC must go when the endpoint expires, like the receive SSRCs.
+                ep.expire()
+                conference.getEndpointBySsrc(1L).shouldBeNull()
+                conference.getEndpointBySsrc(2L).shouldBeNull()
             }
             should("cover every SSRC of the sources of a relayed endpoint, including RTX and synthetic sources") {
                 // The relay routes a packet to the relayed endpoint by the same set, so a gap here would drop all
@@ -282,10 +288,13 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                             )
                         )
                     )
-                    val ep = conference.getRelay(RELAY_ID).shouldNotBeNull().getEndpoint("ep").shouldNotBeNull()
+                    val relay = conference.getRelay(RELAY_ID).shouldNotBeNull()
+                    val ep = relay.getEndpoint("ep").shouldNotBeNull()
                     ep.mediaSources.flatMap { it.rtpEncodings.toList() }.flatMap { it.ssrcs } shouldContainAll
                         listOf(10L, 11L)
                     ep.ssrcs shouldContainAll listOf(1L, 2L, 10L, 11L)
+                    // The map that routes an incoming relay packet to the endpoint.
+                    listOf(1L, 2L, 10L, 11L).forEach { relay.getEndpointBySsrc(it) shouldBe ep }
                 }
             }
             should("cover the SSRCs of a source added later") {

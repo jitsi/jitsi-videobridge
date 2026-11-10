@@ -19,6 +19,7 @@ package org.jitsi.nlj.transform.node.incoming
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import org.jitsi.config.withNewConfig
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
@@ -27,6 +28,8 @@ import org.jitsi.nlj.rtp.audioPacketBytes
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.logging2.LoggerImpl
+import java.util.function.Supplier
 import java.util.logging.Level
 
 class ReceiveSsrcFilterTest : ShouldSpec() {
@@ -84,6 +87,21 @@ class ReceiveSsrcFilterTest : ShouldSpec() {
             }
         }
 
+        context("The log") {
+            should("warn once for each SSRC, and not for each packet") {
+                val recordingLogger = WarningRecordingLogger()
+                val filter = ReceiveSsrcFilter(streamInformationStore, recordingLogger)
+                filter.processPacket(packetInfo(SSRC_A))
+                filter.processPacket(packetInfo(SSRC_A))
+                filter.processPacket(packetInfo(SSRC_B))
+                filter.processPacket(packetInfo(SSRC_A))
+
+                recordingLogger.warnings.size shouldBe 2
+                recordingLogger.warnings[0] shouldContain "SSRC $SSRC_A"
+                recordingLogger.warnings[1] shouldContain "SSRC $SSRC_B"
+            }
+        }
+
         context("The config") {
             should("enable the filter by default") {
                 ReceiveSsrcFilter.enabled shouldBe true
@@ -103,5 +121,25 @@ class ReceiveSsrcFilterTest : ShouldSpec() {
         private const val SSRC_B = 5678L
 
         private fun packetInfo(ssrc: Long) = PacketInfo(RtpPacket(audioPacketBytes).apply { this.ssrc = ssrc })
+    }
+}
+
+/** Records the warnings. The filter logs through a child logger, so the child is this logger too. */
+private class WarningRecordingLogger : LoggerImpl("ReceiveSsrcFilterTest") {
+    val warnings = mutableListOf<String>()
+
+    override fun createChildLogger(name: String) = this
+    override fun createChildLogger(name: String, context: MutableMap<String, String>) = this
+
+    override fun warn(msg: Any?) {
+        warnings.add("$msg")
+    }
+
+    override fun warn(msg: Supplier<String>) {
+        warnings.add(msg.get())
+    }
+
+    override fun warn(msg: Any?, t: Throwable?) {
+        warnings.add("$msg: $t")
     }
 }
