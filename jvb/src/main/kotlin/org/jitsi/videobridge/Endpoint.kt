@@ -362,7 +362,12 @@ class Endpoint @JvmOverloads constructor(
             }
 
             is AudioRtpPacket -> {
-                // A packet that was not rewritten has an SSRC that the receiver does not know, so it is not useful.
+                // This must use the original SSRC, so it comes before SSRC rewriting.
+                if (!audioSequenceNumbers.rewrite(packet)) {
+                    return null
+                }
+                // A packet that [audioSsrcs] did not map has an SSRC that the receiver does not know, so it is not
+                // useful.
                 if (doSsrcRewriting && !audioSsrcs.rewriteRtp(packet)) {
                     return null
                 }
@@ -404,6 +409,11 @@ class Endpoint @JvmOverloads constructor(
      * Manages remapping of audio SSRCs when enabled.
      */
     private val audioSsrcs = AudioSsrcCache(SsrcLimitConfig.config.maxAudioSsrcs, this, doMidDemux, logger)
+
+    /**
+     * Keeps the sequence numbers of the audio sent to this endpoint contiguous when [wants] rejects packets.
+     */
+    private val audioSequenceNumbers = AudioSequenceNumberRewriter()
 
     /**
      * Last advertised forwarded-sources in remapping mode.
@@ -1103,14 +1113,26 @@ class Endpoint @JvmOverloads constructor(
     fun getRtt(): Double = transceiver.getTransceiverStats().endpointConnectionStats.rtt
 
     override fun wants(packetInfo: PacketInfo): Boolean {
+        val packet = packetInfo.packet
+        if (packet is AudioRtpPacket) {
+            // Each reason in wants() to reject an audio packet must go through this call to
+            // [AudioSequenceNumberRewriter.dropped], so that the gap is closed. Packets that are lost later (for
+            // example, when the send queue is full) are not recorded, and the receiver sees them as ordinary loss.
+            val wanted = isTransportConnected() && acceptAudio && conference.isEndpointAudioWanted(id, packet.ssrc)
+            if (wanted) {
+                audioSequenceNumbers.accepted(packet.ssrc, packet.sequenceNumber)
+            } else {
+                audioSequenceNumbers.dropped(packet.ssrc)
+            }
+            return wanted
+        }
+
         if (!isTransportConnected()) {
             return false
         }
 
-        return when (val packet = packetInfo.packet) {
+        return when (packet) {
             is VideoRtpPacket -> acceptVideo && bitrateController.accept(packetInfo)
-
-            is AudioRtpPacket -> acceptAudio && conference.isEndpointAudioWanted(id, packet.ssrc)
 
             is RtcpSrPacket -> {
                 // TODO: For SRs we're only interested in the ntp/rtp timestamp
@@ -1217,6 +1239,7 @@ class Endpoint @JvmOverloads constructor(
         set<ObjectNode>("dtls_transport", dtlsTransport.getDebugState())
         set<ObjectNode>("transceiver", transceiver.debugState(mode))
         put("accept_audio", acceptAudio)
+        set<ObjectNode>("audio_sequence_numbers", audioSequenceNumbers.debugState())
         put("accept_video", acceptVideo)
         put("visitor", visitor)
         put("diarize", diarize)
