@@ -70,6 +70,8 @@ class SrtpSample {
             0xE1, 0xD7, 0x0D, 0x41, 0xE4, 0x8B
         )
         val incomingEncryptedRtpPacket = RtpPacket(incomingEncryptedRtpData, 0, incomingEncryptedRtpData.size)
+        val rtpSsrc = incomingEncryptedRtpPacket.ssrc
+        val rtpPayloadType = incomingEncryptedRtpPacket.payloadType.toByte()
 
         val expectedDecryptedRtpPacket = RtpPacket(
             org.jitsi.rtp.extensions.bytearray.byteArrayOf(

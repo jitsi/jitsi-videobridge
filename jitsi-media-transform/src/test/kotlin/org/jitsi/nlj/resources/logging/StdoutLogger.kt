@@ -54,7 +54,9 @@ class StdoutLogger(
 
     private fun log(level: Level, msg: Any) {
         if (isLoggable(level)) {
-            println("$name: $context $msg")
+            // Evaluate a message supplier, as the real logger does, so a test runs the code that builds the message.
+            val text = if (msg is Supplier<*>) msg.get() else msg
+            println("$name: $context $text")
         }
     }
     private fun log(level: Level, msg: Any, throwable: Throwable) {
