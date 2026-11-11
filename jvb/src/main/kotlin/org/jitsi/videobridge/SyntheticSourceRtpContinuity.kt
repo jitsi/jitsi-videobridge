@@ -34,16 +34,19 @@ import kotlin.math.max
  * or they are too old), and the source is silent until its numbers pass the highest one sent before.
  *
  * The numbers of the producer are not changed until it starts again. After that, the sequence numbers continue from
- * the last one sent, and the timestamps continue from the last one by the time that passed since.
+ * the last one sent. The timestamps continue from the last one by the time that passed since, when the new start is
+ * reported or the timestamps go back.
  *
  * A new start is known in two ways:
  * - [producerStarted], when the connection to the producer opens. This is exact.
  * - Numbers that go back, for a producer that starts again on the same connection. This finds a new start when the
- * timestamps go back, or when the chunk numbers go back by less than 2^15. A new start with later timestamps and
- * chunk numbers that are 2^15 or more behind is not found: receivers then see a loss of that many packets.
+ * timestamps go back, or when the chunk numbers go back by less than 2^15. It has two limits. A new start that is
+ * found by the chunk numbers alone keeps the timestamps of the producer, so one that starts at the last timestamp
+ * repeats it. A new start with later timestamps and chunk numbers that are 2^15 or more behind is not found:
+ * receivers then see a loss of that many packets.
  *
- * The state of an SSRC is kept for the lifetime of the conference (the number of synthetic SSRCs is bounded by
- * signaling), because a source that is removed and added again with the same SSRC must continue from the numbers
+ * The state of an SSRC is kept for the lifetime of the conference (only a signaled synthetic source gets one, and it
+ * is small), because a source that is removed and added again with the same SSRC must continue from the numbers
  * already sent.
  *
  * The state is local to this bridge. When a source keeps its SSRC but its producer moves to a connect on another bridge

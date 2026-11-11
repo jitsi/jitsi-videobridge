@@ -2071,16 +2071,24 @@ public class Conference
         @Override
         public void handleProducerConnected(@NotNull List<String> sourceNames)
         {
-            List<Long> ssrcs = new ArrayList<>();
-            for (String sourceName : sourceNames)
+            try
             {
-                AudioSourceDesc source = findSyntheticAudioSource(sourceName);
-                if (source != null)
+                List<Long> ssrcs = new ArrayList<>();
+                for (String sourceName : sourceNames)
                 {
-                    ssrcs.add(source.getSsrc());
+                    AudioSourceDesc source = findSyntheticAudioSource(sourceName);
+                    if (source != null)
+                    {
+                        ssrcs.add(source.getSsrc());
+                    }
                 }
+                syntheticSourceRtpContinuity.producerStarted(ssrcs);
             }
-            syntheticSourceRtpContinuity.producerStarted(ssrcs);
+            catch (Exception e)
+            {
+                // The exporter calls this while its websocket opens: a failure here must not fail the connection.
+                logger.warn("Failed to handle the new connection of the producer of " + sourceNames, e);
+            }
         }
 
         /**
