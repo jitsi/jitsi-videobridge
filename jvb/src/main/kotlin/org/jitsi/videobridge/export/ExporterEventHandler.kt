@@ -41,6 +41,14 @@ interface ExporterEventHandler {
      */
     fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long)
 
+    /**
+     * Called when the connection to a peer that produces synthetic sources opens, also when it opens again after a
+     * loss. The peer numbers the media of its sources from the start again on a new connection.
+     *
+     * @param sourceNames the synthetic sources requested from the peer.
+     */
+    fun handleProducerConnected(sourceNames: List<String>)
+
     /** Resolves an audio SSRC to its source name, used to filter outbound audio by a connect's exports. */
     fun getAudioSourceName(ssrc: Long): String?
 

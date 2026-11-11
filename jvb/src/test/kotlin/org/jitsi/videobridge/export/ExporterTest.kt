@@ -67,6 +67,7 @@ class ExporterTest : ShouldSpec() {
                 override fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long) {
                     changes.add(Change(sourceName, sending, timestamp))
                 }
+                override fun handleProducerConnected(sourceNames: List<String>) {}
                 override fun getAudioSourceName(ssrc: Long): String? = sources[ssrc]
                 override fun getDiarize(ssrc: Long): Boolean = false
             },

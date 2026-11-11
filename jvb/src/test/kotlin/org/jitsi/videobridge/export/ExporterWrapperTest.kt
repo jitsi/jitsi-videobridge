@@ -38,6 +38,7 @@ class ExporterWrapperTest : ShouldSpec() {
         override fun handleTranscriptionResult(event: TranscriptionResultEvent) {}
         override fun handleMediaEvent(event: MediaEvent) {}
         override fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long) {}
+        override fun handleProducerConnected(sourceNames: List<String>) {}
         override fun getAudioSourceName(ssrc: Long): String? = null
         override fun getDiarize(ssrc: Long): Boolean = false
     }
