@@ -113,9 +113,108 @@ class SyntheticSourceRtpContinuityTest : ShouldSpec() {
                 continuity.nextPacket(SSRC, 1, 255_600) shouldBe Numbers(101, 255_600)
             }
         }
+        context("A producer whose connection opens again") {
+            should("continue the numbers when its timestamps are later and its chunk numbers are 2^15 or more behind") {
+                val clock = FakeClock()
+                val continuity = SyntheticSourceRtpContinuity(clock, LoggerImpl("test"))
+                continuity.nextPacket(SSRC, 40_000, 38_400_000) shouldBe Numbers(40_000, 38_400_000)
+
+                clock.elapse(Duration.ofSeconds(2))
+                continuity.producerStarted(listOf(SSRC))
+                continuity.nextPacket(SSRC, 0, 38_400_960) shouldBe Numbers(40_001, 38_496_000)
+                continuity.nextPacket(SSRC, 1, 38_401_920) shouldBe Numbers(40_002, 38_496_960)
+            }
+            should("give a new start at the timestamp of the last packet a later timestamp") {
+                val clock = FakeClock()
+                val continuity = SyntheticSourceRtpContinuity(clock, LoggerImpl("test"))
+                continuity.sendingChangeTimestamp(SSRC, 0) shouldBe 0
+                continuity.nextPacket(SSRC, 0, 0) shouldBe Numbers(0, 0)
+
+                clock.elapse(Duration.ofSeconds(2))
+                continuity.producerStarted(listOf(SSRC))
+                // The sending change and the media of the new start stay on one timeline.
+                continuity.sendingChangeTimestamp(SSRC, 0) shouldBe 96_000
+                continuity.nextPacket(SSRC, 0, 0) shouldBe Numbers(1, 96_000)
+            }
+            should("keep the numbers of a source that sent nothing yet") {
+                val continuity = SyntheticSourceRtpContinuity(FakeClock(), LoggerImpl("test"))
+                continuity.producerStarted(listOf(SSRC))
+                continuity.sendingChangeTimestamp(SSRC, 4800) shouldBe 4800
+                continuity.nextPacket(SSRC, 5, 4800) shouldBe Numbers(5, 4800)
+            }
+            should("not change the numbers of a producer that kept its numbering") {
+                val clock = FakeClock()
+                val continuity = SyntheticSourceRtpContinuity(clock, LoggerImpl("test"))
+                (0..2).forEach { continuity.nextPacket(SSRC, it, it * 960L) }
+
+                clock.elapse(Duration.ofMillis(20))
+                continuity.producerStarted(listOf(SSRC))
+                continuity.nextPacket(SSRC, 3, 2880) shouldBe Numbers(3, 2880)
+                continuity.nextPacket(SSRC, 4, 3840) shouldBe Numbers(4, 3840)
+            }
+            should("start again once, when the numbers that go back follow the opening") {
+                val clock = FakeClock()
+                val continuity = SyntheticSourceRtpContinuity(clock, LoggerImpl("test"))
+                (0..9).forEach { continuity.nextPacket(SSRC, it, it * 960L) }
+
+                clock.elapse(Duration.ofSeconds(1))
+                continuity.producerStarted(listOf(SSRC))
+                continuity.sendingChangeTimestamp(SSRC, 0) shouldBe 9 * 960L + 48_000
+                continuity.nextPacket(SSRC, 0, 0) shouldBe Numbers(10, 9 * 960L + 48_000)
+                continuity.nextPacket(SSRC, 1, 960) shouldBe Numbers(11, 9 * 960L + 48_960)
+            }
+        }
+        context("Several sources") {
+            should("number each SSRC on its own") {
+                val continuity = SyntheticSourceRtpContinuity(FakeClock(), LoggerImpl("test"))
+                continuity.nextPacket(SSRC, 100, 96_000) shouldBe Numbers(100, 96_000)
+                continuity.nextPacket(OTHER_SSRC, 7, 0) shouldBe Numbers(7, 0)
+                continuity.nextPacket(SSRC, 101, 96_960) shouldBe Numbers(101, 96_960)
+                // Behind the numbers of the other source, and still not a new start of this one.
+                continuity.nextPacket(OTHER_SSRC, 8, 960) shouldBe Numbers(8, 960)
+                continuity.sendingChangeTimestamp(OTHER_SSRC, 1920) shouldBe 1920
+            }
+            should("start again only the sources of the producer that connected") {
+                val clock = FakeClock()
+                val continuity = SyntheticSourceRtpContinuity(clock, LoggerImpl("test"))
+                (0..4).forEach {
+                    continuity.nextPacket(SSRC, it, it * 960L)
+                    continuity.nextPacket(OTHER_SSRC, it, it * 960L)
+                }
+
+                clock.elapse(Duration.ofSeconds(1))
+                continuity.producerStarted(listOf(SSRC))
+                continuity.nextPacket(SSRC, 0, 0) shouldBe Numbers(5, 4 * 960L + 48_000)
+                continuity.nextPacket(OTHER_SSRC, 5, 4800) shouldBe Numbers(5, 4800)
+            }
+            should("ignore the opening of a connection for an SSRC it does not know") {
+                val continuity = SyntheticSourceRtpContinuity(FakeClock(), LoggerImpl("test"))
+                continuity.producerStarted(listOf(OTHER_SSRC))
+                continuity.nextPacket(SSRC, 3, 2880) shouldBe Numbers(3, 2880)
+            }
+        }
+        context("A producer that starts again on the same connection, which nothing reports") {
+            // These pin the limits of finding a new start from the numbers alone (see the KDoc of the class).
+            should("not be found when its timestamps are later and its chunk numbers are 2^15 or more behind") {
+                val continuity = SyntheticSourceRtpContinuity(FakeClock(), LoggerImpl("test"))
+                continuity.nextPacket(SSRC, 40_000, 38_400_000) shouldBe Numbers(40_000, 38_400_000)
+                continuity.nextPacket(SSRC, 0, 38_400_960) shouldBe Numbers(0, 38_400_960)
+            }
+            should("continue the sequence numbers but repeat the timestamp, when it starts at the last timestamp") {
+                val clock = FakeClock()
+                val continuity = SyntheticSourceRtpContinuity(clock, LoggerImpl("test"))
+                continuity.sendingChangeTimestamp(SSRC, 0) shouldBe 0
+                continuity.nextPacket(SSRC, 0, 0) shouldBe Numbers(0, 0)
+
+                clock.elapse(Duration.ofSeconds(2))
+                continuity.sendingChangeTimestamp(SSRC, 0) shouldBe 0
+                continuity.nextPacket(SSRC, 0, 0) shouldBe Numbers(1, 0)
+            }
+        }
     }
 }
 
 private typealias Numbers = SyntheticSourceRtpContinuity.Numbers
 
 private const val SSRC = 1234L
+private const val OTHER_SSRC = 5678L
