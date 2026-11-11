@@ -2066,7 +2066,7 @@ public class Conference
          * Notes that the producer of the given synthetic sources numbers their media from the start again, because
          * the connection to it opened.
          *
-         * @param sourceNames the synthetic sources requested from the producer
+         * @param sourceNames the requests of the connect; a name that is not a synthetic source is ignored
          */
         @Override
         public void handleProducerConnected(@NotNull List<String> sourceNames)
