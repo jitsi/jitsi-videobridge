@@ -142,7 +142,7 @@ class SyntheticSourceRtpContinuityTest : ShouldSpec() {
                 continuity.sendingChangeTimestamp(SSRC, 4800) shouldBe 4800
                 continuity.nextPacket(SSRC, 5, 4800) shouldBe Numbers(5, 4800)
             }
-            should("not change the numbers of a producer that kept its numbering") {
+            should("continue without a step when the producer kept its numbering and its timestamps follow the clock") {
                 val clock = FakeClock()
                 val continuity = SyntheticSourceRtpContinuity(clock, LoggerImpl("test"))
                 (0..2).forEach { continuity.nextPacket(SSRC, it, it * 960L) }
