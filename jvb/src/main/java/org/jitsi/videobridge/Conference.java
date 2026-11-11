@@ -309,6 +309,13 @@ public class Conference
         Collections.synchronizedSet(LRUCache.lruSet(SYNTHETIC_SOURCE_LOG_CACHE_SIZE, true));
 
     /**
+     * Keeps the RTP numbering of each injected synthetic source continuous when its producer starts again. Its state
+     * for a source stays when the source is removed, because a source that is re-added with the same SSRC must
+     * continue from the numbers already sent.
+     */
+    private final SyntheticSourceRtpContinuity syntheticSourceRtpContinuity;
+
+    /**
      * The conference's negotiated Opus payload type, resolved lazily by {@link #getOpusPayloadType()} and cached
      * (payload types are never rewritten, so it is consistent across all endpoints for the conference's lifetime).
      */
@@ -403,6 +410,7 @@ public class Conference
         }
 
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
+        syntheticSourceRtpContinuity = new SyntheticSourceRtpContinuity(clock, logger);
         exporter = new ExporterWrapper(logger, new ExporterEventHandlerImpl());
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
@@ -2001,11 +2009,15 @@ public class Conference
                 AudioRtpPacket rtpPacket = new AudioRtpPacket(buffer, offset, headerSize + payload.length);
                 rtpPacket.setVersion(2);
                 rtpPacket.setPayloadType(opusPayloadType.getPt());
-                rtpPacket.setSequenceNumber(media.getChunk());
-                // The translator sends a monotonic, unwrapped timestamp, but the RTP timestamp is a 32-bit wrapping
-                // field. setTimestamp() truncates to 32 bits on the wire, but caches the raw Long, so mask here to
-                // keep the packet's cached timestamp consistent with its bytes (and the sending-change notification).
-                rtpPacket.setTimestamp(media.getTimestamp() & 0xFFFFFFFFL);
+                // The producer numbers its media from the start again on every connection, while the SSRC stays: the
+                // numbers are kept continuous here. The timestamp of the producer is not wrapped, but the RTP
+                // timestamp is a 32-bit wrapping field. setTimestamp() writes only the low 32 bits but caches the
+                // value it is given, so the timestamp comes back wrapped: the packet's cached timestamp is then
+                // consistent with its bytes (and with the sending-change notification).
+                SyntheticSourceRtpContinuity.Numbers numbers = syntheticSourceRtpContinuity.nextPacket(
+                    source.getSsrc(), media.getChunk(), media.getTimestamp());
+                rtpPacket.setSequenceNumber(numbers.getSequenceNumber());
+                rtpPacket.setTimestamp(numbers.getTimestamp());
                 rtpPacket.setSsrc(source.getSsrc());
 
                 // Optional RFC 6464 audio level, so clients can show a level indicator for the synthetic source.
@@ -2051,6 +2063,35 @@ public class Conference
         }
 
         /**
+         * Notes that the producer of the given synthetic sources numbers their media from the start again, because
+         * the connection to it opened.
+         *
+         * @param sourceNames the requests of the connect; a name that is not a synthetic source is ignored
+         */
+        @Override
+        public void handleProducerConnected(@NotNull List<String> sourceNames)
+        {
+            try
+            {
+                List<Long> ssrcs = new ArrayList<>();
+                for (String sourceName : sourceNames)
+                {
+                    AudioSourceDesc source = findSyntheticAudioSource(sourceName);
+                    if (source != null)
+                    {
+                        ssrcs.add(source.getSsrc());
+                    }
+                }
+                syntheticSourceRtpContinuity.producerStarted(ssrcs);
+            }
+            catch (Exception e)
+            {
+                // The exporter calls this while its websocket opens: a failure here must not fail the connection.
+                logger.warn("Failed to handle the new connection of the producer of " + sourceNames, e);
+            }
+        }
+
+        /**
          * Handles a synthetic source's sending-state change, derived from the {@code start}/{@code stop} mediajson
          * events a translator sends to bracket a "talk" of translated audio. Resolves the named synthetic source
          * (dropping the change if it isn't a known synthetic source, like {@link #handleMediaEvent}) and broadcasts
@@ -2059,8 +2100,9 @@ public class Conference
          *
          * @param sourceName the synthetic source whose sending state changed
          * @param sending    true if the source started sending, false if it stopped
-         * @param timestamp  the RTP timestamp (media clock) at which the change takes effect, on the same timeline as
-         *                   the source's media; the low 32 bits are used (RTP timestamps are 32-bit and wrap)
+         * @param timestamp  the timestamp (media clock) at which the change takes effect, on the same timeline as the
+         *                   producer's media; it is mapped to the timeline of the injected media and wrapped to 32
+         *                   bits (RTP timestamps are 32-bit and wrap)
          */
         @Override
         public void handleSendingChange(String sourceName, boolean sending, long timestamp)
@@ -2082,10 +2124,10 @@ public class Conference
 
             try
             {
-                // The translator sends a monotonic, unwrapped timestamp; the RTP timestamp is 32-bit and wraps, and
-                // the client (lib-jitsi-meet) validates 0..0xFFFFFFFF, so send the low 32 bits. This also matches the
-                // wrapped timestamp the client sees on this source's injected media.
-                long rtpTimestamp = timestamp & 0xFFFFFFFFL;
+                // The producer's timestamp is not wrapped and starts again when the producer reconnects. Map it to
+                // the timeline of this source's injected media (see handleMediaEvent), wrapped to 32 bits: the client
+                // (lib-jitsi-meet) drops a change whose timestamp is outside 0..0xFFFFFFFF.
+                long rtpTimestamp = syntheticSourceRtpContinuity.sendingChangeTimestamp(source.getSsrc(), timestamp);
                 broadcastMessage(
                         new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp, source.getKind()),
                         true);

@@ -172,6 +172,8 @@ internal class Exporter(
             serializer = initSerializer()
             cancelReconnect()
             startPing()
+            // The peer numbers the media it produces from the start again on a new connection.
+            requests.takeIf { it.isNotEmpty() }?.let { eventHandler.handleProducerConnected(it) }
             // Declare our exported/requested sources to the peer, if any, now that the connection is up.
             if (exports.isNotEmpty() || requests.isNotEmpty()) {
                 sendSources()

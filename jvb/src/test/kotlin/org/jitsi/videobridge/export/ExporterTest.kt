@@ -46,6 +46,9 @@ import java.util.concurrent.TimeUnit
 class ExporterTest : ShouldSpec() {
     private data class Change(val sourceName: String, val sending: Boolean, val timestamp: Long)
 
+    /** The sources reported to the handler each time the websocket of the last [fixture] opened. */
+    private val producerConnections = mutableListOf<List<String>>()
+
     /**
      * A fresh, not-yet-connected [Exporter] plus the list capturing its sending-change callback invocations. [sources]
      * backs the audio-source lookup (SSRC -> source name); any other SSRC is unknown (resolves to null).
@@ -57,6 +60,7 @@ class ExporterTest : ShouldSpec() {
         type: Connect.Types = Connect.Types.RECORDER
     ): Pair<Exporter, MutableList<Change>> {
         val changes = mutableListOf<Change>()
+        producerConnections.clear()
         val exporter = Exporter(
             URI("ws://localhost:1/"),
             emptyMap(),
@@ -66,6 +70,9 @@ class ExporterTest : ShouldSpec() {
                 override fun handleMediaEvent(event: MediaEvent) {}
                 override fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long) {
                     changes.add(Change(sourceName, sending, timestamp))
+                }
+                override fun handleProducerConnected(sourceNames: List<String>) {
+                    producerConnections.add(sourceNames)
                 }
                 override fun getAudioSourceName(ssrc: Long): String? = sources[ssrc]
                 override fun getDiarize(ssrc: Long): Boolean = false
@@ -91,6 +98,30 @@ class ExporterTest : ShouldSpec() {
     init {
         afterSpec { TaskPools.resetScheduledPool() }
 
+        context("the opening of the websocket of a peer that produces synthetic sources") {
+            should("be reported to the handler with the requested sources, each time it opens") {
+                val (exporter, _) = fixture(requests = listOf("agent-a0"), type = Connect.Types.AGENT)
+
+                exporter.recorderWebSocket.onWebSocketOpen(mockk<Session>(relaxed = true))
+                producerConnections shouldBe listOf(listOf("agent-a0"))
+                // The peer numbers its media from the start again after a reconnect.
+                exporter.recorderWebSocket.onWebSocketOpen(mockk<Session>(relaxed = true))
+                producerConnections shouldBe listOf(listOf("agent-a0"), listOf("agent-a0"))
+            }
+            should("be reported with the requests of a live update") {
+                val (exporter, _) = fixture(requests = listOf("ep1-a0.fr"))
+                exporter.update(emptyList(), listOf("ep1-a0.fr", "ep1-a0.de"))
+
+                exporter.recorderWebSocket.onWebSocketOpen(mockk<Session>(relaxed = true))
+                producerConnections shouldBe listOf(listOf("ep1-a0.fr", "ep1-a0.de"))
+            }
+            should("not be reported for a peer that produces nothing") {
+                val (exporter, _) = fixture(exports = listOf("ep1-a0"))
+
+                exporter.recorderWebSocket.onWebSocketOpen(mockk<Session>(relaxed = true))
+                producerConnections shouldBe emptyList()
+            }
+        }
         context("inbound start/stop dispatch to the sending-change callback") {
             should("fire sending=true for a start carrying a talk timestamp") {
                 val (exporter, changes) = fixture()
