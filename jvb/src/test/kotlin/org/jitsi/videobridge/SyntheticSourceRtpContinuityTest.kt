@@ -124,7 +124,7 @@ class SyntheticSourceRtpContinuityTest : ShouldSpec() {
                 continuity.nextPacket(SSRC, 0, 38_400_960) shouldBe Numbers(40_001, 38_496_000)
                 continuity.nextPacket(SSRC, 1, 38_401_920) shouldBe Numbers(40_002, 38_496_960)
             }
-            should("give a new start at the timestamp of the last packet a later timestamp") {
+            should("move a new start at the timestamp of the last packet to a later timestamp") {
                 val clock = FakeClock()
                 val continuity = SyntheticSourceRtpContinuity(clock, LoggerImpl("test"))
                 continuity.sendingChangeTimestamp(SSRC, 0) shouldBe 0
