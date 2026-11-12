@@ -468,7 +468,8 @@ private fun logsOf(level: Level, block: () -> Unit): List<String> {
         override fun flush() = Unit
         override fun close() = Unit
     }
-    // The injector creates its own logger, so capture at the java.util.logging logger it delegates to.
+    // The injector creates its own logger, so capture at the java.util.logging logger it delegates to. That one is
+    // found by its name, the class name that createChildLogger gives it: under another name nothing is captured.
     val julLogger = java.util.logging.Logger.getLogger(SyntheticSourceInjector::class.java.name)
     julLogger.addHandler(capture)
     try {
