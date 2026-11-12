@@ -402,8 +402,9 @@ class ExporterTest : ShouldSpec() {
                     val (transcriber, _) = fixture()
 
                     repeat(3) {
-                        agent.close(1006, "abnormal closure")
-                        transcriber.close(1006, "abnormal closure")
+                        // Each close is that of a new connection, as after a redial.
+                        agent.newConnection().onWebSocketClose(1006, "abnormal closure")
+                        transcriber.newConnection().onWebSocketClose(1006, "abnormal closure")
                     }
 
                     agent.debugState().path("reconnect_exhausted").asBoolean() shouldBe true
