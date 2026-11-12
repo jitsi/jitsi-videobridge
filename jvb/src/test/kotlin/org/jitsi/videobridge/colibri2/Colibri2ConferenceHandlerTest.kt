@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.colibri2
 
 import io.kotest.matchers.collections.shouldContainAll
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -237,6 +238,16 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 ep.receivesSsrc(12L) shouldBe false
                 ep.ssrcs shouldContainAll ep.mediaSourceSsrcs()
             }
+            should("cover the primary SSRCs that only a SIM group names") {
+                handle(
+                    endpointRequest(
+                        createEndpoint("ep", false, videoSource("ep-v0", listOf(10L), listOf(sim(10L, 20L, 30L))))
+                    )
+                )
+                val ep = conference.getLocalEndpoint("ep").shouldNotBeNull()
+                ep.mediaSourceSsrcs() shouldContainAll listOf(10L, 20L, 30L)
+                listOf(10L, 20L, 30L).forEach { ep.receivesSsrc(it) shouldBe true }
+            }
             should("cover an SSRC that a group names but the source list leaves out") {
                 handle(
                     endpointRequest(
@@ -248,9 +259,32 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 ep.receivesSsrc(11L) shouldBe true
                 ep.ssrcs shouldContainAll ep.mediaSourceSsrcs()
             }
-            should("cover every SSRC of the sources of a relayed endpoint, including RTX") {
+            should("not include a synthetic source of a local endpoint, while the SSRC still resolves") {
+                // The bridge injects synthetic audio into the conference itself. The endpoint must not be able to
+                // send on that SSRC, but lookups of the SSRC (e.g. for the source name) must still find it.
+                handle(
+                    endpointRequest(
+                        createEndpoint(
+                            "ep",
+                            false,
+                            audioSource("ep-a0", 1L, false),
+                            audioSource("ep-a0.hi", 2L, true)
+                        )
+                    )
+                )
+                val ep = conference.getLocalEndpoint("ep").shouldNotBeNull()
+                ep.receivesSsrc(1L) shouldBe true
+                ep.receivesSsrc(2L) shouldBe false
+                conference.getEndpointBySsrc(2L) shouldBe ep
+
+                // The mapping of the synthetic SSRC must go when the endpoint expires, like the receive SSRCs.
+                ep.expire()
+                conference.getEndpointBySsrc(1L).shouldBeNull()
+                conference.getEndpointBySsrc(2L).shouldBeNull()
+            }
+            should("cover every SSRC of the sources of a relayed endpoint, including RTX and synthetic sources") {
                 // The relay routes a packet to the relayed endpoint by the same set, so a gap here would drop all
-                // of the endpoint's media.
+                // of the endpoint's media. Synthetic audio does arrive over a relay.
                 withNewConfig(RELAY_CONFIG) {
                     handle(
                         relayRequest(
@@ -259,14 +293,18 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                                 "ep",
                                 false,
                                 audioSource("ep-a0", 1L, false),
+                                audioSource("ep-a0.hi", 2L, true),
                                 videoSource("ep-v0", listOf(10L), listOf(fid(10L, 11L)))
                             )
                         )
                     )
-                    val ep = conference.getRelay(RELAY_ID).shouldNotBeNull().getEndpoint("ep").shouldNotBeNull()
+                    val relay = conference.getRelay(RELAY_ID).shouldNotBeNull()
+                    val ep = relay.getEndpoint("ep").shouldNotBeNull()
                     ep.mediaSources.flatMap { it.rtpEncodings.toList() }.flatMap { it.ssrcs } shouldContainAll
                         listOf(10L, 11L)
-                    ep.ssrcs shouldContainAll listOf(1L, 10L, 11L)
+                    ep.ssrcs shouldContainAll listOf(1L, 2L, 10L, 11L)
+                    // The map that routes an incoming relay packet to the endpoint.
+                    listOf(1L, 2L, 10L, 11L).forEach { relay.getEndpointBySsrc(it) shouldBe ep }
                 }
             }
             should("cover the SSRCs of a source added later") {
@@ -357,6 +395,12 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                     groups.forEach { addSsrcGroup(it) }
                 }
                 .build()
+
+        /** A simulcast (SIM) group of [ssrcs]. */
+        fun sim(vararg ssrcs: Long) = SourceGroupPacketExtension().apply {
+            semantics = SourceGroupPacketExtension.SEMANTICS_SIMULCAST
+            addSources(ssrcs.map { ssrc -> SourcePacketExtension().apply { this.ssrc = ssrc } })
+        }
 
         /** An RTX (FID) group of [primary] and [rtx]. */
         fun fid(primary: Long, rtx: Long) = SourceGroupPacketExtension().apply {

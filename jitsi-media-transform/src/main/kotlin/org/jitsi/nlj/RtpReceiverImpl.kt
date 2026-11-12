@@ -244,7 +244,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         // a packet marked for discard on a context that authenticated before), after tccGenerator
                         // and remoteBandwidthEstimator
                         // (so a packet that arrives before the signaling for its source is still acknowledged in the
-                        // feedback, as before), and after the pcap writer (so a dump shows the dropped packets). The
+                        // feedback), and after the pcap writer (so a dump shows the dropped packets). The
                         // pre-SRTP audio level reader above still sees such a packet.
                         node(receiveSsrcFilter, condition = { ReceiveSsrcFilter.enabled })
                         // This reads audio levels from packets that use cryptex. TODO: should it go in the Audio path?
@@ -332,7 +332,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun getStats(): RtpReceiverStats = RtpReceiverStats(
         incomingStats = statsTracker.getSnapshot(),
         packetStreamStats = packetStreamStats.snapshot(),
-        videoParserStats = videoParser.getStats()
+        videoParserStats = videoParser.getStats(),
+        numPacketsDroppedUnsignaledSsrc = receiveSsrcFilter.numPacketsDropped
     )
 
     override fun forceMuteAudio(shouldMute: Boolean) {

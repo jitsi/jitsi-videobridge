@@ -233,6 +233,14 @@ object VideobridgeMetrics {
     )
 
     @JvmField
+    val packetsDroppedUnsignaledSsrc = metricsContainer.registerCounter(
+        "packets_dropped_unsignaled_ssrc",
+        "Number of RTP packets received from local endpoints and dropped because their SSRC was not signaled " +
+            "for the endpoint that sent them, including packets received before their source was signaled " +
+            "(updated on endpoint expiration)."
+    )
+
+    @JvmField
     val keyframeRequestsDroppedByBudget = metricsContainer.registerCounter(
         "keyframe_requests_dropped_by_budget",
         "Number of keyframe requests dropped specifically because the keyframe budget (jmt.keyframe.budget) " +

@@ -602,6 +602,11 @@ class Endpoint @JvmOverloads constructor(
 
     override fun setExtmapAllowMixed(allow: Boolean) = transceiver.setExtmapAllowMixed(allow)
 
+    /**
+     * Adds a receive SSRC: the receive pipeline accepts a packet with this SSRC from the endpoint, and the conference
+     * maps the SSRC to the endpoint. A receive SSRC is never removed (nothing calls removeReceiveSsrc), so a packet
+     * with an SSRC that was signaled at some point is accepted also after its source is removed.
+     */
     fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
         logger.cdebug { "Adding receive ssrc $ssrc of type $mediaType" }
         transceiver.addReceiveSsrc(ssrc, mediaType)
@@ -1207,6 +1212,9 @@ class Endpoint @JvmOverloads constructor(
         )
         VideobridgeMetrics.layeringChangesReceived.addAndGet(
             transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
+        )
+        VideobridgeMetrics.packetsDroppedUnsignaledSsrc.addAndGet(
+            transceiverStats.rtpReceiverStats.numPacketsDroppedUnsignaledSsrc.toLong()
         )
         val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
             it.mediaType == MediaType.VIDEO
