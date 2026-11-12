@@ -669,15 +669,15 @@ public class Conference
      * Feeds an injected agent packet's audio level to speech activity, so a talking bot can be the dominant speaker.
      * A side effect of the injection: a failure here is logged once and never drops the packet.
      */
-    private void feedAgentSpeechActivity(AudioSourceDesc source, String sourceName, int audioLevel)
+    private void feedAgentSpeechActivity(AudioSourceDesc source, int audioLevel)
     {
         AbstractEndpoint owner = source.getOwner() != null ? getEndpoint(source.getOwner()) : null;
         if (owner == null)
         {
             if (loggedNoAgentOwner.compareAndSet(false, true))
             {
-                logger.warn("Injected agent audio for " + sourceName + " has no owner endpoint; the agent can not "
-                    + "become the dominant speaker.");
+                logger.warn("Injected agent audio for " + source.getSourceName() + " has no owner endpoint; the agent "
+                    + "can not become the dominant speaker.");
             }
             return;
         }
@@ -1987,7 +1987,7 @@ public class Conference
         @Override
         public void feedAgentSpeechActivity(@NotNull AudioSourceDesc source, int audioLevel)
         {
-            Conference.this.feedAgentSpeechActivity(source, source.getSourceName(), audioLevel);
+            Conference.this.feedAgentSpeechActivity(source, audioLevel);
         }
     }
 
