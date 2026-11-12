@@ -480,6 +480,20 @@ class ExporterTest : ShouldSpec() {
                 // The only job is the ping of the connection in use.
                 scheduler.numPendingJobs() shouldBe 1
             }
+            should("disconnect the session that a connection still has when it is replaced") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(ping = true)
+                val session = mockk<Session>(relaxed = true)
+                exporter.recorderWebSocket.onWebSocketOpen(session)
+                // The ping, then its timeout: the peer may never answer the close that it asks for.
+                scheduler.runOne()
+                scheduler.runOne()
+                verify(exactly = 0) { session.disconnect() }
+
+                exporter.newConnection()
+
+                verify { session.disconnect() }
+            }
             should("close a connection that opens after a terminal close") {
                 fakeScheduler()
                 val (exporter, _) = fixture(requests = listOf("agent-a0"), type = Connect.Types.AGENT)
