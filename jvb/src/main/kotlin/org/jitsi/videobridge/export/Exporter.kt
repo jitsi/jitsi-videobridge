@@ -230,7 +230,11 @@ internal class Exporter(
         private set
 
     /** Internal (rather than private) so [ExporterTest] can replace the connection without dialing. */
-    internal fun newConnection() = RecorderWebSocket().also { recorderWebSocket = it }
+    internal fun newConnection(): RecorderWebSocket {
+        // After a ping timeout the old session can wait a long time for the reply to its close, out of reach of stop().
+        recorderWebSocket.session?.disconnect()
+        return RecorderWebSocket().also { recorderWebSocket = it }
+    }
 
     private var serializer: MediaJsonSerializer? = null
 

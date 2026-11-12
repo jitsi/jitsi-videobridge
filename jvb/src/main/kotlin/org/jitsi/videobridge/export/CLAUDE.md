@@ -29,7 +29,7 @@ Notes for the audio export code (`Exporter`, `ExporterWrapper`).
   - `InfoEvent`. It is only logged.
   - The bridge logs a message that it cannot parse at warn level and counts it.
 - `Exporter` reconnects, with a backoff, after a lost connection: a close that is not terminal (4001 and 4002 are), a websocket error, or a ping timeout.
-  - Each connection has its own `RecorderWebSocket`. `recorderWebSocket` holds the one in use, and a reconnect replaces it.
+  - Each connection has its own `RecorderWebSocket`. `recorderWebSocket` holds the one in use. A reconnect replaces it and disconnects the session that the replaced one still has, which `stop()` could no longer reach.
   - One loss is reported more than once: Jetty calls `onWebSocketError` and then `onWebSocketClose`, and the close that a ping timeout asks for can arrive after the next connection is open. Only the first report from the connection in use schedules a reconnect (`markLost()`). A second websocket for the same connect would make a peer that keeps only its newest connection close the other one, in a loop.
   - `stop()` and a terminal close do not see a dial that is under way. A connection that opens after either, or after it was replaced, is closed in `onWebSocketOpen`.
 - The conference handles the received events through the `ExporterEventHandler` that it gives to `ExporterWrapper`.
