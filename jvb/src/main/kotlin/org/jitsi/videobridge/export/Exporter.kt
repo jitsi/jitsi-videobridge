@@ -22,6 +22,7 @@ import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.exceptions.WebSocketTimeoutException
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
+import org.eclipse.jetty.websocket.core.CloseStatus
 import org.jitsi.config.JitsiConfig
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.InfoEvent
@@ -139,7 +140,12 @@ internal class Exporter(
          * stable connection, starts the count of reconnect attempts again.
          */
         fun markLost(): Boolean {
-            if (this !== recorderWebSocket || !lost.compareAndSet(false, true)) {
+            if (this !== recorderWebSocket) {
+                logger.debug { "Ignoring the loss of a connection that was already replaced" }
+                return false
+            }
+            if (!lost.compareAndSet(false, true)) {
+                logger.debug { "Ignoring a repeated report of the loss of the connection" }
                 return false
             }
             stopPing()
@@ -184,7 +190,7 @@ internal class Exporter(
                 // A stop or a terminal close does not see a dial that is under way, so it is ended here.
                 this.session = null
                 logger.info("Closing a websocket that opened when it was no longer wanted")
-                session.close(org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN, "closing", Callback.NOOP)
+                session.close(CloseStatus.SHUTDOWN, "closing", Callback.NOOP)
                 return
             }
             openedAtMs = System.currentTimeMillis()
@@ -555,11 +561,7 @@ internal class Exporter(
         if (recorderWebSocket.isConnected) {
             recorderWebSocket.session?.sendText(SessionEndEvent().toJson(), Callback.NOOP)
         }
-        recorderWebSocket.session?.close(
-            org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN,
-            "closing",
-            Callback.NOOP
-        )
+        recorderWebSocket.session?.close(CloseStatus.SHUTDOWN, "closing", Callback.NOOP)
         recorderWebSocket.session?.disconnect()
         queue.close()
     }
