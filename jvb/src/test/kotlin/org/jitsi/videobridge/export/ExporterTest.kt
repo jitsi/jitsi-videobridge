@@ -24,6 +24,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.eclipse.jetty.websocket.api.Session
+import org.eclipse.jetty.websocket.core.CloseStatus
 import org.jitsi.config.withNewConfig
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
@@ -34,14 +35,15 @@ import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
+import java.nio.channels.ClosedChannelException
 import java.util.concurrent.TimeUnit
 
 /**
  * Drives [Exporter] directly (no socket). Verifies how inbound mediajson `start`/`stop` events map to the
  * synthetic-source sending-change callback (a start/stop with a talk timestamp fires the callback, start ->
  * sending=true, stop -> sending=false; one without a timestamp, i.e. a plain stream start/stop, does not), which
- * audio [Exporter.wants] to export given the connect's exports/requests lists, and which websocket close codes lead
- * to a reconnect.
+ * audio [Exporter.wants] to export given the connect's exports/requests lists, which websocket close codes lead
+ * to a reconnect, and that a lost connection is replaced once.
  */
 class ExporterTest : ShouldSpec() {
     private data class Change(val sourceName: String, val sending: Boolean, val timestamp: Long)
@@ -57,7 +59,8 @@ class ExporterTest : ShouldSpec() {
         exports: List<String> = emptyList(),
         requests: List<String> = emptyList(),
         sources: Map<Long, String> = emptyMap(),
-        type: Connect.Types = Connect.Types.RECORDER
+        type: Connect.Types = Connect.Types.RECORDER,
+        ping: Boolean = false
     ): Pair<Exporter, MutableList<Change>> {
         val changes = mutableListOf<Change>()
         producerConnections.clear()
@@ -77,6 +80,9 @@ class ExporterTest : ShouldSpec() {
                 override fun getAudioSourceName(ssrc: Long): String? = sources[ssrc]
                 override fun getDiarize(ssrc: Long): Boolean = false
             },
+            pingEnabled = ping,
+            pingIntervalMs = 10_000,
+            pingTimeoutMs = 3_000,
             type = type,
             exports = exports,
             requests = requests
@@ -402,14 +408,133 @@ class ExporterTest : ShouldSpec() {
                     val (transcriber, _) = fixture()
 
                     repeat(3) {
-                        agent.close(1006, "abnormal closure")
-                        transcriber.close(1006, "abnormal closure")
+                        // Each close is that of a new connection, as after a redial.
+                        agent.newConnection().onWebSocketClose(1006, "abnormal closure")
+                        transcriber.newConnection().onWebSocketClose(1006, "abnormal closure")
                     }
 
                     agent.debugState().path("reconnect_exhausted").asBoolean() shouldBe true
                     val transcriberState = transcriber.debugState()
                     transcriberState.path("reconnect_exhausted").asBoolean() shouldBe false
                     transcriberState.path("reconnect_attempts").asInt() shouldBe 3
+                }
+            }
+        }
+        context("one reconnect for each lost connection") {
+            should("reconnect once when the loss is reported as an error and then as a close") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(requests = listOf("agent-a0"))
+                exporter.recorderWebSocket.onWebSocketOpen(mockk<Session>(relaxed = true))
+
+                exporter.recorderWebSocket.onWebSocketError(ClosedChannelException())
+                exporter.close(1006, "Session Closed")
+
+                scheduler.numPendingJobs() shouldBe 1
+                exporter.debugState().path("reconnect_attempts").asInt() shouldBe 1
+            }
+            should("reconnect once when a ping times out and the close it asks for follows") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(ping = true)
+                val session = mockk<Session>(relaxed = true)
+                exporter.recorderWebSocket.onWebSocketOpen(session)
+                // The ping, then its timeout.
+                scheduler.runOne()
+                scheduler.runOne()
+                verify { session.close(1000, "Ping timeout", any()) }
+
+                exporter.close(1000, "Ping timeout")
+
+                scheduler.numPendingJobs() shouldBe 1
+                exporter.debugState().path("reconnect_attempts").asInt() shouldBe 1
+            }
+            should("leave a new connection and its ping alone when the one it replaced reports its close") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(ping = true)
+                val replaced = exporter.recorderWebSocket
+                replaced.onWebSocketOpen(mockk<Session>(relaxed = true))
+                replaced.onWebSocketError(ClosedChannelException())
+                // What the reconnect does, without the dial.
+                val session = mockk<Session>(relaxed = true)
+                exporter.newConnection().onWebSocketOpen(session)
+
+                replaced.onWebSocketClose(1006, "Session Closed")
+
+                exporter.isConnected() shouldBe true
+                exporter.debugState().path("reconnect_attempts").asInt() shouldBe 1
+                // The only job left is the ping of the new connection.
+                scheduler.numPendingJobs() shouldBe 1
+                scheduler.runOne()
+                verify { session.sendText(match { "\"event\":\"ping\"" in it }, any()) }
+            }
+            should("ignore the reports of a connection that was replaced before it was lost") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(ping = true)
+                val replaced = exporter.recorderWebSocket
+                exporter.newConnection().onWebSocketOpen(mockk<Session>(relaxed = true))
+
+                replaced.onWebSocketError(ClosedChannelException())
+                replaced.onWebSocketClose(1006, "Session Closed")
+
+                exporter.isConnected() shouldBe true
+                exporter.debugState().path("reconnect_attempts").asInt() shouldBe 0
+                // The only job is the ping of the connection in use.
+                scheduler.numPendingJobs() shouldBe 1
+            }
+            should("disconnect the session that a connection still has when it is replaced") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(ping = true)
+                val session = mockk<Session>(relaxed = true)
+                exporter.recorderWebSocket.onWebSocketOpen(session)
+                // The ping, then its timeout: the peer may never answer the close that it asks for.
+                scheduler.runOne()
+                scheduler.runOne()
+                verify(exactly = 0) { session.disconnect() }
+
+                exporter.newConnection()
+
+                verify { session.disconnect() }
+            }
+            should("close a connection that opens after a terminal close") {
+                fakeScheduler()
+                val (exporter, _) = fixture(requests = listOf("agent-a0"), type = Connect.Types.AGENT)
+                val replaced = exporter.recorderWebSocket
+                replaced.onWebSocketError(ClosedChannelException())
+                // The reconnect was already dialing when the peer said not to redial.
+                val dialing = exporter.newConnection()
+                replaced.onWebSocketClose(Exporter.CLOSE_AGENT_ENDED, "agent ended")
+                val session = mockk<Session>(relaxed = true)
+
+                dialing.onWebSocketOpen(session)
+
+                verify { session.close(CloseStatus.SHUTDOWN, "closing", any()) }
+                exporter.isConnected() shouldBe false
+                producerConnections shouldBe emptyList()
+            }
+            should("close a connection that opens after the exporter stopped") {
+                fakeScheduler()
+                val (exporter, _) = fixture(requests = listOf("agent-a0"))
+                exporter.stop()
+                val session = mockk<Session>(relaxed = true)
+
+                exporter.recorderWebSocket.onWebSocketOpen(session)
+
+                verify { session.close(CloseStatus.SHUTDOWN, "closing", any()) }
+                exporter.isConnected() shouldBe false
+                producerConnections shouldBe emptyList()
+            }
+            should("count the attempts from one after a stable connection, also when an error reports its loss") {
+                // Any connection that opened counts as stable.
+                withNewConfig("videobridge.exporter.stable-connection-threshold = -1 ms") {
+                    fakeScheduler()
+                    val (exporter, _) = fixture()
+                    repeat(2) { exporter.newConnection().onWebSocketClose(1006, "abnormal closure") }
+                    exporter.debugState().path("reconnect_attempts").asInt() shouldBe 2
+                    val stable = exporter.newConnection()
+                    stable.onWebSocketOpen(mockk<Session>(relaxed = true))
+
+                    stable.onWebSocketError(ClosedChannelException())
+
+                    exporter.debugState().path("reconnect_attempts").asInt() shouldBe 1
                 }
             }
         }

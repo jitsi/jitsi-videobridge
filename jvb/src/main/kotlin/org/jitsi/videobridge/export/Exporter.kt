@@ -22,6 +22,7 @@ import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.exceptions.WebSocketTimeoutException
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
+import org.eclipse.jetty.websocket.core.CloseStatus
 import org.jitsi.config.JitsiConfig
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.InfoEvent
@@ -90,8 +91,6 @@ internal class Exporter(
     @Volatile
     private var speakers: Speakers? = null
 
-    private var connectionOpenedAtMs: Long = 0
-
     // Ping/pong state
     private var pingScheduledFuture: ScheduledFuture<*>? = null
 
@@ -122,6 +121,8 @@ internal class Exporter(
             1024
         )
     }
+
+    /** One connection to the peer. Its loss can be reported more than once, also after its replacement is open. */
     inner class RecorderWebSocket : Session.Listener.AutoDemanding {
         @Volatile
         var session: Session? = null
@@ -129,17 +130,35 @@ internal class Exporter(
         val isConnected: Boolean
             get() = session != null
 
-        override fun onWebSocketClose(statusCode: Int, reason: String?) {
-            val openedAt = connectionOpenedAtMs
-            val stableConnection = openedAt > 0 &&
-                System.currentTimeMillis() - openedAt > stableConnectionThreshold.toMillis()
-            if (stableConnection) {
-                reconnectAttempts.set(0)
-                connectionOpenedAtMs = 0
-            }
+        @Volatile
+        private var openedAtMs: Long = 0
 
-            session = null
+        private val lost = AtomicBoolean(false)
+
+        /**
+         * True only at the first report that the connection in use is lost. Also stops the ping then and, after a
+         * stable connection, starts the count of reconnect attempts again.
+         */
+        fun markLost(): Boolean {
+            if (this !== recorderWebSocket) {
+                logger.debug { "Ignoring the loss of a connection that was already replaced" }
+                return false
+            }
+            if (!lost.compareAndSet(false, true)) {
+                logger.debug { "Ignoring a repeated report of the loss of the connection" }
+                return false
+            }
             stopPing()
+            val openedAt = openedAtMs
+            if (openedAt > 0 && System.currentTimeMillis() - openedAt > stableConnectionThreshold.toMillis()) {
+                reconnectAttempts.set(0)
+            }
+            return true
+        }
+
+        override fun onWebSocketClose(statusCode: Int, reason: String?) {
+            session = null
+            val reconnectDue = markLost()
             val internalError = statusCode == 1011
             if (internalError) {
                 webSocketInternalErrors.inc()
@@ -159,7 +178,7 @@ internal class Exporter(
                 }
             } else {
                 logger.info("Websocket closed with status $statusCode, reason: $reason")
-                if (!isShuttingDown.get()) {
+                if (reconnectDue && !isShuttingDown.get()) {
                     scheduleReconnect()
                 }
             }
@@ -167,7 +186,14 @@ internal class Exporter(
 
         override fun onWebSocketOpen(session: Session) {
             this.session = session
-            connectionOpenedAtMs = System.currentTimeMillis()
+            if (this !== recorderWebSocket || isShuttingDown.get() || terminalClose != null) {
+                // A stop or a terminal close does not see a dial that is under way, so it is ended here.
+                this.session = null
+                logger.info("Closing a websocket that opened when it was no longer wanted")
+                session.close(CloseStatus.SHUTDOWN, "closing", Callback.NOOP)
+                return
+            }
+            openedAtMs = System.currentTimeMillis()
             logger.info("Websocket connected: $isConnected")
             serializer = initSerializer()
             cancelReconnect()
@@ -191,7 +217,7 @@ internal class Exporter(
             }
             webSocketFailures.inc()
             instanceWebSocketFailures.incrementAndGet()
-            if (!isShuttingDown.get()) {
+            if (markLost() && !isShuttingDown.get()) {
                 scheduleReconnect()
             }
         }
@@ -201,8 +227,20 @@ internal class Exporter(
         }
     }
 
-    /** Internal (rather than private) so [ExporterTest] can install a mock session without opening a socket. */
-    internal val recorderWebSocket = RecorderWebSocket()
+    /**
+     * The connection in use. Internal (rather than private) so [ExporterTest] can install a mock session without
+     * opening a socket.
+     */
+    @Volatile
+    internal var recorderWebSocket = RecorderWebSocket()
+        private set
+
+    /** Internal (rather than private) so [ExporterTest] can replace the connection without dialing. */
+    internal fun newConnection(): RecorderWebSocket {
+        // After a ping timeout the old session can wait a long time for the reply to its close, out of reach of stop().
+        recorderWebSocket.session?.disconnect()
+        return RecorderWebSocket().also { recorderWebSocket = it }
+    }
 
     private var serializer: MediaJsonSerializer? = null
 
@@ -386,7 +424,9 @@ internal class Exporter(
     }
 
     private fun sendPing() {
-        if (!recorderWebSocket.isConnected || isShuttingDown.get()) {
+        val connection = recorderWebSocket
+        val session = connection.session
+        if (session == null || isShuttingDown.get()) {
             return
         }
 
@@ -396,10 +436,10 @@ internal class Exporter(
         try {
             lastPingSentId.set(pingId)
             pingTimeoutFuture = TaskPools.SCHEDULED_POOL.schedule({
-                handlePingTimeout()
+                handlePingTimeout(connection)
             }, pingTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
 
-            recorderWebSocket.session?.sendText(pingEvent.toJson(), Callback.NOOP)
+            session.sendText(pingEvent.toJson(), Callback.NOOP)
             logger.debug { "Sent ping with id=$pingId" }
         } catch (e: Exception) {
             pingTimeoutFuture?.cancel(false)
@@ -408,12 +448,14 @@ internal class Exporter(
         }
     }
 
-    private fun handlePingTimeout() {
+    private fun handlePingTimeout(connection: RecorderWebSocket) {
+        if (!connection.markLost()) {
+            return
+        }
         logger.warn("Ping timeout, reconnecting websocket")
 
         // Force reconnect on timeout
-        stopPing()
-        recorderWebSocket.session?.close(1000, "Ping timeout", Callback.NOOP)
+        connection.session?.close(1000, "Ping timeout", Callback.NOOP)
         scheduleReconnect()
     }
 
@@ -485,7 +527,7 @@ internal class Exporter(
             if (!isShuttingDown.get() && terminalClose == null) {
                 try {
                     logger.info("Attempting reconnection (attempt $attempt)")
-                    webSocketClient.connect(recorderWebSocket, url, createUpgradeRequest())
+                    webSocketClient.connect(newConnection(), url, createUpgradeRequest())
                 } catch (e: Exception) {
                     logger.warn("Reconnection attempt $attempt failed", e)
                     scheduleReconnect()
@@ -519,11 +561,7 @@ internal class Exporter(
         if (recorderWebSocket.isConnected) {
             recorderWebSocket.session?.sendText(SessionEndEvent().toJson(), Callback.NOOP)
         }
-        recorderWebSocket.session?.close(
-            org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN,
-            "closing",
-            Callback.NOOP
-        )
+        recorderWebSocket.session?.close(CloseStatus.SHUTDOWN, "closing", Callback.NOOP)
         recorderWebSocket.session?.disconnect()
         queue.close()
     }
