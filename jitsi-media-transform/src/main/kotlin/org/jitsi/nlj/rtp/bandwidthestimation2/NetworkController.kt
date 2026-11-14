@@ -89,6 +89,11 @@ interface NetworkControllerInterface {
     fun onTransportPacketsFeedback(report: TransportPacketsFeedback): NetworkControlUpdate
 
     // Omitted: onNetworkStateUpdate: Not used
+
+    /** Returns true if the network controller supports adaptation to ECN.
+     * https://www.rfc-editor.org/rfc/rfc9331.html
+     */
+    fun supportsEcnAdaptation(): Boolean = false
 }
 
 /** NetworkControllerFactoryInterface is an interface for creating a network
