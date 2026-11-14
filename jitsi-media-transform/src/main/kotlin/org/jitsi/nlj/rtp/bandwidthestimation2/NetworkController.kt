@@ -17,6 +17,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
+import java.time.Clock
 import java.time.Duration
 
 /* Base type for network controller,
@@ -40,7 +41,10 @@ class NetworkControllerConfig(
     /** Initial stream specific configuration, these are changed at any later time
      * by calls to OnStreamsConfig.
      */
-    val streamBasedConfig: StreamsConfig = StreamsConfig()
+    val streamBasedConfig: StreamsConfig = StreamsConfig(),
+
+    /** Jitsi local: the clock. In WebRTC it is part of the environment in the configuration. */
+    val clock: Clock = Clock.systemUTC()
 )
 
 /** NetworkControllerInterface is implemented by network controllers. A network

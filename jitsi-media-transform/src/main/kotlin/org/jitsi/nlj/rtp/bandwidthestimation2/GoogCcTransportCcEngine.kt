@@ -63,6 +63,7 @@ class GoogCcTransportCcEngine(
         NetworkControllerConfig(
             logger,
             diagnosticContext,
+            clock = clock,
             constraints = TargetRateConstraints(
                 atTime = clock.instant(),
                 startingRate = BandwidthEstimatorConfig.initBw,

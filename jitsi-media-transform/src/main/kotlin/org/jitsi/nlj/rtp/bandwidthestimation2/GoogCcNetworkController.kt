@@ -654,7 +654,7 @@ class GoogCcNetworkController(
     }
 
     private val bandwidthEstimation = SendSideBandwidthEstimation(logger, diagnosticContext)
-    private val alrDetector = AlrDetector()
+    private val alrDetector = AlrDetector(config.clock)
     private var probeBitrateEstimator = ProbeBitrateEstimator(logger, diagnosticContext)
     private var delayBasedBwe = DelayBasedBwe(logger, diagnosticContext).also {
         it.setMinBitrate(kCongestionControllerMinBitrate)

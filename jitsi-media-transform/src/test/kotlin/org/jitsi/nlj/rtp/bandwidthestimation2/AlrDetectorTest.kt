@@ -83,7 +83,7 @@ class AlrDetectorTest : FreeSpec() {
     init {
         "AlrDetection" {
             val clock = FakeClock().apply { setTime(Instant.ofEpochSecond(1)) }
-            val alrDetector = AlrDetector()
+            val alrDetector = AlrDetector(clock)
             alrDetector.setEstimatedBitrate(kEstimatedBitrate)
 
             // Start in non-ALR state
@@ -111,7 +111,7 @@ class AlrDetectorTest : FreeSpec() {
 
         "ShortSpike" {
             val clock = FakeClock().apply { setTime(Instant.ofEpochSecond(1)) }
-            val alrDetector = AlrDetector()
+            val alrDetector = AlrDetector(clock)
             alrDetector.setEstimatedBitrate(kEstimatedBitrate)
 
             // Start in non-ALR state
@@ -138,7 +138,7 @@ class AlrDetectorTest : FreeSpec() {
 
         "BandwidthEstimateChanges" {
             val clock = FakeClock().apply { setTime(Instant.ofEpochSecond(1)) }
-            val alrDetector = AlrDetector()
+            val alrDetector = AlrDetector(clock)
             alrDetector.setEstimatedBitrate(kEstimatedBitrate)
 
             // Start in non-ALR state
