@@ -473,7 +473,6 @@ class GoogCcNetworkController(
             } else {
                 targetRateMsg.targetRate = pushbackTargetRate
             }
-            targetRateMsg.stableTargetRate = lossBasedTargetRate
             targetRateMsg.networkEstimate.atTime = atTime
             targetRateMsg.networkEstimate.roundTripTime = roundTripTime
             targetRateMsg.networkEstimate.lossRateRatio = fractionLoss.toFloat() / 255.0f
@@ -524,7 +523,6 @@ class GoogCcNetworkController(
         val time: Instant,
         val rtt: Duration,
         val target: Bandwidth,
-        val stableTarget: Bandwidth,
         val pacing: Bandwidth?,
         val padding: Bandwidth?,
         val window: DataSize,
@@ -568,7 +566,6 @@ class GoogCcNetworkController(
             put("time", time.toEpochMilli())
             put("rtt", rtt.toDouble())
             put("target", target.bps)
-            put("stable_target", stableTarget.bps)
             put("pacing", pacing?.bps?.toDouble() ?: Double.NaN)
             put("padding", padding?.bps?.toDouble() ?: Double.NaN)
             put("window", window.bytes)
@@ -590,7 +587,6 @@ class GoogCcNetworkController(
             point.apply {
                 addField("rtt", rtt.toDouble())
                 addField("target", target.bps)
-                addField("stable_target", stableTarget.bps)
                 addField("pacing", pacing?.bps ?: Double.NaN)
                 addField("padding", padding?.bps ?: Double.NaN)
                 addField("window", window.bytes)
@@ -621,7 +617,6 @@ class GoogCcNetworkController(
             time = target.atTime,
             rtt = target.networkEstimate.roundTripTime,
             target = target.targetRate,
-            stableTarget = target.stableTargetRate,
             pacing = pacing?.dataRate(),
             padding = pacing?.padRate(),
             window = congestionWindow,
