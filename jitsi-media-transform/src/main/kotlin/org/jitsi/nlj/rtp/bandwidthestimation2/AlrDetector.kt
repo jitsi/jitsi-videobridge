@@ -18,6 +18,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.utils.toRoundedMillis
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToLong
@@ -39,7 +40,9 @@ AlrDetector provides a signal that can be utilized to adjust
 estimate bandwidth.
 Note: This class is not thread-safe.
 */
-class AlrDetector {
+class AlrDetector(
+    private val clock: Clock
+) {
     fun onBytesSent(bytesSent: DataSize, sendTime: Instant) {
         val lastSendTime = this.lastSendTime
         if (lastSendTime == null) {
@@ -57,7 +60,7 @@ class AlrDetector {
         if (alrBudget.budgetRatio() > conf.startBudgetLevelRatio &&
             alrStartedTime == null
         ) {
-            alrStartedTime = Instant.ofEpochMilli(System.currentTimeMillis())
+            alrStartedTime = clock.instant()
             stateChanged = true
         } else if (alrBudget.budgetRatio() < conf.startBudgetLevelRatio &&
             alrStartedTime != null
