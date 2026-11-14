@@ -15,6 +15,13 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.DataSize
+import org.jitsi.utils.toRoundedMillis
+import java.time.Duration
+import java.time.Instant
+import kotlin.math.roundToLong
+
 /**
  * An Application-limited region detector.
  *
@@ -44,29 +51,30 @@ estimate bandwidth.
 Note: This class is not thread-safe.
 */
 class AlrDetector {
-    fun onBytesSent(bytesSent: Long, sendTimeMs: Long) {
-        if (lastSendTimeMs == null) {
-            lastSendTimeMs = sendTimeMs
+    fun onBytesSent(bytesSent: DataSize, sendTime: Instant) {
+        val lastSendTime = this.lastSendTime
+        if (lastSendTime == null) {
+            this.lastSendTime = sendTime
             // Since the duration for sending the bytes is unknwon, return without
             // updating alr state.
             return
         }
-        val deltaTimeMs = sendTimeMs - lastSendTimeMs!!
-        lastSendTimeMs = sendTimeMs
+        val deltaTime = Duration.between(lastSendTime, sendTime)
+        this.lastSendTime = sendTime
 
-        alrBudget.useBudget(bytesSent)
-        alrBudget.increaseBudget(deltaTimeMs)
+        alrBudget.useBudget(bytesSent.bytes.roundToLong())
+        alrBudget.increaseBudget(deltaTime.toRoundedMillis())
         var stateChanged = false
         if (alrBudget.budgetRatio() > conf.startBudgetLevelRatio &&
-            alrStartedTimeMs == null
+            alrStartedTime == null
         ) {
-            alrStartedTimeMs = System.currentTimeMillis()
+            alrStartedTime = Instant.ofEpochMilli(System.currentTimeMillis())
             stateChanged = true
         } else if (alrBudget.budgetRatio() < conf.startBudgetLevelRatio &&
-            alrStartedTimeMs != null
+            alrStartedTime != null
         ) {
             stateChanged = true
-            alrStartedTimeMs = null
+            alrStartedTime = null
         }
         if (stateChanged) {
             // TODO?  Log event
@@ -74,21 +82,22 @@ class AlrDetector {
     }
 
     // Set current estimated bandwidth.
-    fun setEstimatedBitrate(bitrateBps: Int) {
-        val targetRateKbps = bitrateBps.toDouble() * conf.bandwidthUsageRatio / 1000
-        alrBudget.setTargetRateKbps(targetRateKbps.toInt())
+    fun setEstimatedBitrate(bitrate: Bandwidth) {
+        require(bitrate > Bandwidth.ZERO)
+        // WebRTC's DataRate::kbps() rounds to the nearest integer.
+        alrBudget.setTargetRateKbps((((bitrate * conf.bandwidthUsageRatio).bps + 500) / 1000).toInt())
     }
 
-    // Returns time in milliseconds when the current application-limited region
-    // started or empty result if the sender is currently not application-limited.
-    fun getApplicationLimitedRegionStartTime(): Long? = alrStartedTimeMs
+    // Returns time when the current application-limited region started or empty
+    // result if the sender is currently not application-limited.
+    fun getApplicationLimitedRegionStartTime(): Instant? = alrStartedTime
 
     private val conf = kDefaultProbingScreenshareBweSettings
 
-    private var lastSendTimeMs: Long? = null
+    private var lastSendTime: Instant? = null
 
     private val alrBudget = IntervalBudget(0, true)
-    private var alrStartedTimeMs: Long? = null
+    private var alrStartedTime: Instant? = null
 
     companion object {
         /* From rtc_base/experiments/alr_experiment.cc */
