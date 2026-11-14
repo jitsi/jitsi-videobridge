@@ -161,5 +161,30 @@ class AlrDetectorTest : FreeSpec() {
                 .atPercentOfEstimatedBitrate(50)
             alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
         }
+
+        // Jitsi local: WebRTC has no test which tells the stop level from the start level.
+        "StopLevelIsBelowStartLevel" {
+            val clock = FakeClock().apply { setTime(Instant.ofEpochSecond(1)) }
+            val alrDetector = AlrDetector(clock)
+            alrDetector.setEstimatedBitrate(kEstimatedBitrate)
+
+            // ALR starts when bitrate drops below 20%. The budget fills up.
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(1000.ms)
+                .atPercentOfEstimatedBitrate(20)
+            alrDetector.getApplicationLimitedRegionStartTime() shouldNotBe null
+
+            // The budget level is now 0.25, below the start level (0.40) and above the stop level (-0.60).
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(1500.ms)
+                .atPercentOfEstimatedBitrate(100)
+            alrDetector.getApplicationLimitedRegionStartTime() shouldNotBe null
+
+            // The budget level is now -0.75, below the stop level.
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(2000.ms)
+                .atPercentOfEstimatedBitrate(100)
+            alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
+        }
     }
 }
