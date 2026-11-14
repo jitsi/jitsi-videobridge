@@ -508,12 +508,7 @@ class GoogCcNetworkController(
             maxPaddingRate
         }
         paddingRate = min(paddingRate, lastPushbackTargetRate)
-        val msg = PacerConfig()
-        msg.atTime = atTime
-        msg.timeWindow = 1.secs
-        msg.dataWindow = pacingRate * msg.timeWindow
-        msg.padWindow = paddingRate * msg.timeWindow
-        return msg
+        return PacerConfig.create(atTime, pacingRate, paddingRate, pacingTimeWindow)
     }
 
     /** Jitsi local addition.
@@ -677,6 +672,7 @@ class GoogCcNetworkController(
     private var lastEstimatedRoundTripTime = MAX_DURATION
 
     private var pacingFactor = config.streamBasedConfig.pacingFactor ?: kDefaultPaceMultiplier
+    private val pacingTimeWindow = config.defaultPacingTimeWindow
     private var minTotalAllocatedBitrate = config.streamBasedConfig.minTotalAllocatedBitrate ?: Bandwidth.ZERO
     private var maxPaddingRate = config.streamBasedConfig.maxPaddingRate ?: Bandwidth.ZERO
 
