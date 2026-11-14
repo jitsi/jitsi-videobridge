@@ -62,7 +62,7 @@ class AlrDetector(
         ) {
             alrStartedTime = clock.instant()
             stateChanged = true
-        } else if (alrBudget.budgetRatio() < conf.startBudgetLevelRatio &&
+        } else if (alrBudget.budgetRatio() < conf.stopBudgetLevelRatio &&
             alrStartedTime != null
         ) {
             stateChanged = true
