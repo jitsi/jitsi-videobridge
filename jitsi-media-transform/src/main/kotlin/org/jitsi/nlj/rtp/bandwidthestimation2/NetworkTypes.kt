@@ -256,15 +256,11 @@ class TargetTransferRate {
     // The estimate on which the target rate is based on.
     var networkEstimate = NetworkEstimate()
     var targetRate = Bandwidth.ZERO
-
-    // TODO(bugs.webrtc.org/423841921): stable_rate is not used by WebRTC and
-    // should be removed as soon as downstream projects are not referencing it.
-    var stableTargetRate = Bandwidth.ZERO // Deprecated
     var cwndReduceRatio = 0.0
 
     /* Jitsi local */
     override fun toString(): String = "atTime $atTime: networkEstimate {$networkEstimate}, " +
-        "targetRate $targetRate, stableTargetRate $stableTargetRate, cwndReduceRatio $cwndReduceRatio"
+        "targetRate $targetRate, cwndReduceRatio $cwndReduceRatio"
 }
 
 // Contains updates of network controller comand state. Using nullables to
@@ -288,7 +284,6 @@ open class NetworkControlUpdate(
     fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
         targetRate?.let {
             point.addField("target_rate_bps", it.targetRate.bps)
-            point.addField("stable_target_rate_bps", it.stableTargetRate.bps)
             point.addField("cwnd_reduce_ratio", it.cwndReduceRatio)
             point.addField("rtt_ms", it.networkEstimate.roundTripTime.toDoubleMillis())
             point.addField("bwe_period_ms", it.networkEstimate.bwePeriod.toDoubleMillis())
