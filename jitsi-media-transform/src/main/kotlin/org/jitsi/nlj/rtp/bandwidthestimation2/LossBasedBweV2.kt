@@ -229,7 +229,14 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             newtonsMethodUpdate(candidate)
 
             val candidateObjective = getObjective(candidate)
-            if (candidateObjective > objectiveMax) {
+            if (candidateObjective > objectiveMax ||
+                (
+                    candidateObjective == objectiveMax &&
+                        candidate.lossLimitedBandwidth > bestCandidate.lossLimitedBandwidth
+                    )
+            ) {
+                // Select the candidate with the highest objective or the one with the
+                // same objective but higher bandwidth if they are tied.
                 objectiveMax = candidateObjective
                 bestCandidate = candidate
             }
