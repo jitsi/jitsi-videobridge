@@ -76,8 +76,7 @@ class AlrDetector(
     // Set current estimated bandwidth.
     fun setEstimatedBitrate(bitrate: Bandwidth) {
         require(bitrate > Bandwidth.ZERO)
-        // WebRTC's DataRate::kbps() rounds to the nearest integer.
-        alrBudget.setTargetRateKbps((((bitrate * conf.bandwidthUsageRatio).bps + 500) / 1000).toInt())
+        alrBudget.setTargetRateKbps((bitrate * conf.bandwidthUsageRatio).toRoundedKbps().toInt())
     }
 
     // Returns time when the current application-limited region started or empty

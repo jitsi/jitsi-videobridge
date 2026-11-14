@@ -36,6 +36,12 @@ value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
     val mbps: Double
         get() = bps.toDouble() / (1000 * 1000)
 
+    /**
+     * The rate in kilobits per second as an integer, rounded to the nearest (a half rounds up), which is how
+     * WebRTC's DataRate::kbps() converts.
+     */
+    fun toRoundedKbps(): Long = Math.floorDiv(bps + 500, 1000L)
+
     operator fun minus(other: Bandwidth): Bandwidth = Bandwidth(bps - other.bps)
 
     operator fun plus(other: Bandwidth): Bandwidth = Bandwidth(bps + other.bps)
