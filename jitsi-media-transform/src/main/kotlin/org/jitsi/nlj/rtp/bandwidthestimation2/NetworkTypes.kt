@@ -187,6 +187,12 @@ class TransportPacketsFeedback {
     var packetFeedbacks: MutableList<PacketResult> = ArrayList()
     var transportSupportsEcn: Boolean = false
 
+    // Smoothed RTT calculated on the current network route.
+    // Calculated similarly as RFC 6298 using exponentially weighted moving
+    // average with alpha 1/8. Note that it is not calculated for all feedback
+    // types.
+    var smoothedRtt: Duration = MAX_DURATION
+
     /** Arrival times for messages without send times information */
     val sendlessArrivalTimes = ArrayList<Instant>()
 

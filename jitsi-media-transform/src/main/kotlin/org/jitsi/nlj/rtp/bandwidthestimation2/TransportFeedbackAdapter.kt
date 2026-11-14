@@ -30,12 +30,15 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.TimeUtils
+import org.jitsi.utils.div
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.max
 import org.jitsi.utils.secs
+import org.jitsi.utils.times
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -282,6 +285,12 @@ class TransportFeedbackAdapter(
             result.sentPacket = packetFeedback.sent
             if (packetInfo is ReceivedPacketInfo) {
                 result.receiveTime = currentOffset - packetInfo.arrivalTimeOffset
+                val rtt = Duration.between(result.sentPacket.sendTime, feedbackReceiveTime) -
+                    packetInfo.arrivalTimeOffset
+                if (smoothedRtt.isInfinite()) {
+                    smoothedRtt = rtt
+                }
+                smoothedRtt = (smoothedRtt * 7 + rtt) / 8L // RFC 6298, alpha = 1/8
                 result.ecn = packetInfo.ecn
                 supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
             }
@@ -332,6 +341,7 @@ class TransportFeedbackAdapter(
         msg.packetFeedbacks = packetResults
         msg.dataInFlight = inFlight.getOutstandingData()
         msg.transportSupportsEcn = supportsEcn
+        msg.smoothedRtt = smoothedRtt
 
         return msg
     }
@@ -391,6 +401,9 @@ class TransportFeedbackAdapter(
 
     private var lastAckSeqNum = -1L
     private val inFlight = InFlightBytesTracker()
+
+    // Jitsi local: there are no network routes, so this is never reset.
+    private var smoothedRtt = MAX_DURATION
 
     private var currentOffset = Instant.MIN
 
