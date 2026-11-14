@@ -22,7 +22,7 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToLong
 
-/**
+/*
  * An Application-limited region detector.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/alr_detector.{h,cc} in
@@ -30,17 +30,6 @@ import kotlin.math.roundToLong
  *
  * Field trial settings have been generally removed, set to their default settings.
  */
-
-data class AlrDetectorConfig(
-    // Sent traffic ratio as a function of network capacity used to determine
-    // application-limited region. ALR region start when bandwidth usage drops
-    // below kAlrStartUsageRatio and ends when it raises above
-    // kAlrEndUsageRatio. NOTE: This is intentionally conservative at the moment
-    // until BW adjustments of application limited region is fine tuned.
-    val bandwidthUsageRatio: Double = 0.65,
-    val startBudgetLevelRatio: Double = 0.80,
-    val stopBudgetLevelRatio: Double = 0.50
-)
 
 /** Application limited region detector is a class that utilizes signals of
 elapsed time and bytes sent to estimate whether network traffic is
@@ -92,6 +81,17 @@ class AlrDetector {
     // result if the sender is currently not application-limited.
     fun getApplicationLimitedRegionStartTime(): Instant? = alrStartedTime
 
+    private data class AlrDetectorConfig(
+        // Sent traffic ratio as a function of network capacity used to determine
+        // application-limited region. ALR region start when bandwidth usage drops
+        // below kAlrStartUsageRatio and ends when it raises above
+        // kAlrEndUsageRatio. NOTE: This is intentionally conservative at the moment
+        // until BW adjustments of application limited region is fine tuned.
+        val bandwidthUsageRatio: Double = 0.65,
+        val startBudgetLevelRatio: Double = 0.80,
+        val stopBudgetLevelRatio: Double = 0.50
+    )
+
     private val conf = kDefaultProbingScreenshareBweSettings
 
     private var lastSendTime: Instant? = null
@@ -101,7 +101,7 @@ class AlrDetector {
 
     companion object {
         /* From rtc_base/experiments/alr_experiment.cc */
-        val kDefaultProbingScreenshareBweSettings = AlrDetectorConfig(
+        private val kDefaultProbingScreenshareBweSettings = AlrDetectorConfig(
             bandwidthUsageRatio = 0.80,
             startBudgetLevelRatio = 0.40,
             stopBudgetLevelRatio = -0.60
