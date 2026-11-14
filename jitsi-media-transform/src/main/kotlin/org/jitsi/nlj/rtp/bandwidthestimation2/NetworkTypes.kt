@@ -20,14 +20,18 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
+import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.per
+import org.jitsi.nlj.util.times
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 import org.jitsi.utils.toDoubleMillis
+import org.jitsi.utils.toMicros
 import java.time.Duration
 import java.time.Instant
 
@@ -225,18 +229,49 @@ class PacerConfig {
     var atTime = Instant.MAX
 
     // Pacer should send at most data_window data over time_window duration.
+    // If `time_window` is zero, Pacer should pace every packet as
+    // accurate as possible and data_rate() is calculated as
+    // data_window/1 second;
     var dataWindow = DataSize.INFINITY
     var timeWindow = MAX_DURATION
+
+    fun rateWindow(): Duration = if (timeWindow.isZero) 1.secs else timeWindow
 
     // Pacer should send at least pad_window data over time_window duration.
     var padWindow = DataSize.ZERO
 
-    fun dataRate() = dataWindow.per(timeWindow)
-    fun padRate() = padWindow.per(timeWindow)
+    fun dataRate() = dataWindow.per(rateWindow())
+    fun padRate() = padWindow.per(rateWindow())
 
     /* Jitsi Local */
     override fun toString(): String = "Data rate ${dataRate()} ($dataWindow per $timeWindow), " +
         "pad rate ${padRate()} ($padWindow per $timeWindow)"
+
+    companion object {
+        val kDefaultTimeInterval: Duration = 40.ms
+
+        fun create(
+            atTime: Instant,
+            sendRate: Bandwidth,
+            padRate: Bandwidth,
+            timeWindow: Duration = kDefaultTimeInterval
+        ): PacerConfig {
+            val pacerConfig = PacerConfig()
+            pacerConfig.atTime = atTime
+            pacerConfig.timeWindow = timeWindow
+            // Note that precision is lost here, since DataSize store number of bytes.
+            pacerConfig.dataWindow = wholeBytesSentAt(sendRate, pacerConfig.rateWindow())
+            pacerConfig.padWindow = wholeBytesSentAt(padRate, pacerConfig.rateWindow())
+            return pacerConfig
+        }
+
+        /**
+         * `DataRate * TimeDelta` in WebRTC, where a DataSize is a whole number of bytes: the result is rounded
+         * to the nearest byte. The windows are calculated this way so that they are the same as in WebRTC.
+         */
+        private fun wholeBytesSentAt(rate: Bandwidth, duration: Duration): DataSize =
+            ((rate.bps * duration.toMicros() + 4_000_000) / 8_000_000).bytes
+    }
 }
 
 data class ProbeClusterConfig(

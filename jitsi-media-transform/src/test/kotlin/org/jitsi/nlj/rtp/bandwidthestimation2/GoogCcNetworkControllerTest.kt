@@ -210,8 +210,8 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             val kDefaultMinBitrate = 5.kbps
             update = controller.onNetworkRouteChange(createRouteChange(currentTime))
             update.targetRate!!.targetRate shouldBe kDefaultMinBitrate
-            update.pacerConfig!!.dataRate().bps.toDouble() shouldBe
-                kDefaultMinBitrate.bps * kDefaultPacingRate plusOrMinus 10.0
+            // WebRTC's DataSize is a whole number of bytes: 5 kbps * 2.5 * 40 ms is 62.5 bytes, which rounds to 63.
+            update.pacerConfig!!.dataWindow shouldBe 63.bytes
             update.probeClusterConfigs.size shouldBe 2
         }
 

@@ -43,6 +43,12 @@ class NetworkControllerConfig(
      */
     val streamBasedConfig: StreamsConfig = StreamsConfig(),
 
+    /** Default time window used for calculating how send packets are paced.
+     * Note that a network controller can choose to request the pacer to pace
+     * packets stricter.
+     */
+    val defaultPacingTimeWindow: Duration = PacerConfig.kDefaultTimeInterval,
+
     /** Jitsi local: the clock. In WebRTC it is part of the environment in the configuration. */
     val clock: Clock = Clock.systemUTC()
 )
