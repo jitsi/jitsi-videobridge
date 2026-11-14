@@ -49,7 +49,6 @@ import kotlin.math.roundToLong
  * except where needed by unit tests.
  */
 class GoogCcConfig(
-    val feedbackOnly: Boolean = false,
     /* Not in this object in WebRTC: This is a field trial parameter there */
     val rateControlSettings: CongestionWindowConfig = CongestionWindowConfig()
 )
@@ -145,10 +144,6 @@ class GoogCcNetworkController(
     }
 
     override fun onRemoteBitrateReport(msg: RemoteBitrateReport): NetworkControlUpdate {
-        if (packetFeedbackOnly) {
-            logger.error("Received REMB for packet feedback only GoogCC")
-            return NetworkControlUpdate()
-        }
         bandwidthEstimation.updateReceiverEstimate(msg.receiveTime, msg.bandwidth)
 
         timeSeriesLogger.trace {
@@ -159,7 +154,7 @@ class GoogCcNetworkController(
     }
 
     override fun onRoundTripTimeUpdate(msg: RoundTripTimeUpdate): NetworkControlUpdate {
-        if (packetFeedbackOnly || msg.smoothed) {
+        if (msg.smoothed) {
             return NetworkControlUpdate()
         }
         assert(msg.roundTripTime != Duration.ZERO)
@@ -274,9 +269,6 @@ class GoogCcNetworkController(
     }
 
     override fun onTransportLossReport(msg: TransportLossReport): NetworkControlUpdate {
-        if (packetFeedbackOnly) {
-            return NetworkControlUpdate()
-        }
         val totalPacketsDelta = msg.packetsReceivedDelta + msg.packetsLostDelta
         bandwidthEstimation.updatePacketsLost(msg.packetsLostDelta, totalPacketsDelta, msg.receiveTime)
         return NetworkControlUpdate()
@@ -331,43 +323,8 @@ class GoogCcNetworkController(
             // TODO(srte): Use time since last unacknowledged packet.
             bandwidthEstimation.updatePropagationRtt(report.feedbackTime, minPropagationRtt)
         }
-        if (packetFeedbackOnly) {
-            if (!feedbackMaxRtts.isEmpty()) {
-                val sumRttMs = feedbackMaxRtts.sum()
-                val meanRttMs = sumRttMs / feedbackMaxRtts.size
-                delayBasedBwe.onRttUpdate(meanRttMs.ms)
-            }
 
-            var feedbackMinRtt = MAX_DURATION
-            for (packetFeedback in feedbacks) {
-                val pendingTime = Duration.between(packetFeedback.receiveTime, maxRecvTime)
-                val rtt = Duration.between(packetFeedback.sentPacket.sendTime, report.feedbackTime) - pendingTime
-                // Value used for predicting NACK round trip time in FEC controller.
-                feedbackMinRtt = min(rtt, feedbackMinRtt)
-            }
-            if (feedbackMinRtt.isFinite()) {
-                bandwidthEstimation.updateRtt(feedbackMinRtt, report.feedbackTime)
-            }
-
-            expectedPacketsSinceLastLossUpdate += report.packetsWithFeedback().size
-            for (packetFeedback in report.packetsWithFeedback()) {
-                if (!packetFeedback.isReceived()) {
-                    lostPacketsSinceLastLossUpdate += 1
-                }
-            }
-            if (report.feedbackTime > nextLossUpdate) {
-                nextLossUpdate = report.feedbackTime + kLossUpdateInterval
-                bandwidthEstimation.updatePacketsLost(
-                    lostPacketsSinceLastLossUpdate.toLong(),
-                    expectedPacketsSinceLastLossUpdate.toLong(),
-                    report.feedbackTime
-                )
-                expectedPacketsSinceLastLossUpdate = 0
-                lostPacketsSinceLastLossUpdate = 0
-            }
-        }
         val alrStartTime = alrDetector.getApplicationLimitedRegionStartTime()
-
         if (previouslyInAlr && alrStartTime == null) {
             val nowMs = report.feedbackTime.toEpochMilli()
             acknowledgedBitrateEstimator.setAlrEndedTime(report.feedbackTime)
@@ -690,7 +647,6 @@ class GoogCcNetworkController(
         )
     }
 
-    private val packetFeedbackOnly = googCcConfig.feedbackOnly
     private val safeResetOnRouteChange = false
     private val safeResetAcknowledgedRate = false
     private val useMinAllocatableAsLowerBound = true
@@ -723,10 +679,6 @@ class GoogCcNetworkController(
 
     /* Skipping NetworkStateEstimate */
 
-    private var nextLossUpdate = Instant.MIN
-    private var lostPacketsSinceLastLossUpdate = 0
-    private var expectedPacketsSinceLastLossUpdate = 0
-
     private val feedbackMaxRtts = ArrayDeque<Long>()
 
     private var lastLossBasedTargetRate = config.constraints.startingRate!!
@@ -745,9 +697,6 @@ class GoogCcNetworkController(
     private var currentDataWindow: DataSize? = null
 
     companion object {
-        // From RTCPSender video report interval.
-        private val kLossUpdateInterval = 1000.ms
-
         // Pacing-rate relative to our target send rate.
         // Multiplicative factor that is applied to the target bitrate to calculate
         // the number of bytes that can be transmitted per interval.

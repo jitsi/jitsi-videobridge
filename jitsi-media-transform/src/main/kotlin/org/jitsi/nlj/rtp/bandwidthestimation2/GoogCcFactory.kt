@@ -27,7 +27,6 @@ import java.time.Duration
  */
 
 class GoogCcFactoryConfig(
-    val feedbackOnly: Boolean = false,
     /* Not in this object in WebRTC: This is a field trial parameter there */
     val rateControlSettings: CongestionWindowConfig = CongestionWindowConfig()
 )
@@ -36,7 +35,7 @@ class GoogCcNetworkControllerFactory(
     private val factoryConfig: GoogCcFactoryConfig = GoogCcFactoryConfig()
 ) : NetworkControllerFactoryInterface {
     override fun create(config: NetworkControllerConfig): NetworkControllerInterface {
-        val googCcConfig = GoogCcConfig(feedbackOnly = factoryConfig.feedbackOnly)
+        val googCcConfig = GoogCcConfig()
         return GoogCcNetworkController(config, googCcConfig)
     }
 
