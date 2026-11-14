@@ -376,16 +376,12 @@ class ProbeController(
         repeatedInitialProbingEnabled = enable
     }
 
-    fun setAlrStartTimeMs(alrStartTimeMs: Long?) {
-        if (alrStartTimeMs != null) {
-            alrStartTime = Instant.ofEpochMilli(alrStartTimeMs)
-        } else {
-            alrStartTime = null
-        }
+    fun setAlrStartTime(alrStartTime: Instant?) {
+        this.alrStartTime = alrStartTime
     }
 
-    fun setAlrEndedTimeMs(alrEndTimeMs: Long) {
-        alrEndTime = Instant.ofEpochMilli(alrEndTimeMs)
+    fun setAlrEndedTime(alrEndTime: Instant) {
+        this.alrEndTime = alrEndTime
     }
 
     fun requestProbe(atTime: Instant): MutableList<ProbeClusterConfig> {

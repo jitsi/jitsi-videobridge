@@ -123,8 +123,7 @@ class GoogCcNetworkController(
             congestionWindowPushbackController.updatePacingQueue(msg.pacerQueue.bytes.roundToLong())
         }
         bandwidthEstimation.updateEstimate(msg.atTime)
-        val startTimeMs = alrDetector.getApplicationLimitedRegionStartTime()
-        probeController.setAlrStartTimeMs(startTimeMs)
+        probeController.setAlrStartTime(alrDetector.getApplicationLimitedRegionStartTime())
 
         val probes = probeController.process(msg.atTime)
         update.probeClusterConfigs.addAll(probes)
@@ -164,7 +163,7 @@ class GoogCcNetworkController(
     }
 
     override fun onSentPacket(sentPacket: SentPacket): NetworkControlUpdate {
-        alrDetector.onBytesSent(sentPacket.size.bytes.roundToLong(), sentPacket.sendTime.toEpochMilli())
+        alrDetector.onBytesSent(sentPacket.size, sentPacket.sendTime)
         acknowledgedBitrateEstimator.setAlr(alrDetector.getApplicationLimitedRegionStartTime() != null)
 
         if (!firstPacketSent) {
@@ -326,9 +325,8 @@ class GoogCcNetworkController(
 
         val alrStartTime = alrDetector.getApplicationLimitedRegionStartTime()
         if (previouslyInAlr && alrStartTime == null) {
-            val nowMs = report.feedbackTime.toEpochMilli()
             acknowledgedBitrateEstimator.setAlrEndedTime(report.feedbackTime)
-            probeController.setAlrEndedTimeMs(nowMs)
+            probeController.setAlrEndedTime(report.feedbackTime)
         }
         previouslyInAlr = alrStartTime != null
         acknowledgedBitrateEstimator.incomingPacketFeedbackVector(report.sortedByReceiveTime())
@@ -390,7 +388,7 @@ class GoogCcNetworkController(
         recoveredFromOveruse = result.recoveredFromOveruse
 
         if (recoveredFromOveruse) {
-            probeController.setAlrStartTimeMs(alrStartTime)
+            probeController.setAlrStartTime(alrStartTime)
             val probes = probeController.requestProbe(report.feedbackTime)
             update.probeClusterConfigs.addAll(probes)
         }
@@ -463,7 +461,7 @@ class GoogCcNetworkController(
             lastEstimatedRoundTripTime = roundTripTime
             lastLossBasedState = lossBasedState
 
-            alrDetector.setEstimatedBitrate(lossBasedTargetRate.bps.toInt())
+            alrDetector.setEstimatedBitrate(lossBasedTargetRate)
 
             val bwePeriod = delayBasedBwe.getExpectedBwePeriod()
 

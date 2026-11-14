@@ -27,19 +27,23 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.jitsi.nlj.util.bps
+import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.times
+import org.jitsi.utils.ms
+import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
+import java.time.Duration
+import java.time.Instant
 
-const val kEstimatedBitrateBps = 300000
-
-data class TimestampHolder(
-    var time: Long
-)
+val kEstimatedBitrate = 300_000.bps
 
 class SimulateOutgoingTrafficIn(
     val alrDetector: AlrDetector,
-    var timestampMs: TimestampHolder
+    val clock: FakeClock
 ) {
-    fun forTimeMs(timeMs: Int): SimulateOutgoingTrafficIn {
-        intervalMs = timeMs
+    fun forTime(time: Duration): SimulateOutgoingTrafficIn {
+        interval = time
         produceTraffic()
         return this
     }
@@ -51,101 +55,98 @@ class SimulateOutgoingTrafficIn(
     }
 
     private fun produceTraffic() {
-        val intervalMs = intervalMs
+        val interval = interval
         val usagePercentage = usagePercentage
-        if (intervalMs == null || usagePercentage == null) {
+        if (interval == null || usagePercentage == null) {
             return
         }
-        val kTimeStepMs = 10
-        for (t in 0 until intervalMs step kTimeStepMs) {
-            timestampMs.time += kTimeStepMs
+        val kTimeStep = 10.ms
+        var t = Duration.ZERO
+        while (t < interval) {
+            clock.elapse(kTimeStep)
             alrDetector.onBytesSent(
-                kEstimatedBitrateBps.toLong() * usagePercentage * kTimeStepMs / (8 * 100 * 1000),
-                timestampMs.time
+                // WebRTC's DataSize is a whole number of bytes, and dividing it by an integer truncates.
+                ((kEstimatedBitrate * usagePercentage * kTimeStep).bytes.toLong() / 100).bytes,
+                clock.instant()
             )
+            t += kTimeStep
         }
-        val remainderMs = intervalMs % kTimeStepMs
-        if (remainderMs > 0) {
-            timestampMs.time += kTimeStepMs
-            alrDetector.onBytesSent(
-                kEstimatedBitrateBps.toLong() * usagePercentage * kTimeStepMs / (8 * 100 * 1000),
-                timestampMs.time
-            )
-        }
+        // As of now all tests use interval that is a multiple of 10ms.
+        check(interval.toMillis() % kTimeStep.toMillis() == 0L)
     }
 
-    private var intervalMs: Int? = null
+    private var interval: Duration? = null
     private var usagePercentage: Int? = null
 }
 
 class AlrDetectorTest : FreeSpec() {
     init {
         "AlrDetection" {
-            val timestampMs = TimestampHolder(1000)
+            val clock = FakeClock().apply { setTime(Instant.ofEpochSecond(1)) }
             val alrDetector = AlrDetector()
-            alrDetector.setEstimatedBitrate(kEstimatedBitrateBps)
+            alrDetector.setEstimatedBitrate(kEstimatedBitrate)
 
             // Start in non-ALR state
             alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
 
             // Stay in non-ALR state when usage is close to 100%.
-            SimulateOutgoingTrafficIn(alrDetector, timestampMs)
-                .forTimeMs(1000)
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(1000.ms)
                 .atPercentOfEstimatedBitrate(90)
             alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
 
             // Verify that we ALR starts when bitrate drops below 20%.
-            SimulateOutgoingTrafficIn(alrDetector, timestampMs)
-                .forTimeMs(1500)
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(1500.ms)
                 .atPercentOfEstimatedBitrate(20)
             alrDetector.getApplicationLimitedRegionStartTime() shouldNotBe null
 
             // Verify that ALR ends when usage is above 65%.
-            SimulateOutgoingTrafficIn(alrDetector, timestampMs)
-                .forTimeMs(4000)
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(4000.ms)
                 .atPercentOfEstimatedBitrate(100)
 
             alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
         }
 
         "ShortSpike" {
-            val timestampMs = TimestampHolder(1000)
+            val clock = FakeClock().apply { setTime(Instant.ofEpochSecond(1)) }
             val alrDetector = AlrDetector()
-            alrDetector.setEstimatedBitrate(kEstimatedBitrateBps)
+            alrDetector.setEstimatedBitrate(kEstimatedBitrate)
 
             // Start in non-ALR state
             alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
 
             // Verify that we ALR starts when bitrate drops below 20%.
-            SimulateOutgoingTrafficIn(alrDetector, timestampMs)
-                .forTimeMs(1000)
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(1000.ms)
                 .atPercentOfEstimatedBitrate(20)
             alrDetector.getApplicationLimitedRegionStartTime() shouldNotBe null
 
             // Verify that we stay in ALR region even after a short bitrate spike.
-            SimulateOutgoingTrafficIn(alrDetector, timestampMs)
-                .forTimeMs(100)
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(100.ms)
                 .atPercentOfEstimatedBitrate(150)
             alrDetector.getApplicationLimitedRegionStartTime() shouldNotBe null
 
             // ALR ends when usage is above 65%.
-            SimulateOutgoingTrafficIn(alrDetector, timestampMs)
-                .forTimeMs(3000)
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(3000.ms)
                 .atPercentOfEstimatedBitrate(100)
             alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
         }
 
         "BandwidthEstimateChanges" {
-            val timestampMs = TimestampHolder(1000)
+            val clock = FakeClock().apply { setTime(Instant.ofEpochSecond(1)) }
             val alrDetector = AlrDetector()
-            alrDetector.setEstimatedBitrate(kEstimatedBitrateBps)
+            alrDetector.setEstimatedBitrate(kEstimatedBitrate)
 
             // Start in non-ALR state
             alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
 
             // ALR starts when bitrate drops below 20%.
-            SimulateOutgoingTrafficIn(alrDetector, timestampMs)
-                .forTimeMs(1000)
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(1000.ms)
                 .atPercentOfEstimatedBitrate(20)
             alrDetector.getApplicationLimitedRegionStartTime() shouldNotBe null
 
@@ -153,10 +154,10 @@ class AlrDetectorTest : FreeSpec() {
             // it shortly afterwards as the sender continues sending the same amount of
             // traffic. This is necessary to ensure that ProbeController can still react
             // to the BWE drop by initiating a new probe.
-            alrDetector.setEstimatedBitrate(kEstimatedBitrateBps / 5)
+            alrDetector.setEstimatedBitrate(kEstimatedBitrate / 5)
             alrDetector.getApplicationLimitedRegionStartTime() shouldNotBe null
-            SimulateOutgoingTrafficIn(alrDetector, timestampMs)
-                .forTimeMs(1000)
+            SimulateOutgoingTrafficIn(alrDetector, clock)
+                .forTime(1000.ms)
                 .atPercentOfEstimatedBitrate(50)
             alrDetector.getApplicationLimitedRegionStartTime() shouldBe null
         }
