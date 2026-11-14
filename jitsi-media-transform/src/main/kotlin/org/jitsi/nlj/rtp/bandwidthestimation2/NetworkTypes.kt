@@ -256,7 +256,10 @@ class TargetTransferRate {
     // The estimate on which the target rate is based on.
     var networkEstimate = NetworkEstimate()
     var targetRate = Bandwidth.ZERO
-    var stableTargetRate = Bandwidth.ZERO
+
+    // TODO(bugs.webrtc.org/423841921): stable_rate is not used by WebRTC and
+    // should be removed as soon as downstream projects are not referencing it.
+    var stableTargetRate = Bandwidth.ZERO // Deprecated
     var cwndReduceRatio = 0.0
 
     /* Jitsi local */

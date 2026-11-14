@@ -425,7 +425,6 @@ class GoogCcNetworkController(
             }
 
             targetRate = lastPushbackTargetRate
-            stableTargetRate = bandwidthEstimation.getEstimatedLinkCapacity()
         }
         update.pacerConfig = getPacingRates(atTime)
         update.congestionWindow = currentDataWindow
@@ -451,21 +450,17 @@ class GoogCcNetworkController(
                     lossBasedTargetRate.bps
             }
         }
-        var stableTargetRate = bandwidthEstimation.getEstimatedLinkCapacity()
-        stableTargetRate = min(stableTargetRate, pushbackTargetRate)
 
         if (lossBasedTargetRate != lastLossBasedTargetRate ||
             lossBasedState != lastLossBasedState ||
             fractionLoss != lastEstimatedFractionLoss ||
             roundTripTime != lastEstimatedRoundTripTime ||
-            pushbackTargetRate != lastPushbackTargetRate ||
-            stableTargetRate != lastStableTargetRate
+            pushbackTargetRate != lastPushbackTargetRate
         ) {
             lastLossBasedTargetRate = lossBasedTargetRate
             lastPushbackTargetRate = pushbackTargetRate
             lastEstimatedFractionLoss = fractionLoss
             lastEstimatedRoundTripTime = roundTripTime
-            lastStableTargetRate = stableTargetRate
             lastLossBasedState = lossBasedState
 
             alrDetector.setEstimatedBitrate(lossBasedTargetRate.bps.toInt())
@@ -480,7 +475,7 @@ class GoogCcNetworkController(
             } else {
                 targetRateMsg.targetRate = pushbackTargetRate
             }
-            targetRateMsg.stableTargetRate = stableTargetRate
+            targetRateMsg.stableTargetRate = lossBasedTargetRate
             targetRateMsg.networkEstimate.atTime = atTime
             targetRateMsg.networkEstimate.roundTripTime = roundTripTime
             targetRateMsg.networkEstimate.lossRateRatio = fractionLoss.toFloat() / 255.0f
@@ -683,7 +678,6 @@ class GoogCcNetworkController(
 
     private var lastLossBasedTargetRate = config.constraints.startingRate!!
     private var lastPushbackTargetRate = lastLossBasedTargetRate
-    private var lastStableTargetRate = lastLossBasedTargetRate
     private var lastLossBasedState: LossBasedState = LossBasedState.kDelayBasedEstimate
 
     private var lastEstimatedFractionLoss: UByte? = 0u

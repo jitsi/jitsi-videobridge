@@ -46,50 +46,6 @@ import kotlin.math.min
  *
  * Field trial settings have been generally removed, set to their default settings.
  */
-class LinkCapacityTracker {
-    private var capacityEstimateBps = 0.0
-    private var lastLinkCapcityUpdate = Instant.MIN
-    private var lastDelayBasedEstimate = Bandwidth.INFINITY
-
-    fun updateDelayBasedEstimate(atTime: Instant, delayBasedEstimate: Bandwidth) {
-        if (delayBasedEstimate < lastDelayBasedEstimate) {
-            capacityEstimateBps = min(capacityEstimateBps, delayBasedEstimate.bps.toDouble())
-            lastLinkCapcityUpdate = atTime
-        }
-        lastDelayBasedEstimate = delayBasedEstimate
-    }
-
-    fun onStartingRate(startRate: Bandwidth) {
-        if (lastLinkCapcityUpdate.isInfinite()) {
-            capacityEstimateBps = startRate.bps.toDouble()
-        }
-    }
-
-    fun onRateUpdate(acknowledged: Bandwidth?, target: Bandwidth, atTime: Instant) {
-        if (acknowledged == null) {
-            return
-        }
-        val acknowledgedTarget = min(acknowledged, target)
-        if (acknowledgedTarget.bps > capacityEstimateBps) {
-            val alpha = if (lastLinkCapcityUpdate.isFinite() && atTime.isFinite()) {
-                val delta = Duration.between(lastLinkCapcityUpdate, atTime)
-                exp(-(delta / 10.secs))
-            } else {
-                0.0
-            }
-            capacityEstimateBps = alpha * capacityEstimateBps * alpha + (1 - alpha) * acknowledgedTarget.bps
-        }
-        lastLinkCapcityUpdate = atTime
-    }
-
-    fun onRttBackoff(backoffRate: Bandwidth, atTime: Instant) {
-        capacityEstimateBps = min(capacityEstimateBps, backoffRate.bps.toDouble())
-        lastLinkCapcityUpdate = atTime
-    }
-
-    fun estimate(): Bandwidth = capacityEstimateBps.bps
-}
-
 class RttBasedBackoff {
     val disabled = false
     val configuredLimit = 3.secs
@@ -140,7 +96,6 @@ class SendSideBandwidthEstimation(
     private val logger = parentLogger.createChildLogger(javaClass.name)
 
     private val rttBackoff = RttBasedBackoff()
-    private val linkCapacity = LinkCapacityTracker()
 
     private val minBitrateHistory = ArrayDeque<Pair<Instant, Bandwidth>>()
 
@@ -231,8 +186,6 @@ class SendSideBandwidthEstimation(
 
     fun roundTripTime() = lastRoundTripTime
 
-    fun getEstimatedLinkCapacity(): Bandwidth = linkCapacity.estimate()
-
     // Call periodically to update estimate
     fun updateEstimate(atTime: Instant) {
         if (rttBackoff.isRttAboveLimit()) {
@@ -241,7 +194,6 @@ class SendSideBandwidthEstimation(
             ) {
                 timeLastDecrease = atTime
                 val newBitrate = (currentTarget * rttBackoff.dropFraction).coerceAtLeast(rttBackoff.bandwidthFloor)
-                linkCapacity.onRttBackoff(newBitrate, atTime)
                 updateTargetBitrate(newBitrate, atTime)
                 return
             }
@@ -361,7 +313,6 @@ class SendSideBandwidthEstimation(
 
     // Call when a new delay-based estimate is available.
     fun updateDelayBasedEstimate(atTime: Instant, bitrate: Bandwidth) {
-        linkCapacity.updateDelayBasedEstimate(atTime, bitrate)
         // TODO(srte): Ensure caller passes PlusInfinity, not zero, to represent no
         // limitation.
         delayBasedLimit = if (bitrate == Bandwidth.ZERO) {
@@ -420,7 +371,6 @@ class SendSideBandwidthEstimation(
     fun setBitrates(sendBitrate: Bandwidth?, minBitrate: Bandwidth, maxBitrate: Bandwidth, atTime: Instant) {
         setMinMaxBitrate(minBitrate, maxBitrate)
         if (sendBitrate != null) {
-            linkCapacity.onStartingRate(sendBitrate)
             setSendBitrate(sendBitrate, atTime)
         }
     }
@@ -566,7 +516,6 @@ class SendSideBandwidthEstimation(
         }
         currentTarget = newBitrate
         maybeLogLossBasedEvent(atTime)
-        linkCapacity.onRateUpdate(acknowledgedRate, currentTarget, atTime)
     }
 
     // Applies lower and upper bounds to the current target rate.
