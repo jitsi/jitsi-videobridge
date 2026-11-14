@@ -368,7 +368,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 config.holdDurationFactor > 0
             ) {
                 logger.info {
-                    "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: ${lastHoldInfo.duration}"
+                    "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: ${lastHoldInfo.duration}" +
+                        ", avg loss rate: $averageReportedLossRatio"
                 }
                 lastHoldInfo = HoldInfo(
                     timestamp = lastSendTimeMostRecentObservation + lastHoldInfo.duration,
