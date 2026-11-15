@@ -281,14 +281,8 @@ class ScreamV2(
             1.0
         }
         val fractionMarked = parsed.numCeMarkedPackets.toDouble() / parsed.numReceivedPackets
-        // Fast attack slow decay EWMA filter.
-        if (fractionMarked > l4sAlpha) {
-            val gUp = params.l4sAvgGUp / stepsPerRtt
-            l4sAlpha = min(gUp * fractionMarked + (1.0 - gUp) * l4sAlpha, 1.0)
-        } else {
-            val gDown = params.l4sAvgGDown / stepsPerRtt
-            l4sAlpha = (1.0 - gDown) * l4sAlpha
-        }
+        val g = params.l4sAvgG / stepsPerRtt
+        l4sAlpha = (g * fractionMarked + (1.0 - g) * l4sAlpha).coerceIn(0.0, 1.0)
     }
 
     private fun updateRefWindow(parsed: ScreamFeedback) {

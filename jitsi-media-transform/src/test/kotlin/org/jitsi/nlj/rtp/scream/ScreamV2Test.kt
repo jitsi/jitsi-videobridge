@@ -368,7 +368,7 @@ class ScreamV2Test : FreeSpec() {
             val feedbackInterval = 25.ms
 
             // First feedback with 100% CE marks at RTT = 100ms (steps_per_rtt = 4).
-            // With L4sAvgGUp = 1/8 and steps_per_rtt = 4, g_up = (1/8) / 4 = 1/32.
+            // With L4sAvgG = 1/16 and steps_per_rtt = 4, g = (1/16) / 4 = 1/64.
             val ceFeedback = createFeedback(
                 clock.instant(),
                 rtt,
@@ -379,10 +379,10 @@ class ScreamV2Test : FreeSpec() {
                 packet.ecn = EcnMarking.kCe
             }
             scream.onTransportPacketsFeedback(ceFeedback)
-            scream.l4sAlpha() shouldBe ((1.0 / 8.0) / 4.0 plusOrMinus 1e-15)
+            scream.l4sAlpha() shouldBe ((1.0 / 16.0) / 4.0 plusOrMinus 1e-15)
 
             // Next 4 feedbacks (1 RTT) with 0% CE marks.
-            // With L4sAvgGDown = 1/16 and steps_per_rtt = 4, g_down = (1/16) / 4 = 1/64.
+            // With L4sAvgG = 1/16 and steps_per_rtt = 4, g = (1/16) / 4 = 1/64.
             val alphaBeforeDecay = scream.l4sAlpha()
             for (i in 0 until 4) {
                 clock.elapse(feedbackInterval)
