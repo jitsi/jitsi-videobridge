@@ -20,6 +20,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -209,16 +210,20 @@ private fun findFeedback(report: TransportPacketsFeedback?, transportSequenceNum
 class OneTransportFeedbackAdapterTest(val feedbackType: FeedbackType) {
     private val logger = createLogger()
 
-    fun createAndProcessFeedback(packets: List<PacketTemplate>): TransportPacketsFeedback? {
+    fun createAndProcessFeedback(
+        packets: List<PacketTemplate>,
+        feedbackReceiveTime: Instant? = null
+    ): TransportPacketsFeedback? {
+        val receiveTime = feedbackReceiveTime ?: timeNow()
         when (feedbackType) {
             FeedbackType.Tcc -> {
                 val rtcpFeedback = buildRtcpTransportFeedbackPacket(packets)
-                return adapter.processTransportFeedback(rtcpFeedback, timeNow())
+                return adapter.processTransportFeedback(rtcpFeedback, receiveTime)
             }
 
             FeedbackType.Ccfb -> {
                 val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
-                return adapter.processCongestionControlFeedback(rtcpFeedback, timeNow())
+                return adapter.processCongestionControlFeedback(rtcpFeedback, receiveTime)
             }
         }
     }
@@ -758,6 +763,71 @@ class TransportFeedbackAdapterTest : FreeSpec() {
                     // Both CCFB and TWCC never infer packet 2 as lost unless explicitly skipped
                     // within the sequence number range of a single received feedback packet.
                     findFeedback(adaptedFeedback4, 2) shouldBe null
+                }
+            }
+        }
+
+        "HandlesReorderedFeedbackPackets" {
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+
+                    val packet1 = PacketTemplate(
+                        transportSequenceNumber = 1,
+                        rtpSequenceNumber = 101,
+                        sendTimestamp = Instant.EPOCH + 100.ms,
+                        receiveTimestamp = Instant.EPOCH + 120.ms
+                    )
+
+                    val packet2 = PacketTemplate(
+                        transportSequenceNumber = 2,
+                        rtpSequenceNumber = 102,
+                        sendTimestamp = Instant.EPOCH + 110.ms,
+                        receiveTimestamp = Instant.EPOCH + 130.ms
+                    )
+
+                    test.adapter.addPacket(
+                        createPacketToSend(packet1),
+                        packet1.transportSequenceNumber,
+                        0.bytes,
+                        timeNow()
+                    )
+                    test.adapter.processSentPacket(
+                        SentPacketInfo(packet1.transportSequenceNumber, packet1.sendTimestamp)
+                    )
+                    test.adapter.addPacket(
+                        createPacketToSend(packet2),
+                        packet2.transportSequenceNumber,
+                        0.bytes,
+                        timeNow()
+                    )
+                    test.adapter.processSentPacket(
+                        SentPacketInfo(packet2.transportSequenceNumber, packet2.sendTimestamp)
+                    )
+
+                    // Process the later feedback packet first (reordered)
+                    val adaptedFeedback2 = test.createAndProcessFeedback(
+                        listOf(packet2),
+                        feedbackReceiveTime = Instant.EPOCH + 1000.ms
+                    )
+                    adaptedFeedback2!!.packetFeedbacks.size shouldBe 1
+
+                    // Process the earlier feedback packet 10ms later due to reordering.
+                    val adaptedFeedback1 = test.createAndProcessFeedback(
+                        listOf(packet1),
+                        feedbackReceiveTime = Instant.EPOCH + 1010.ms
+                    )
+                    adaptedFeedback1!!.packetFeedbacks.size shouldBe 1
+
+                    val result2 = adaptedFeedback2.packetFeedbacks[0]
+                    val result1 = adaptedFeedback1.packetFeedbacks[0]
+
+                    // Even though processed out-of-order, the offset between send and receive
+                    // time should be identical within 1ms (due to compact NTP fractional tick
+                    // precision limits).
+                    val diff2 = Duration.between(result2.sentPacket.sendTime, result2.receiveTime)
+                    val diff1 = Duration.between(result1.sentPacket.sendTime, result1.receiveTime)
+                    (diff2 - diff1).abs() shouldBeLessThanOrEqualTo 1.ms
                 }
             }
         }
