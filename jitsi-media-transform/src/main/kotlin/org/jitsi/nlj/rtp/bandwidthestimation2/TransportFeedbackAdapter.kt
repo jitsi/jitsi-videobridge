@@ -30,10 +30,13 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.max
+import org.jitsi.utils.min
+import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration
 import java.time.Instant
@@ -294,6 +297,7 @@ class TransportFeedbackAdapter(
         }
 
         var failedLookups = 0
+        var unexpectedArrivalTimeOffset = false
         var supportsEcn = true
         val packetResultVector = mutableListOf<PacketResult>()
         var sequenceNumberInReport: MinMax? = null
@@ -311,10 +315,42 @@ class TransportFeedbackAdapter(
             val result = PacketResult()
             result.sentPacket = packetFeedback.sent
             if (packetInfo is ReceivedPacketInfo) {
-                result.receiveTime = currentOffset - packetInfo.arrivalTimeOffset
+                // Arrival time offset (ATO) is expected to be bounded by:
+                // 1. The interval between this feedback and the last received feedback
+                //    (using the receiver's NTP report timestamps). Under RFC 8888,
+                //    received packets must be reported. Since previously acknowledged
+                //    packets are erased from `history_`, any packet newly acknowledged
+                //    here must have arrived after the previous received feedback was
+                //    generated.
+                // 2. The round-trip elapsed time between packet send and feedback
+                // receive.
+                //    A packet cannot arrive before it was sent, so the time the receiver
+                //    held the packet (ATO) cannot exceed the total round-trip duration.
+                val timeBetweenTwoLastFeedback = if (feedbackDelta > Duration.ZERO) {
+                    feedbackDelta + 1.ms
+                } else {
+                    MAX_DURATION
+                }
+                val feedbackSendTimeDelta =
+                    max(Duration.between(packetFeedback.sent.sendTime, feedbackReceiveTime), Duration.ZERO)
+                val maxExpectedAto = min(timeBetweenTwoLastFeedback, feedbackSendTimeDelta)
+                var arrivalTimeOffset = packetInfo.arrivalTimeOffset
+                if (arrivalTimeOffset > maxExpectedAto) {
+                    if (!unexpectedArrivalTimeOffset) {
+                        logger.warn {
+                            "Arrival time offset ${packetInfo.arrivalTimeOffset} " +
+                                "exceeds max expected ATO $maxExpectedAto " +
+                                "(feedback_send_time_delta: $feedbackSendTimeDelta, " +
+                                "time_between_two_last_feedback: $timeBetweenTwoLastFeedback)"
+                        }
+                    }
+                    unexpectedArrivalTimeOffset = true
+                    arrivalTimeOffset = maxExpectedAto
+                }
+                result.receiveTime = currentOffset - arrivalTimeOffset
                 result.ecn = packetInfo.ecn
                 supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
-                result.arrivalTimeOffset = packetInfo.arrivalTimeOffset
+                result.arrivalTimeOffset = arrivalTimeOffset
             }
             result.sentWithEct1 = packetFeedback.sentWithEct1
             result.reportedRecoveredForTheFirstTime =
