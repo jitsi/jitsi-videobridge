@@ -420,7 +420,6 @@ class GoogCcNetworkController(
             networkEstimate.atTime = atTime
             networkEstimate.lossRateRatio = (lastEstimatedFractionLoss ?: 0u).toFloat() / 255.0f
             networkEstimate.roundTripTime = lastEstimatedRoundTripTime
-            networkEstimate.bwePeriod = delayBasedBwe.getExpectedBwePeriod()
 
             this.atTime = atTime
             if (rateControlSettings.useCongestionWindowDropFrameOnly()) {
@@ -475,8 +474,6 @@ class GoogCcNetworkController(
 
             alrDetector.setEstimatedBitrate(lossBasedTargetRate)
 
-            val bwePeriod = delayBasedBwe.getExpectedBwePeriod()
-
             val targetRateMsg = TargetTransferRate()
             targetRateMsg.atTime = atTime
             if (rateControlSettings.useCongestionWindowDropFrameOnly()) {
@@ -488,7 +485,6 @@ class GoogCcNetworkController(
             targetRateMsg.networkEstimate.atTime = atTime
             targetRateMsg.networkEstimate.roundTripTime = roundTripTime
             targetRateMsg.networkEstimate.lossRateRatio = fractionLoss.toFloat() / 255.0f
-            targetRateMsg.networkEstimate.bwePeriod = bwePeriod
             targetRateMsg.isBandwidthLimited = isBandwidthLimited
 
             update.targetRate = targetRateMsg

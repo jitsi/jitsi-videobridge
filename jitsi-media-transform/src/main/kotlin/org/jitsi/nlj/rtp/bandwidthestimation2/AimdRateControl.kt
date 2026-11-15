@@ -182,23 +182,6 @@ class AimdRateControl(private val sendSide: Boolean = false) {
         return increaseRateBpsPerSecond.coerceAtLeast(kMinIncreaseRateBpsPerSecond)
     }
 
-    fun getExpectedBandwidthPeriod(): Duration {
-        val kMinPeriod = 2.secs
-        val kDefaultPeriod = 3.secs
-        val kMaxPeriod = 50.secs
-
-        val increaseRateBpsPerSecond = getNearMaxIncreaseRateBpsPerSecond()
-        if (lastDecrease == null) {
-            return kDefaultPeriod
-        }
-
-        val timeToRecoverDecreaseSeconds =
-            lastDecrease!!.bps / increaseRateBpsPerSecond
-
-        val period = durationOfDoubleSeconds(timeToRecoverDecreaseSeconds)
-        return period.coerceIn(kMinPeriod, kMaxPeriod)
-    }
-
     private fun changeBitrate(input: RateControlInput, atTime: Instant) {
         var newBitrate: Bandwidth? = null
         val estimatedThroughput = input.estimatedThroughput ?: latestEstimatedThroughput

@@ -136,16 +136,6 @@ class DelayBasedBweTest : FreeSpec() {
                 ((kTargetUtilizationFraction * 4000000).toLong() plusOrMinus 10000)
         }
 
-        "GetExpectedBwePeriodMs" {
-            val test = OneDelayBasedBweTest(logger, diagnosticContext)
-            val defaultInterval = test.bitrateEstimator.getExpectedBwePeriod()
-            defaultInterval.toMillis() shouldBeGreaterThan 0
-            test.capacityDropTestHelper(1, true, 533, 0)
-            val interval = test.bitrateEstimator.getExpectedBwePeriod()
-            interval.toMillis() shouldBeGreaterThan 0
-            interval shouldNotBeEqual defaultInterval
-        }
-
         "InitialBehavior" {
             val test = OneDelayBasedBweTest(logger, diagnosticContext)
             test.initialBehaviorTestHelper(730000)
