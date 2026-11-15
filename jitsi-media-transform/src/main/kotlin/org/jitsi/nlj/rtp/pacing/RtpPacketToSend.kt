@@ -19,6 +19,7 @@ package org.jitsi.nlj.rtp.pacing
 
 import org.jitsi.nlj.PacketInfo
 import java.time.Duration
+import java.time.Instant
 
 /** The kind of a packet that is given to the pacer,
  * based on RtpPacketMediaType in WebRTC modules/rtp_rtcp/include/rtp_rtcp_defines.h in
@@ -59,6 +60,8 @@ class RtpPacketToSend(
     val originalPacketType: OriginalType? = null,
     val isKeyFrame: Boolean = false,
     val isFirstPacketOfFrame: Boolean = false,
+    /** Time in local time base as close as it can to frame capture time. */
+    val captureTime: Instant = Instant.EPOCH,
     /** The packet that is sent. */
     val packetInfo: PacketInfo? = null
 ) {
