@@ -341,6 +341,70 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             }
         }
 
+        // Send packets on two SSRCs, and drop all packets on one of them.
+        // Expect TransportFeedbackAdapter to detect such missing packets.
+        // This test is trivial for TransportFeedback RTCP message where packets are
+        // identified by transport sequence number, and missing numbers is the primary
+        // way to report and track dropped packets.
+        // However for CongestionControl RTCP message that is not natural - when no
+        // packets are received on certain SSRC, such SSRC is not included into the
+        // report, yet TransportFeedbackAdapter still can treat such packets as lost.
+        "HandlesDroppedPacketsFromAnSsrc" {
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val kSsrc1 = 123L
+                    val kSsrc2 = 456L
+                    val test = OneTransportFeedbackAdapterTest(it)
+
+                    val packets = listOf(
+                        PacketTemplate(
+                            ssrc = kSsrc1,
+                            transportSequenceNumber = 1,
+                            rtpSequenceNumber = 101,
+                            sendTimestamp = Instant.EPOCH + 1_200.ms,
+                            receiveTimestamp = Instant.EPOCH + 100.ms
+                        ),
+                        PacketTemplate(
+                            ssrc = kSsrc2,
+                            transportSequenceNumber = 2,
+                            rtpSequenceNumber = 201,
+                            sendTimestamp = Instant.EPOCH + 1_210.ms
+                        ),
+                        PacketTemplate(
+                            ssrc = kSsrc2,
+                            transportSequenceNumber = 3,
+                            rtpSequenceNumber = 202,
+                            sendTimestamp = Instant.EPOCH + 1_220.ms
+                        ),
+                        PacketTemplate(
+                            ssrc = kSsrc1,
+                            transportSequenceNumber = 4,
+                            rtpSequenceNumber = 102,
+                            sendTimestamp = Instant.EPOCH + 1_230.ms,
+                            receiveTimestamp = Instant.EPOCH + 130.ms
+                        )
+                    )
+
+                    packets.forEach { packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        test.adapter.processSentPacket(
+                            SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp)
+                        )
+                    }
+
+                    val receivedPackets = listOf(packets[0], packets[3])
+                    val adaptedFeedback = test.createAndProcessFeedback(receivedPackets)
+
+                    comparePacketFeedbackVectors(packets, adaptedFeedback!!.packetFeedbacks)
+                }
+            }
+        }
+
         // Skipped: "FeedbackReportsIfPacketIsAudio"
 
         "ReceiveTimeWrapsBothWays" {

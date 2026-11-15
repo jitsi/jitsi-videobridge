@@ -42,6 +42,18 @@ import java.util.*
 
 private val kSendTimeHistoryWindow = 60.secs
 
+private class MinMax(value: Long) {
+    var minimum = value
+        private set
+    var maximum = value
+        private set
+
+    fun update(value: Long) {
+        minimum = kotlin.math.min(minimum, value)
+        maximum = kotlin.math.max(maximum, value)
+    }
+}
+
 /** Transport feedback adapter,
  * based loosely on WebRTC modules/congestion_controller/rtp/transport_feedback_adapter.{h,cc} in
  * WebRTC tag branch-heads/6613 (Chromium 128)
@@ -268,6 +280,7 @@ class TransportFeedbackAdapter(
         var failedLookups = 0
         var supportsEcn = true
         val packetResultVector = mutableListOf<PacketResult>()
+        var sequenceNumberInReport: MinMax? = null
         feedback.packets.forEach { packetInfo ->
             val packetFeedback = retrievePacketFeedback(
                 SsrcAndRtpSequenceNumber(ssrc = packetInfo.ssrc, packetInfo.sequenceNumber),
@@ -277,6 +290,8 @@ class TransportFeedbackAdapter(
                 ++failedLookups
                 return@forEach
             }
+            sequenceNumberInReport?.update(packetFeedback.sent.sequenceNumber)
+                ?: run { sequenceNumberInReport = MinMax(packetFeedback.sent.sequenceNumber) }
             val result = PacketResult()
             result.sentPacket = packetFeedback.sent
             if (packetInfo is ReceivedPacketInfo) {
@@ -297,6 +312,29 @@ class TransportFeedbackAdapter(
                 isRetransmission = packetFeedback.isRetransmission,
             )
             packetResultVector.add(result)
+        }
+
+        // Report packets as lost that are in the same transport sequence number range
+        // as reported packets, but that are not mentioned in the report.
+        // Code below relies on the fact that received packets are already erased from
+        // the `history_`.
+        sequenceNumberInReport?.let { range ->
+            for (packetFeedback in history.subMap(range.minimum, true, range.maximum, true).values) {
+                if (packetFeedback.previouslyReportedLost) {
+                    continue
+                }
+                packetFeedback.previouslyReportedLost = true
+                val result = PacketResult()
+                result.sentPacket = packetFeedback.sent
+                result.sentWithEct1 = packetFeedback.sentWithEct1
+                result.reportedLostForTheFirstTime = true
+                result.rtpPacketInfo = PacketResult.RtpPacketInfo(
+                    ssrc = packetFeedback.ssrc,
+                    rtpSequenceNumber = packetFeedback.rtpSequenceNumber,
+                    isRetransmission = packetFeedback.isRetransmission,
+                )
+                packetResultVector.add(result)
+            }
         }
 
         totalUnmatchedReports += failedLookups
