@@ -203,6 +203,19 @@ class PacketResult(
 
     fun isReceived() = receiveTime.isFinite()
 
+    companion object {
+        /** Orders packets by receive time, then by send time, then by sequence number. */
+        val receiveTimeOrder: Comparator<PacketResult> = Comparator { lhs, rhs ->
+            if (lhs.receiveTime != rhs.receiveTime) {
+                lhs.receiveTime.compareTo(rhs.receiveTime)
+            } else if (lhs.sentPacket.sendTime != rhs.sentPacket.sendTime) {
+                lhs.sentPacket.sendTime.compareTo(rhs.sentPacket.sendTime)
+            } else {
+                lhs.sentPacket.sequenceNumber.compareTo(rhs.sentPacket.sequenceNumber)
+            }
+        }
+    }
+
     fun copy(): PacketResult = PacketResult(
         sentPacket.copy(),
         receiveTime,
@@ -236,7 +249,7 @@ class TransportPacketsFeedback {
 
     fun packetsWithFeedback(): List<PacketResult> = packetFeedbacks
 
-    fun sortedByReceiveTime(): List<PacketResult> = receivedWithSendInfo().sortedBy { it.receiveTime }
+    fun sortedByReceiveTime(): List<PacketResult> = receivedWithSendInfo().sortedWith(PacketResult.receiveTimeOrder)
 
     // True if at least one packet is CE marked.
     fun hasPacketWithEcnCe(): Boolean = packetFeedbacks.any { it.ecn == EcnMarking.kCe }
