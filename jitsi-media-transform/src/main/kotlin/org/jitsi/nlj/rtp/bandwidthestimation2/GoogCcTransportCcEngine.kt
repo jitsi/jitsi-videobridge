@@ -30,6 +30,7 @@ import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
+import org.jitsi.utils.RateLimit
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -241,6 +242,18 @@ class GoogCcTransportCcEngine(
 
     @Synchronized
     override fun start() {
+        val processInterval = factory.getProcessInterval().toMillis()
+
+        // Schedule the task first. processUpdate below throws if a listener throws.
+        processTask = scheduledExecutor.scheduleAtFixedRate({
+            loggingExceptions("processing an interval") {
+                synchronized(this@GoogCcTransportCcEngine) {
+                    val now = clock.instant()
+                    processUpdate(networkController.onProcessInterval(ProcessInterval(atTime = now)))
+                }
+            }
+        }, processInterval, processInterval, TimeUnit.MILLISECONDS)
+
         val startTime = clock.instant()
         var update =
             networkController.onNetworkAvailability(NetworkAvailability(atTime = startTime, networkAvailable = true))
@@ -248,16 +261,39 @@ class GoogCcTransportCcEngine(
 
         update = networkController.onProcessInterval(ProcessInterval(atTime = startTime))
         processUpdate(update)
+    }
 
-        val processInterval = factory.getProcessInterval().toMillis()
+    /** Rate limit for the log messages of [loggingExceptions]. */
+    private val exceptionLogLimit = RateLimit()
 
-        processTask = scheduledExecutor.scheduleAtFixedRate({
-            synchronized(this@GoogCcTransportCcEngine) {
-                val now = clock.instant()
-                update = networkController.onProcessInterval(ProcessInterval(atTime = now))
-                processUpdate(update)
+    /** The number of exceptions that [loggingExceptions] has not logged since its last log message. */
+    private var numExceptionsNotLogged = 0
+
+    /**
+     * Runs [block] and logs any exception it throws. Use this for tasks given to [scheduledExecutor]. The executor
+     * stores an exception from a task in the task's Future, and nothing reads that Future, so the exception would
+     * never be logged. The executor also stops running a periodic task after the task throws. The log messages are
+     * rate limited, because a task can fail every time it runs.
+     */
+    private inline fun loggingExceptions(what: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (t: Throwable) {
+            val notLogged = synchronized(exceptionLogLimit) {
+                if (exceptionLogLimit.accept()) {
+                    numExceptionsNotLogged.also { numExceptionsNotLogged = 0 }
+                } else {
+                    numExceptionsNotLogged++
+                    null
+                }
             }
-        }, processInterval, processInterval, TimeUnit.MILLISECONDS)
+            if (notLogged != null) {
+                logger.error(
+                    "Exception while $what" + if (notLogged > 0) " ($notLogged more exceptions not logged)" else "",
+                    t
+                )
+            }
+        }
     }
 
     @Synchronized
@@ -269,9 +305,18 @@ class GoogCcTransportCcEngine(
     }
 
     private fun processUpdate(update: NetworkControlUpdate) {
+        // The first exception thrown by a listener. It is rethrown after the whole update has been applied. The
+        // network controller has already changed state, so the update must not be left half applied.
+        var listenerFailure: Throwable? = null
         update.targetRate?.let { targetRate ->
             logger.debug { "GoogleCcEstimator setting TargetRate to $targetRate" }
-            listeners.forEach { it.bandwidthEstimationChanged(targetRate.targetRate) }
+            listeners.forEach { listener ->
+                try {
+                    listener.bandwidthEstimationChanged(targetRate.targetRate)
+                } catch (t: Throwable) {
+                    listenerFailure?.addSuppressed(t) ?: run { listenerFailure = t }
+                }
+            }
         }
         update.congestionWindow?.let { congestionWindow ->
             /* We don't use a congestion window */
@@ -304,6 +349,8 @@ class GoogCcTransportCcEngine(
             update.addToTimeSeriesPoint(updatePoint)
             timeSeriesLogger.trace(updatePoint)
         }
+
+        listenerFailure?.let { throw it }
     }
 
     /** Schedule bitrate probing if needed and not current scheduled.
@@ -321,22 +368,29 @@ class GoogCcTransportCcEngine(
             }
 
             probeTask = scheduledExecutor.schedule({
-                val cluster: PacedPacketInfo
-                val probeSize: DataSize
-                synchronized(this@GoogCcTransportCcEngine) {
-                    probeTask = null
-                    val now = clock.instant()
-                    cluster = bitrateProber.currentCluster(now) ?: PacedPacketInfo()
-                    if (cluster.probeClusterId == kNotAProbe) {
-                        return@schedule
-                    }
-                    probeSize = bitrateProber.recommendedMinProbeSize()
-                    val probeSent = sendProbing(probeSize, cluster)
-                    bitrateProber.probeSent(now, probeSent.bytes)
-                    maybeScheduleProbing(now)
-                }
+                loggingExceptions("sending a probe") { sendProbe() }
             }, delay, TimeUnit.MILLISECONDS)
         }
+    }
+
+    /** Sends a probe for the current cluster and schedules the next probe. */
+    @Synchronized
+    private fun sendProbe() {
+        probeTask = null
+        val now = clock.instant()
+        val cluster = bitrateProber.currentCluster(now) ?: PacedPacketInfo()
+        if (cluster.probeClusterId == kNotAProbe) {
+            return
+        }
+        val probeSize = bitrateProber.recommendedMinProbeSize()
+        val probeSent = sendProbing(probeSize, cluster)
+        if (probeSent <= 0) {
+            // BitrateProber.probeSent requires a nonzero size. WebRTC's pacer does not call it when nothing was
+            // sent. The next call to mediaPacketTagged schedules the next probe.
+            return
+        }
+        bitrateProber.probeSent(now, probeSent.bytes)
+        maybeScheduleProbing(now)
     }
 
     companion object {
