@@ -121,7 +121,11 @@ class GoogCcNetworkController(
             congestionWindowPushbackController.updatePacingQueue(msg.pacerQueue.bytes.roundToLong())
         }
         bandwidthEstimation.updateEstimate(msg.atTime)
-        probeController.setAlrStartTime(alrDetector.getApplicationLimitedRegionStartTime())
+        // Avoid ALR probing before the first transport feedback is received in
+        // order to avoid ALR probing if receive side BWE is used.
+        probeController.setAlrStartTime(
+            if (firstTransportFeedbackReceived) alrDetector.getApplicationLimitedRegionStartTime() else null
+        )
 
         val probes = probeController.process(msg.atTime)
         update.probeClusterConfigs.addAll(probes)
