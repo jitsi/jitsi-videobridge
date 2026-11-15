@@ -547,6 +547,15 @@ class Endpoint @JvmOverloads constructor(
             override fun consentUpdated(time: Instant) {
                 transceiver.packetIOActivity.lastIceActivityInstant = time
             }
+
+            override fun sendRouteChanged(first: Boolean) {
+                val supportsEct1 = iceTransport.supportsEct1
+                logger.info("Packets are sent on a new candidate pair (first=$first), supports ECT(1): $supportsEct1")
+                transceiver.setTransportSupportsEct1(supportsEct1)
+                if (!first) {
+                    transceiver.onNetworkRouteChanged()
+                }
+            }
         }
     }
 
@@ -661,7 +670,12 @@ class Endpoint @JvmOverloads constructor(
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
 
-        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        iceTransport.send(
+            packetInfo.packet.buffer,
+            packetInfo.packet.offset,
+            packetInfo.packet.length,
+            packetInfo.sendAsEct1
+        )
         packetInfo.addEvent(SENT_OVER_ICE_TRANSPORT_EVENT)
         PacketTransitStats.packetSent(packetInfo)
         ByteBufferPool.returnBuffer(packetInfo.packet.buffer)

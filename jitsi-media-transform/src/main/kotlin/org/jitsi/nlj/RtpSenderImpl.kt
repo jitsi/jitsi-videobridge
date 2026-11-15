@@ -343,6 +343,14 @@ class RtpSenderImpl(
 
     override fun getTransportCcEngineStats() = transportCcEngine.getStatistics()
 
+    override fun setTransportSupportsEct1(supported: Boolean) {
+        (transportCcEngine as? GoogCcTransportCcEngine)?.setTransportSupportsEct1(supported)
+    }
+
+    override fun onNetworkRouteChanged() {
+        (transportCcEngine as? GoogCcTransportCcEngine)?.onNetworkRouteChanged()
+    }
+
     override fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener) =
         transportCcEngine.addBandwidthListener(listener)
 

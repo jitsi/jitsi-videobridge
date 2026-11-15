@@ -144,6 +144,25 @@ class GoogCcTransportCcEngine(
      */
     @Synchronized
     fun onNetworkRouteChanged() {
+        // WebRTC tells the controller of every route change if the controller adapts to ECN, so that it knows that
+        // the round trip time may have changed. It tells other controllers only of a change which is significant
+        // enough to restart the estimate, which cannot be judged here.
+        if (rfc8888FeedbackNegotiated && networkController.supportsEcnAdaptation()) {
+            val now = clock.instant()
+            val update = networkController.onNetworkRouteChange(
+                NetworkRouteChange(
+                    atTime = now,
+                    constraints = TargetRateConstraints(
+                        atTime = now,
+                        maxDataRate = BandwidthEstimatorConfig.maxBw,
+                        minDataRate = BandwidthEstimatorConfig.minBw
+                    ),
+                    restartBwe = false
+                )
+            )
+            processUpdate(update)
+        }
+
         // The new path may preserve the ECT(1) marking even if the old one did not.
         ect1Policy.onNetworkRouteChanged()
     }

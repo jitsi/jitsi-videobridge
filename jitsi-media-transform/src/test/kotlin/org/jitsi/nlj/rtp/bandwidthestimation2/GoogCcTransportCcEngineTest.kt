@@ -20,12 +20,15 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.scream.ScreamNetworkController
+import org.jitsi.nlj.rtp.scream.scaledBy
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
@@ -174,6 +177,29 @@ class GoogCcTransportCcEngineTest : ShouldSpec() {
                     engine.onNetworkRouteChanged()
                     engine.sendPacket().sendAsEct1 shouldBe true
                 }
+            }
+
+            should("restart SCReAM from its target rate when the network route changes") {
+                engine.setRfc8888FeedbackNegotiated(true)
+                val seqNum = nextSeqNum
+                engine.sendPacket()
+                clock.elapse(20.ms)
+                engine.receiveFeedback(seqNum, EcnMarking.kEct1)
+                val targetRate = targetRates.last()
+                val numTargetRates = targetRates.size
+
+                engine.onNetworkRouteChanged()
+                engine.controllerStats().shouldBeInstanceOf<ScreamNetworkController.StatisticsSnapshot>()
+
+                // SCReAM starts over from the rate it had, and reports a rate again with the next feedback. With
+                // one packet in a 20 ms round trip its window is small, so the rate is somewhat lower.
+                val seqNum2 = nextSeqNum
+                engine.sendPacket()
+                clock.elapse(20.ms)
+                engine.receiveFeedback(seqNum2, EcnMarking.kEct1)
+                targetRates.size shouldBe numTargetRates + 1
+                targetRates.last() shouldBeGreaterThanOrEqualTo targetRate.scaledBy(0.8)
+                targetRates.last() shouldBeLessThanOrEqualTo targetRate
             }
 
             context("when the transport cannot send ECT(1)") {
