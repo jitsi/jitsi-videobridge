@@ -99,9 +99,12 @@ open class RtpPacket(
     var sequenceNumber: Int
         get() = _sequenceNumber
         set(newValue) {
-            if (newValue != _sequenceNumber) {
-                RtpHeader.setSequenceNumber(this.buffer, this.offset, newValue)
-                _sequenceNumber = newValue
+            // The header holds 16 bits. Keep the same 16 bits here, so that the getter returns the sequence number
+            // that is on the wire when the caller counts past 0xFFFF.
+            val sequenceNumber = newValue and 0xFFFF
+            if (sequenceNumber != _sequenceNumber) {
+                RtpHeader.setSequenceNumber(this.buffer, this.offset, sequenceNumber)
+                _sequenceNumber = sequenceNumber
             }
         }
 

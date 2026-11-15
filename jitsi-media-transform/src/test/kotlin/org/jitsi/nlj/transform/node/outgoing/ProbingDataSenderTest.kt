@@ -30,6 +30,7 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketCache
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
@@ -100,6 +101,24 @@ class ProbingDataSenderTest : ShouldSpec() {
                 sender.rtx.packets.shouldBeEmpty()
                 sender.padding.packets.map { it.length }.toSet() shouldBe (12..267).toSet()
                 sender.padding.lengthsWithoutRoom().shouldBeEmpty()
+            }
+        }
+        context("The sequence numbers of padding packets") {
+            should("wrap at 16 bits") {
+                val sender = Sender()
+
+                // The first sequence number is random, so send enough packets to pass 0xFFFF from any start.
+                repeat(0x10000 + 10) {
+                    sender.probingDataSender.sendProbing(listOf(MEDIA_SSRC), 12, null)
+                }
+
+                val sequenceNumbers = sender.padding.packets.map { (it as RtpPacket).sequenceNumber }
+                val first = sequenceNumbers.first()
+                sequenceNumbers shouldBe List(0x10000 + 10) { (first + it) and 0xFFFF }
+                // RFC 8888 feedback is matched with the sequence number that is in the header.
+                sender.padding.packets.count {
+                    RtpHeader.getSequenceNumber(it.buffer, it.offset) != (it as RtpPacket).sequenceNumber
+                } shouldBe 0
             }
         }
         context("Probing sent as retransmissions") {

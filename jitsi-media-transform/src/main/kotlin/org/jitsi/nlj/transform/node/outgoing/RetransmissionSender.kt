@@ -78,8 +78,8 @@ class RetransmissionSender(
 
     private fun retransmitRtx(packetInfo: PacketInfo, rtxPt: Int, rtxSsrc: Long): PacketInfo {
         // Get a default value of 1 to start if it isn't present in the map.  If it is present
-        // in the map, get the value and increment it by 1
-        val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
+        // in the map, get the value and increment it by 1, wrapping at 16 bits.
+        val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1) { seqNum, increment -> (seqNum + increment) and 0xFFFF }!!
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         logger.cdebug {
             "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum " +
