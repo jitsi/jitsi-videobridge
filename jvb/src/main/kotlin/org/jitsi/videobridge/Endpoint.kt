@@ -329,7 +329,8 @@ class Endpoint @JvmOverloads constructor(
         logger,
         TransceiverEventHandlerImpl(),
         clock,
-        getMidBySsrc = this::getMidBySsrc
+        getMidBySsrc = this::getMidBySsrc,
+        allowPacing = true
     ).apply {
         setIncomingPacketHandler(object : ConsumerNode("receiver chain handler") {
             override fun consume(packetInfo: PacketInfo) {

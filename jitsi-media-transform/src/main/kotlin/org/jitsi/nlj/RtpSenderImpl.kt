@@ -29,6 +29,7 @@ import org.jitsi.nlj.rtcp.RtcpSrUpdater
 import org.jitsi.nlj.rtp.ClassicTransportCcEngine
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.RtpExtensionType
+import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorEngine
@@ -55,6 +56,7 @@ import org.jitsi.nlj.transform.node.outgoing.HeaderExtEncoder
 import org.jitsi.nlj.transform.node.outgoing.HeaderExtStripper
 import org.jitsi.nlj.transform.node.outgoing.MidStamper
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
+import org.jitsi.nlj.transform.node.outgoing.PacedSender
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
@@ -96,7 +98,12 @@ class RtpSenderImpl(
      * Resolves the sdes:mid to stamp on an outgoing packet given its (rewritten) SSRC, or null to not stamp a mid.
      * Used under SSRC rewriting for mid-based demuxing on the receiving client.
      */
-    private val getMidBySsrc: (Long) -> String? = { null }
+    private val getMidBySsrc: (Long) -> String? = { null },
+    /**
+     * Whether this sender can pace the packets it sends. It does if the pacer is also enabled in the configuration
+     * and the bandwidth estimation engine is GoogleCc2.
+     */
+    allowPacing: Boolean = false
 ) : RtpSender() {
     private val logger = createChildLogger(parentLogger)
     private val outgoingRtpRoot: Node
@@ -119,6 +126,22 @@ class RtpSenderImpl(
     // its handler (likely in another thread) grab the packet and send it out
     private var outgoingPacketHandler: PacketHandler? = null
 
+    /** The pacer, or null if packets are not paced. */
+    private val pacedSender: PacedSender? =
+        if (allowPacing &&
+            BandwidthEstimatorConfig.pacerEnabled &&
+            BandwidthEstimatorConfig.engine == BandwidthEstimatorEngine.GoogleCc2
+        ) {
+            PacedSender(
+                logger,
+                executor,
+                sendPadding = { numBytes -> probingDataSender.sendProbing(null, numBytes, null) },
+                getRtxSsrc = { ssrc -> streamInformationStore.getRemoteSecondarySsrc(ssrc, SsrcAssociationType.RTX) }
+            )
+        } else {
+            null
+        }
+
     private val transportCcEngine: TransportCcEngine =
         when (BandwidthEstimatorConfig.engine) {
             BandwidthEstimatorEngine.GoogleCc ->
@@ -132,6 +155,7 @@ class RtpSenderImpl(
                         probingData
                     )
                 }).also { engine ->
+                    engine.setPacer(pacedSender)
                     streamInformationStore.onRtpPayloadTypesChanged { payloadTypes ->
                         // The payload types are cleared before they are signaled again. That says nothing about
                         // the feedback format, and changing it replaces the network controller.
@@ -182,9 +206,11 @@ class RtpSenderImpl(
             node(AudioRedHandler(streamInformationStore, logger))
             node(headerExtensionStripper)
             node(outgoingPacketCache)
+            // The pacer is where the RTX pipeline and probing join the main pipeline, so that they are paced too.
+            pacedSender?.let { node(it) }
             node(absSendTime)
-            // Placed right after absSendTime, which is where the RTX pipeline joins the main pipeline, so that both
-            // media packets and their retransmissions get the mid stamped.
+            // Placed right after absSendTime, which follows the point where the RTX pipeline joins the main
+            // pipeline, so that both media packets and their retransmissions get the mid stamped.
             node(MidStamper(streamInformationStore, getMidBySsrc))
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
@@ -198,8 +224,9 @@ class RtpSenderImpl(
 
         outgoingRtxRoot = pipeline {
             node(RetransmissionSender(streamInformationStore, logger))
-            // We want RTX packets to hook into the main RTP pipeline starting at AbsSendTime
-            node(absSendTime)
+            // We want RTX packets to hook into the main RTP pipeline starting at the pacer if there is one, and at
+            // AbsSendTime otherwise.
+            node(pacedSender ?: absSendTime)
         }
 
         nackHandler = NackHandler(outgoingPacketCache.getPacketCache(), outgoingRtxRoot, logger)
@@ -244,7 +271,7 @@ class RtpSenderImpl(
         probingDataSender = ProbingDataSender(
             packetCache = outgoingPacketCache.getPacketCache(),
             rtxDataSender = outgoingRtxRoot,
-            garbageDataSender = absSendTime,
+            garbageDataSender = pacedSender ?: absSendTime,
             diagnosticContext = diagnosticContext,
             streamInformationStore = streamInformationStore,
             parentLogger = logger

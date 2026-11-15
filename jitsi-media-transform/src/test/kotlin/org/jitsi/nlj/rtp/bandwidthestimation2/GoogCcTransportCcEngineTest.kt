@@ -20,16 +20,20 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
+import org.jitsi.nlj.rtp.pacing.PacerControl
 import org.jitsi.nlj.rtp.scream.ScreamNetworkController
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.scaledBy
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.ReceivedPacketInfo
@@ -52,14 +56,21 @@ class GoogCcTransportCcEngineTest : ShouldSpec() {
 
     private val targetRates = mutableListOf<Bandwidth>()
 
-    private fun createEngine(screamMode: ScreamMode) = GoogCcTransportCcEngine(
+    /** The number of times the engine has asked for a probe to be sent. */
+    private var numProbesRequested = 0
+
+    private fun createEngine(screamMode: ScreamMode, pacer: PacerControl? = null) = GoogCcTransportCcEngine(
         DiagnosticContext(),
         logger,
         scheduler,
-        { _, _ -> 0 },
+        { _, _ ->
+            numProbesRequested++
+            0
+        },
         clock,
         screamMode
     ).also {
+        it.setPacer(pacer)
         it.addBandwidthListener(object : TransportCcEngine.BandwidthListener {
             override fun bandwidthEstimationChanged(newValue: Bandwidth) {
                 targetRates.add(newValue)
@@ -100,8 +111,90 @@ class GoogCcTransportCcEngineTest : ShouldSpec() {
         rtcpPacketReceived(feedback, clock.instant())
     }
 
+    /** A pacer that records what the engine tells it. */
+    private class FakePacer : PacerControl {
+        val pacerConfigs = mutableListOf<PacerConfig>()
+        val congestedStates = mutableListOf<Boolean>()
+        val probeClusters = mutableListOf<ProbeClusterConfig>()
+
+        override fun setPacerConfig(config: PacerConfig) {
+            pacerConfigs.add(config)
+        }
+
+        override fun setCongested(congested: Boolean) {
+            congestedStates.add(congested)
+        }
+
+        override fun createProbeClusters(configs: List<ProbeClusterConfig>) {
+            probeClusters.addAll(configs)
+        }
+
+        override fun queueSizeData(): DataSize = DataSize.ZERO
+    }
+
     init {
         BufferPool.getBuffer = { size -> ByteArray(size + 10) }
+
+        context("Without a pacer") {
+            val engine = createEngine(ScreamMode.GoogCc)
+            should("send the probes of Google CC itself") {
+                for (i in 1..20) {
+                    engine.sendPacket()
+                    scheduler.runUntil(clock.instant() + 5.ms)
+                }
+                numProbesRequested shouldBeGreaterThan 0
+            }
+        }
+
+        context("With a pacer and Google CC") {
+            val pacer = FakePacer()
+            val engine = createEngine(ScreamMode.GoogCc, pacer)
+            should("set the pacing rate of the pacer when it starts") {
+                pacer.pacerConfigs.isNotEmpty() shouldBe true
+                pacer.pacerConfigs.last().dataRate() shouldBeGreaterThan Bandwidth.ZERO
+            }
+            should("give the probe clusters to the pacer and send no probes itself") {
+                for (i in 1..20) {
+                    engine.sendPacket()
+                    scheduler.runUntil(clock.instant() + 5.ms)
+                }
+                pacer.probeClusters.isNotEmpty() shouldBe true
+                numProbesRequested shouldBe 0
+            }
+            should("not report congestion, since Google CC sets no congestion window") {
+                for (i in 1..200) {
+                    engine.sendPacket()
+                }
+                pacer.congestedStates shouldBe emptyList()
+            }
+        }
+
+        context("With a pacer and SCReAM") {
+            val pacer = FakePacer()
+            val engine = createEngine(ScreamMode.ScreamWithRfc8888, pacer)
+            engine.setRfc8888FeedbackNegotiated(true)
+            should("set the pacing rate of the pacer for the new controller") {
+                engine.controllerStats().shouldBeInstanceOf<ScreamNetworkController.StatisticsSnapshot>()
+                pacer.pacerConfigs.size shouldBeGreaterThan 1
+            }
+            should("tell the pacer when the data in flight reaches the congestion window and when it falls below") {
+                // Send without feedback until the data in flight reaches the window of SCReAM.
+                val firstSeqNum = nextSeqNum
+                var sent = 0
+                while (pacer.congestedStates.isEmpty() && sent < 1000) {
+                    engine.sendPacket()
+                    sent++
+                }
+                pacer.congestedStates shouldBe listOf(true)
+
+                // Feedback for the packets takes them out of the data in flight.
+                clock.elapse(20.ms)
+                for (seqNum in firstSeqNum until nextSeqNum) {
+                    engine.receiveFeedback(seqNum, EcnMarking.kEct1)
+                }
+                pacer.congestedStates shouldBe listOf(true, false)
+            }
+        }
 
         context("With SCReAM never used") {
             val engine = createEngine(ScreamMode.GoogCc)
