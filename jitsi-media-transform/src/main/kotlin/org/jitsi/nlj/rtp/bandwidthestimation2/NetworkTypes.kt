@@ -186,6 +186,12 @@ class PacketResult(
     // this packet as lost, but current report marks it as received.
     var reportedRecoveredForTheFirstTime: Boolean = false,
 
+    // Indicates if the packet receive time is ambiguous (e.g. because the packet
+    // was retransmitted without RTX and could match multiple transmissions),
+    // meaning receive_time is a best-effort estimate and should not be used for
+    // delay or RTT calculations.
+    var ambiguousReceiveTime: Boolean = false,
+
     // `rtp_packet_info` is only set if the feedback is related to a RTP packet.
     var rtpPacketInfo: RtpPacketInfo? = null
 ) {
@@ -205,6 +211,7 @@ class PacketResult(
         sentWithEct1,
         reportedLostForTheFirstTime,
         reportedRecoveredForTheFirstTime,
+        ambiguousReceiveTime,
         rtpPacketInfo
     )
 }

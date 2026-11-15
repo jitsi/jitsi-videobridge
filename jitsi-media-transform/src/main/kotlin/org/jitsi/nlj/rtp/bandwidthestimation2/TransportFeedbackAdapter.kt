@@ -89,7 +89,8 @@ private data class PacketFeedback(
     val rtpSequenceNumber: Int = 0,
     val isRetransmission: Boolean = false,
     val sentWithEct1: Boolean = false,
-    var previouslyReportedLost: Boolean = false
+    var previouslyReportedLost: Boolean = false,
+    var ambiguousReceiveTime: Boolean = false
 )
 
 private class InFlightBytesTracker {
@@ -154,9 +155,25 @@ class TransportFeedbackAdapter(
             history.remove(history.firstEntry().key)
         }
         // Note that it can happen that the same SSRC and sequence number is sent
-        // again. e.g, audio retransmission.
-        rtpToTransportSequenceNumber[SsrcAndRtpSequenceNumber(feedback.ssrc, feedback.rtpSequenceNumber)] =
+        // again, e.g., audio retransmission. Delay metrics from such packets are
+        // ambiguous, since it is not specified which of the two packets was
+        // received.
+        val previous = rtpToTransportSequenceNumber.putIfAbsent(
+            SsrcAndRtpSequenceNumber(feedback.ssrc, feedback.rtpSequenceNumber),
             feedback.sent.sequenceNumber
+        )
+        if (previous != null) {
+            feedback.ambiguousReceiveTime = true
+            history[previous]?.ambiguousReceiveTime = true
+        } else if (feedback.isRetransmission &&
+            (packet.originalSsrc == null || packet.originalSsrc == rtpPacket.ssrc)
+        ) {
+            // A retransmission without RTX (same SSRC and sequence number) whose
+            // original packet is no longer in `rtp_to_transport_sequence_number_`
+            // (e.g., the original packet was already acknowledged and removed from
+            // history).
+            feedback.ambiguousReceiveTime = true
+        }
         history[feedback.sent.sequenceNumber] = feedback
     }
 
@@ -259,6 +276,7 @@ class TransportFeedbackAdapter(
                 packetFeedback.rtpSequenceNumber,
                 packetFeedback.isRetransmission
             )
+            result.ambiguousReceiveTime = packetFeedback.ambiguousReceiveTime
             packetResultVector.add(result)
         }
 
@@ -352,6 +370,7 @@ class TransportFeedbackAdapter(
                 supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
                 result.arrivalTimeOffset = arrivalTimeOffset
             }
+            result.ambiguousReceiveTime = packetFeedback.ambiguousReceiveTime
             result.sentWithEct1 = packetFeedback.sentWithEct1
             result.reportedRecoveredForTheFirstTime =
                 packetInfo is ReceivedPacketInfo && packetFeedback.previouslyReportedLost
