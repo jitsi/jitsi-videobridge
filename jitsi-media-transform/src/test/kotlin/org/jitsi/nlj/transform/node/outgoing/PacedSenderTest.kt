@@ -148,6 +148,15 @@ class PacedSenderTest : ShouldSpec() {
                 // They are spread over that time, not sent together.
                 Duration.between(start, sent[10].first) shouldBeGreaterThan 80.ms
                 Duration.between(start, sent[10].first) shouldBeLessThan 120.ms
+
+                val stats = pacedSender.getNodeStats().toJson()
+                stats["max_queue_size_packets"].asLong() shouldBe 20L
+                stats["max_queue_size_bytes"].asLong() shouldBe 20L * 988
+                // The last packet waited for the whole time, and the first did not wait.
+                stats["queue_time_max_us"].asLong() shouldBeGreaterThan 180_000L
+                stats["queue_time_max_us"].asLong() shouldBeLessThan 220_000L
+                stats["queue_time_avg_us"].asLong() shouldBeGreaterThan 80_000L
+                stats["queue_time_avg_us"].asLong() shouldBeLessThan 120_000L
             }
             should("send audio at once, ahead of the video that is waiting") {
                 for (i in 1..5) {

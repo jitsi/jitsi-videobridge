@@ -120,6 +120,13 @@ class PacedSender(
     private var numPaddingPacketsGenerated = 0L
     private var numPacketsDropped = 0L
     private var numTimerRuns = 0L
+    private var maxQueueSizePackets = 0
+    private var maxQueueSize = DataSize.ZERO
+
+    /** The time that the packets waited in the pacer. */
+    private val queueTime = DelayStats()
+
+    /** The time from when the pacer passes a packet on until the packet has been written to the socket. */
     private val releaseToSendDelay = DelayStats()
 
     override fun setPacerConfig(config: PacerConfig) {
@@ -169,6 +176,8 @@ class PacedSender(
             numPacketsPaced++
             queuedSsrcs.add(rtpPacket.ssrc)
             controller.enqueuePacket(packetInfo.toRtpPacketToSend(rtpPacket))
+            maxQueueSizePackets = maxOf(maxQueueSizePackets, controller.queueSizePackets())
+            maxQueueSize = maxOf(maxQueueSize, controller.queueSizeData())
             process()
         }
         return emptyList()
@@ -298,6 +307,7 @@ class PacedSender(
             if (clusterInfo.probeClusterId != PacedPacketInfo.kNotAProbe) {
                 packetInfo.probingInfo = clusterInfo
             }
+            packet.timeInSendQueue?.let { queueTime.add(it.toNanos()) }
             val releaseTime = System.nanoTime()
             packetInfo.onSent { releaseToSendDelay.add(System.nanoTime() - releaseTime) }
             next(packetInfo)
@@ -372,7 +382,11 @@ class PacedSender(
             addNumber("num_padding_packets_generated", numPaddingPacketsGenerated)
             addNumber("num_packets_dropped", numPacketsDropped)
             addNumber("num_timer_runs", numTimerRuns)
+            addNumber("max_queue_size_packets", maxQueueSizePackets)
+            addNumber("max_queue_size_bytes", maxQueueSize.wholeBytes())
         }
+        addNumber("queue_time_avg_us", queueTime.averageMicros())
+        addNumber("queue_time_max_us", queueTime.maxMicros())
         addNumber("release_to_send_delay_avg_us", releaseToSendDelay.averageMicros())
         addNumber("release_to_send_delay_max_us", releaseToSendDelay.maxMicros())
     }
@@ -381,7 +395,7 @@ class PacedSender(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    /** The time from when the pacer passes a packet on until the packet has been written to the socket. */
+    /** The average and the maximum of a delay. */
     private class DelayStats {
         private var count = 0L
         private var sumNanos = 0L
