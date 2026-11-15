@@ -355,5 +355,68 @@ class GoogCcNetworkControllerTest : FreeSpec() {
                 packetTransmissionAndFeedbackBlock(controller, kRunTimeMs, 50, currentTime)
             targetBitrateAfterDelay!! shouldBeLessThan targetBitrateBeforeDelay!!
         }
+
+        "TriggersTargetRateUpdateWhenBandwidthLimitedChanges" {
+            val fixture = NetworkControllerTextFixture()
+            val controller = fixture.createController()
+            var currentTime = Instant.ofEpochMilli(123456)
+
+            var update =
+                controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
+            update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
+            update.targetRate shouldNotBe null
+            update.targetRate!!.isBandwidthLimited shouldBe true
+
+            // Send packet to initialize ALR detector
+            val sentPacket = SentPacket()
+            sentPacket.sendTime = currentTime
+            sentPacket.size = 1000.bytes
+            update = controller.onSentPacket(sentPacket)
+
+            // Wait 10 seconds without sending any packets (this will make budget ratio
+            // accumulate and enter ALR)
+            currentTime += 10.secs
+            // Send a tiny packet to trigger AlrDetector state change evaluation
+            sentPacket.sendTime = currentTime
+            sentPacket.size = 1.bytes
+            update = controller.onSentPacket(sentPacket)
+
+            var alrDetected = false
+            if (update.targetRate != null && !update.targetRate!!.isBandwidthLimited) {
+                alrDetected = true
+            } else {
+                // Process interval should trigger target rate update if not already
+                // triggered by OnSentPacket
+                update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
+                if (update.targetRate != null && !update.targetRate!!.isBandwidthLimited) {
+                    alrDetected = true
+                }
+            }
+            alrDetected shouldBe true
+
+            // Now send a large burst of packets to leave ALR.
+            // Target rate is kInitialBitrate (60kbps). Budget ratio needs to drop below
+            // 0.5. We send 50 packets of 1000 bytes.
+            var bandwidthLimitedDetected = false
+            for (i in 0 until 50) {
+                currentTime += 1.ms
+                sentPacket.sendTime = currentTime
+                sentPacket.size = 1000.bytes
+                update = controller.onSentPacket(sentPacket)
+                if (update.targetRate != null && update.targetRate!!.isBandwidthLimited) {
+                    bandwidthLimitedDetected = true
+                }
+            }
+
+            if (!bandwidthLimitedDetected) {
+                // Process interval should trigger target rate update if not already
+                // triggered by OnSentPacket
+                update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
+                if (update.targetRate != null && update.targetRate!!.isBandwidthLimited) {
+                    bandwidthLimitedDetected = true
+                }
+            }
+            bandwidthLimitedDetected shouldBe true
+        }
     }
 }

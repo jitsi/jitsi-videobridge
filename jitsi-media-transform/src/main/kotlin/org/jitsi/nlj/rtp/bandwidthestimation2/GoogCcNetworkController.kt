@@ -426,6 +426,7 @@ class GoogCcNetworkController(
             }
 
             targetRate = lastPushbackTargetRate
+            isBandwidthLimited = alrDetector.getApplicationLimitedRegionStartTime() == null
         }
         update.pacerConfig = getPacingRates(atTime)
         update.congestionWindow = currentDataWindow
@@ -452,17 +453,21 @@ class GoogCcNetworkController(
             }
         }
 
+        val isBandwidthLimited = alrDetector.getApplicationLimitedRegionStartTime() == null
+
         if (lossBasedTargetRate != lastLossBasedTargetRate ||
             lossBasedState != lastLossBasedState ||
             fractionLoss != lastEstimatedFractionLoss ||
             roundTripTime != lastEstimatedRoundTripTime ||
-            pushbackTargetRate != lastPushbackTargetRate
+            pushbackTargetRate != lastPushbackTargetRate ||
+            isBandwidthLimited != lastIsBandwidthLimited
         ) {
             lastLossBasedTargetRate = lossBasedTargetRate
             lastPushbackTargetRate = pushbackTargetRate
             lastEstimatedFractionLoss = fractionLoss
             lastEstimatedRoundTripTime = roundTripTime
             lastLossBasedState = lossBasedState
+            lastIsBandwidthLimited = isBandwidthLimited
 
             alrDetector.setEstimatedBitrate(lossBasedTargetRate)
 
@@ -480,6 +485,7 @@ class GoogCcNetworkController(
             targetRateMsg.networkEstimate.roundTripTime = roundTripTime
             targetRateMsg.networkEstimate.lossRateRatio = fractionLoss.toFloat() / 255.0f
             targetRateMsg.networkEstimate.bwePeriod = bwePeriod
+            targetRateMsg.isBandwidthLimited = isBandwidthLimited
 
             update.targetRate = targetRateMsg
 
@@ -688,6 +694,7 @@ class GoogCcNetworkController(
     private var maxPaddingRate = config.streamBasedConfig.maxPaddingRate ?: Bandwidth.ZERO
 
     private var previouslyInAlr = false
+    private var lastIsBandwidthLimited = true
     private var currentDataWindow: DataSize? = null
 
     companion object {

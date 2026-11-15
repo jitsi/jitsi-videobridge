@@ -323,9 +323,13 @@ class TargetTransferRate {
     var targetRate = Bandwidth.ZERO
     var cwndReduceRatio = 0.0
 
+    // True if WebRTC is actively sending near estimated link capacity (not in
+    // ALR).
+    var isBandwidthLimited = true
+
     /* Jitsi local */
     override fun toString(): String = "atTime $atTime: networkEstimate {$networkEstimate}, " +
-        "targetRate $targetRate, cwndReduceRatio $cwndReduceRatio"
+        "targetRate $targetRate, cwndReduceRatio $cwndReduceRatio, isBandwidthLimited $isBandwidthLimited"
 }
 
 // Contains updates of network controller comand state. Using nullables to
