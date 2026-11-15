@@ -107,6 +107,7 @@ class ProbeControllerConfig(
 
     // Configures the probes emitted by changed to the allocated bitrate.
     val probeOnMaxAllocatedBitrateChange: Boolean = true,
+    val probeOnMaxAllocatedBitrateChangeWithoutAlr: Boolean = true,
     val firstAllocationProbeScale: Double? = 1.0,
     val secondAllocationProbeScale: Double? = 2.0,
     val allocationProbeLimitByCurrentScale: Double = 2.0,
@@ -225,11 +226,11 @@ class ProbeController(
         atTime: Instant
     ): MutableList<ProbeClusterConfig> {
         val inAlr = alrStartTime != null
-        val allowAllocationProbe = inAlr
+        val allowAllocationProbe = inAlr || config.probeOnMaxAllocatedBitrateChangeWithoutAlr
 
         if (config.probeOnMaxAllocatedBitrateChange &&
             state == State.kProbingComplete &&
-            maxTotalAllocatedBitrate != this.maxTotalAllocatedBitrate &&
+            maxTotalAllocatedBitrate > this.maxTotalAllocatedBitrate &&
             estimatedBitrate < maxBitrate &&
             estimatedBitrate < maxTotalAllocatedBitrate &&
             allowAllocationProbe

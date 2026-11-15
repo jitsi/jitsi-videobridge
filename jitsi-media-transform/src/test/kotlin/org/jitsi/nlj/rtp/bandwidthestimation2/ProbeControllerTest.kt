@@ -174,8 +174,10 @@ class ProbeControllerTest : FreeSpec() {
             probes[0].targetDataRate.bps shouldBe kMaxBitrate.bps + 100
         }
 
-        "ProbesOnMaxAllocatedBitrateIncreaseOnlyWhenInAlr" {
-            val fixture = ProbeControllerFixture()
+        "ProbesInAlrWhenAllocationProbingOutsideAlrIsDisabled" {
+            val fixture = ProbeControllerFixture(
+                config = ProbeControllerConfig(probeOnMaxAllocatedBitrateChangeWithoutAlr = false)
+            )
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
@@ -198,14 +200,83 @@ class ProbeControllerTest : FreeSpec() {
             )
             probes.size shouldBe 2
             probes[0].targetDataRate shouldBe kMaxBitrate
+        }
 
-            // Do not probe when not in alr.
-            probeController.setAlrStartTime(null)
-            probes = probeController.onMaxTotalAllocatedBitrate(
-                kMaxBitrate + 2.bps,
+        "ProbesOnMaxAllocatedBitrateIncreaseOutsideAlrByDefault" {
+            val fixture = ProbeControllerFixture()
+            val probeController = fixture.createController()
+            val kTransportMaxBitrate = 10000.kbps
+            val kEstimatedAfterInitialProbing = 300.kbps
+            val kScreenShareMaxBitrate = 3500.kbps
+
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes =
+                probeController.setBitrates(kMinBitrate, kStartBitrate, kTransportMaxBitrate, fixture.currentTime())
+            probes = probeController.setEstimatedBitrate(
+                kEstimatedAfterInitialProbing,
+                BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probes = probeController.process(fixture.currentTime())
             probes.isEmpty() shouldBe true
+
+            probeController.setAlrStartTime(null)
+            probes = probeController.onMaxTotalAllocatedBitrate(kScreenShareMaxBitrate, fixture.currentTime())
+            probes.size shouldBe 1
+            probes[0].targetDataRate shouldBe 2 * kEstimatedAfterInitialProbing
+        }
+
+        "AllocationProbingOutsideAlrCanBeDisabled" {
+            val fixture = ProbeControllerFixture(
+                config = ProbeControllerConfig(probeOnMaxAllocatedBitrateChangeWithoutAlr = false)
+            )
+            val probeController = fixture.createController()
+            val kTransportMaxBitrate = 10000.kbps
+            val kEstimatedAfterInitialProbing = 300.kbps
+            val kScreenShareMaxBitrate = 3500.kbps
+
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes =
+                probeController.setBitrates(kMinBitrate, kStartBitrate, kTransportMaxBitrate, fixture.currentTime())
+            probes = probeController.setEstimatedBitrate(
+                kEstimatedAfterInitialProbing,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probes = probeController.process(fixture.currentTime())
+            probes.isEmpty() shouldBe true
+
+            probeController.setAlrStartTime(null)
+            probeController.onMaxTotalAllocatedBitrate(kScreenShareMaxBitrate, fixture.currentTime())
+                .isEmpty() shouldBe true
+        }
+
+        "DoesNotProbeWhenMaxAllocatedBitrateDecreases" {
+            val fixture = ProbeControllerFixture()
+            val probeController = fixture.createController()
+
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.isEmpty() shouldBe false
+
+            // Set the initial allocation while initial probing is still in progress.
+            probeController.onMaxTotalAllocatedBitrate(kMaxBitrate, fixture.currentTime()).isEmpty() shouldBe true
+            probes = probeController.setEstimatedBitrate(
+                kStartBitrate,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probeController.process(fixture.currentTime()).isEmpty() shouldBe true
+
+            // A lower allocation should update the limit without triggering a probe.
+            probeController.onMaxTotalAllocatedBitrate(kMaxBitrate / 2, fixture.currentTime()).isEmpty() shouldBe true
+
+            // A subsequent increase from the lower allocation should trigger probing.
+            probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate * 3 / 4, fixture.currentTime())
+            probes.isEmpty() shouldBe false
         }
 
         "ProbesOnMaxAllocatedBitrateLimitedByCurrentBwe" {
