@@ -225,6 +225,9 @@ class TransportPacketsFeedback {
     fun packetsWithFeedback(): List<PacketResult> = packetFeedbacks
 
     fun sortedByReceiveTime(): List<PacketResult> = receivedWithSendInfo().sortedBy { it.receiveTime }
+
+    // True if at least one packet is CE marked.
+    fun hasPacketWithEcnCe(): Boolean = packetFeedbacks.any { it.ecn == EcnMarking.kCe }
 }
 
 // Network estimation
