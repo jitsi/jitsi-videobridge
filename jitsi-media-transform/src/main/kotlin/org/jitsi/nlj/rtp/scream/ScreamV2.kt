@@ -22,6 +22,7 @@ import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.min
 import org.jitsi.utils.NEVER
+import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -103,6 +104,7 @@ class ScreamV2(
             firstFeedbackProcessed = true
         }
 
+        updateFeedbackInterval(feedback.feedbackTime)
         updateL4SAlpha(feedback)
         updateRefWindow(feedback)
         updateTargetRate(feedback)
@@ -221,31 +223,46 @@ class ScreamV2(
     private fun updateRefWindow(parsed: ScreamFeedback) {
         val isCe = parsed.numCeMarkedPackets > 0
         var isLoss = lossEstimator.update(parsed, delayBasedCongestionControl.rtt())
-        var isVirtualCe = false
-        if (delayBasedCongestionControl.isQueueDelayDetected()) {
-            isVirtualCe = true
-        }
+        val isVirtualCe = delayBasedCongestionControl.isQueueDelayDetected()
         if (isLoss) {
-            if (!lossEstimator.congested() && !delayBasedCongestionControl.isQueueDelayDetected()) {
+            if (!lossEstimator.congested() && !isVirtualCe) {
                 isLoss = false
             }
         }
 
         val previousRefWindow = refWindow
 
+        val timeSinceLastReaction = timeBetween(lastReactionToCongestionTime, parsed.feedbackTime)
+        val reactionInterval = if (params.useFeedbackIntervalForVirtualRtt) {
+            max(params.virtualRtt, feedbackInterval)
+        } else {
+            params.virtualRtt
+        }
+
         if ((isVirtualCe || isCe || isLoss) &&
-            timeBetween(lastReactionToCongestionTime, parsed.feedbackTime) >=
-            min(delayBasedCongestionControl.rtt(), params.virtualRtt)
+            timeSinceLastReaction >= min(delayBasedCongestionControl.rtt(), reactionInterval)
         ) {
             lastReactionToCongestionTime = parsed.feedbackTime
+            if (allowInitialRefWindowClamping && receivedRate.isFinite()) {
+                // Clamp ref_window to received rate on the first congestion event,
+                // to adjust if starting rate was much higher than link capacity.
+                refWindow = clamp(
+                    dataSentAt(receivedRate, delayBasedCongestionControl.rtt() + feedbackHoldTime),
+                    params.minRefWindow,
+                    refWindow
+                )
+                allowInitialRefWindowClamping = false
+            }
+
             var backoff = 0.0
             if (isLoss) { // Back off due to loss
                 backoff = 1.0 - params.betaLoss
             } else if (isCe) { // Backoff due to ECN-CE marking
                 backoff = l4sAlpha / 2.0
                 // Scale down backoff when RTT is high as several backoff events occur
-                // per RTT
-                backoff /= max(1.0, delayBasedCongestionControl.rtt().ratioTo(params.virtualRtt))
+                // per RTT. Scaling is relative to reaction_interval to account for
+                // how often feedback is actually received.
+                backoff /= max(1.0, delayBasedCongestionControl.rtt().ratioTo(reactionInterval))
 
                 if (!delayBasedCongestionControl.isQueueDelayDetected()) {
                     // Scale down backoff if close to the last known max reference window
@@ -258,17 +275,17 @@ class ScreamV2(
                     backoff *= max(0.1, delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay())
                 }
 
-                // Note that `last_reaction_to_congestion_time_` was set to the time of this feedback just above,
-                // as in WebRTC.
-                if (timeBetween(lastReactionToCongestionTime, parsed.feedbackTime) >
+                if (timeSinceLastReaction.isFinite() &&
+                    timeSinceLastReaction >
                     max(params.virtualRtt, delayBasedCongestionControl.rtt())
-                        .multipliedBy(params.numberOfRttsBetweenResetRefWindowIOnCongestion.toLong())
+                        .multipliedBy(params.numberOfRttsBetweenResetRefWindowIOnCongestion.toLong()) &&
+                    maxDataInFlightPrevRtt > DataSize.ZERO
                 ) {
                     // A long time(> 100 RTTs) since last congested because
-                    // link throughput exceeds max video bitrate. (or first congestion)
+                    // link throughput exceeds max video bitrate.
                     // There is a certain risk that ref_wnd has increased way above
                     // bytes in flight, so we reduce it here to get it better on
-                    // track and thus the congestion episode is shortened
+                    // track and thus the congestion episode is shortened.
                     refWindow = clamp(maxDataInFlightPrevRtt, params.minRefWindow, refWindow)
                     // In addition, bump up l4sAlpha to a more credible value
                     // This may over react but it is better than
@@ -277,7 +294,7 @@ class ScreamV2(
                 }
             } else if (isVirtualCe) { // Back off due to delay
                 backoff = delayBasedCongestionControl.l4sAlphaV() / 2.0
-                backoff /= max(1.0, delayBasedCongestionControl.rtt().ratioTo(params.virtualRtt))
+                backoff /= max(1.0, delayBasedCongestionControl.rtt().ratioTo(reactionInterval))
             }
             refWindow = refWindow.scaledBy(1.0 - backoff)
         }
@@ -367,6 +384,21 @@ class ScreamV2(
             this.feedbackHoldTime.scaledBy(1.0 - params.feedbackHoldTimeAvgG)
     }
 
+    private fun updateFeedbackInterval(feedbackTime: Instant) {
+        if (!lastFeedbackTime.isInfinite()) {
+            val delta = Duration.between(lastFeedbackTime, feedbackTime)
+            if (delta > Duration.ZERO) {
+                if (feedbackInterval.isZero) {
+                    feedbackInterval = delta
+                } else {
+                    val g = params.feedbackIntervalAvgG
+                    feedbackInterval = delta.scaledBy(g) + feedbackInterval.scaledBy(1.0 - g)
+                }
+            }
+        }
+        lastFeedbackTime = feedbackTime
+    }
+
     private fun updateTargetRate(parsed: ScreamFeedback) {
         // Avoid division by zero.
         val nonZeroSmoothedRtt = max(delayBasedCongestionControl.rtt(), 1.ms)
@@ -450,12 +482,14 @@ class ScreamV2(
     private val lossEstimator = LossEstimator(params)
 
     private var feedbackHoldTime: Duration = Duration.ZERO
+    private var lastFeedbackTime: Instant = NEVER
+    private var feedbackInterval: Duration = Duration.ZERO
 
     // Per-RTT stats
     private var lastDataInFlightUpdate: Instant = NEVER
     private var maxDataInFlightThisRtt = DataSize.ZERO
     private var maxDataInFlightPrevRtt = DataSize.ZERO
-
+    private var allowInitialRefWindowClamping = params.allowInitialRefWindowClamping
     private var receivedRate = Bandwidth.ZERO
     private var accumulatedReceivedBytes = DataSize.ZERO
     private var lastWindowReceiveTime: Instant = NEVER

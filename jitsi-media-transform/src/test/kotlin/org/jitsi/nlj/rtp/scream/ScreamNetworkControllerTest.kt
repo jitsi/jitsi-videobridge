@@ -80,6 +80,43 @@ class ScreamNetworkControllerTest : FreeSpec() {
         clock = clock
     )
 
+    private fun testClampsRefWindowOnFirstCongestionWhenStartingRateIsHigh(sendAsEct1: Boolean) {
+        val clock = createClock()
+        val constraints = TargetRateConstraints(startingRate = 300.kbps, minDataRate = 20.kbps, maxDataRate = 1000.kbps)
+        val config = createConfig(
+            clock,
+            constraints = constraints,
+            streamBasedConfig = StreamsConfig(maxTotalAllocatedBitrate = 1000.kbps)
+        )
+        val screamController = ScreamNetworkController(config)
+        screamController.onNetworkAvailability(NetworkAvailability(atTime = clock.instant(), networkAvailable = true))
+
+        // RTT is 200ms (100ms one-way delay), link capacity is 30 kbps.
+        val feedbackGenerator = CcFeedbackGenerator(
+            CcFeedbackGenerator.Config(
+                networkConfig = BuiltInNetworkBehaviorConfig(queueDelayMs = 100, linkCapacity = 30.kbps),
+                sendAsEct1 = sendAsEct1,
+                packetSize = 150.bytes
+            )
+        )
+
+        val rtt = 200.ms
+        val startTime = clock.instant()
+        var targetRate = constraints.startingRate!!
+        while (targetRate > 60.kbps && Duration.between(startTime, clock.instant()) < rtt.multipliedBy(10)) {
+            val feedback = feedbackGenerator.processUntilNextFeedback(
+                targetRate,
+                clock,
+                { packet -> screamController.onSentPacket(packet) }
+            )
+            val update = screamController.onTransportPacketsFeedback(feedback)
+            update.targetRate?.let { targetRate = it.targetRate }
+        }
+        targetRate shouldBeLessThanOrEqualTo 60.kbps
+        targetRate shouldBeGreaterThanOrEqualTo 20.kbps
+        Duration.between(startTime, clock.instant()) shouldBeLessThanOrEqualTo rtt.multipliedBy(2)
+    }
+
     private fun testRouteChangeWithoutBweRestart(initialQueueDelay: Duration, queueDelayAfterRouteChange: Duration) {
         val clock = createClock()
         val constraints = TargetRateConstraints(startingRate = 100.kbps, maxDataRate = 3000.kbps)
@@ -1086,6 +1123,14 @@ class ScreamNetworkControllerTest : FreeSpec() {
             streamUpdate.pacerConfig shouldNotBe null
             streamUpdate.pacerConfig!!.dataWindow shouldBe
                 dataSentAt(300.kbps.scaledBy(kPacingFactor), PacerConfig.kDefaultTimeInterval)
+        }
+
+        "ClampsRefWindowOnFirstDelayCongestionWhenStartingRateIsHigh" {
+            testClampsRefWindowOnFirstCongestionWhenStartingRateIsHigh(sendAsEct1 = false)
+        }
+
+        "ClampsRefWindowOnFirstCeCongestionWhenStartingRateIsHigh" {
+            testClampsRefWindowOnFirstCongestionWhenStartingRateIsHigh(sendAsEct1 = true)
         }
     }
 }

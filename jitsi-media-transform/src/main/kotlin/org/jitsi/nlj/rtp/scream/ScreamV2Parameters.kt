@@ -175,6 +175,18 @@ data class ScreamV2Parameters(
     // received until feedback is sent. If zero, this delay is ignored.
     val feedbackHoldTimeAvgG: Double = 1.0 / 8.0,
 
+    // Exponentially Weighted Moving Average (EWMA) factor for tracking average
+    // feedback interval.
+    val feedbackIntervalAvgG: Double = 0.1,
+
+    // If true, effective virtual_rtt is calculated as
+    // std::max(virtual_rtt, feedback_interval). Otherwise, virtual_rtt is used.
+    val useFeedbackIntervalForVirtualRtt: Boolean = true,
+
+    // If true, reference window is clamped to received rate on the first
+    // congestion event after the first RTT.
+    val allowInitialRefWindowClamping: Boolean = true,
+
     // If the time since last reaction to congestion is larger than this, the
     // pacing window is increased. I.e. packets are allowed to be sent in larger
     // bursts.
