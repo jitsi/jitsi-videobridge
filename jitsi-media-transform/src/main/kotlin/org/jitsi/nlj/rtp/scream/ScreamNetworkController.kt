@@ -15,11 +15,14 @@
  */
 package org.jitsi.nlj.rtp.scream
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtp.bandwidthestimation2.MutableNetworkControlUpdate
 import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkAvailability
 import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkControlUpdate
 import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkControllerConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkControllerInterface
+import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkControllerStatistics
 import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkRouteChange
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacerConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.ProbeClusterConfig
@@ -39,8 +42,10 @@ import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.min
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.isFinite
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.ms
+import org.jitsi.utils.toDouble
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.abs
@@ -362,6 +367,89 @@ class ScreamNetworkController(
         }
         return null
     }
+
+    /** Jitsi local addition. */
+    class StatisticsSnapshot(
+        val time: Instant,
+        val target: Bandwidth,
+        val pacing: Bandwidth,
+        val padding: Bandwidth,
+        val rtt: Duration,
+        val refWindow: DataSize,
+        val refWindowI: DataSize,
+        val maxDataInFlight: DataSize,
+        val dataInFlight: DataSize,
+        val l4sAlpha: Double,
+        val lossCongestionLevel: Double,
+        val queueDelay: Duration,
+        val queueDelayMinAvg: Duration,
+        val latencyDifferenceAvg: Duration,
+        val feedbackHoldTime: Duration,
+        val receivedRate: Bandwidth,
+        val isApplicationLimited: Boolean
+    ) : NetworkControllerStatistics {
+        override fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+            put("name", ScreamNetworkController::class.java.simpleName)
+            put("time", time.toEpochMilli())
+            put("target", target.bps)
+            put("pacing", pacing.bps)
+            put("padding", padding.bps)
+            put("rtt", rtt.toDouble())
+            put("ref_window", refWindow.bytes)
+            put("ref_window_i", refWindowI.bytes)
+            put("max_data_in_flight", maxDataInFlight.bytes)
+            put("data_in_flight", dataInFlight.bytes)
+            put("l4s_alpha", l4sAlpha)
+            put("loss_congestion_level", lossCongestionLevel)
+            put("queue_delay", if (queueDelay.isFinite()) queueDelay.toDouble() else Double.NaN)
+            put("queue_delay_min_avg", queueDelayMinAvg.toDouble())
+            put("latency_difference_avg", latencyDifferenceAvg.toDouble())
+            put("feedback_hold_time", feedbackHoldTime.toDouble())
+            put("received_rate", if (receivedRate.isFinite()) receivedRate.bps.toDouble() else Double.NaN)
+            put("is_application_limited", isApplicationLimited)
+        }
+
+        override fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
+            point.apply {
+                addField("target", target.bps)
+                addField("pacing", pacing.bps)
+                addField("padding", padding.bps)
+                addField("rtt", rtt.toDouble())
+                addField("ref_window", refWindow.bytes)
+                addField("ref_window_i", refWindowI.bytes)
+                addField("max_data_in_flight", maxDataInFlight.bytes)
+                addField("data_in_flight", dataInFlight.bytes)
+                addField("l4s_alpha", l4sAlpha)
+                addField("loss_congestion_level", lossCongestionLevel)
+                addField("queue_delay", if (queueDelay.isFinite()) queueDelay.toDouble() else Double.NaN)
+                addField("queue_delay_min_avg", queueDelayMinAvg.toDouble())
+                addField("latency_difference_avg", latencyDifferenceAvg.toDouble())
+                addField("feedback_hold_time", feedbackHoldTime.toDouble())
+                addField("received_rate", if (receivedRate.isFinite()) receivedRate.bps.toDouble() else Double.NaN)
+                addField("is_application_limited", isApplicationLimited)
+            }
+        }
+    }
+
+    override fun getStatistics(now: Instant): StatisticsSnapshot = StatisticsSnapshot(
+        time = now,
+        target = scream.targetRate(),
+        pacing = getPacingRate(),
+        padding = reportedPaddingRate,
+        rtt = scream.rtt(),
+        refWindow = scream.refWindow(),
+        refWindowI = scream.refWindowI(),
+        maxDataInFlight = scream.maxDataInFlight(),
+        dataInFlight = dataInFlight,
+        l4sAlpha = scream.l4sAlpha(),
+        lossCongestionLevel = scream.lossCongestionLevel(),
+        queueDelay = scream.delayBasedCongestionControl().queueDelay(),
+        queueDelayMinAvg = scream.delayBasedCongestionControl().queueDelayMinAvg(),
+        latencyDifferenceAvg = scream.delayBasedCongestionControl().latencyDifferenceAvg(),
+        feedbackHoldTime = scream.feedbackHoldTime(),
+        receivedRate = scream.receivedRate(),
+        isApplicationLimited = scream.isApplicationLimited()
+    )
 
     companion object {
         private val kDefaultStartRate = 300.kbps
