@@ -832,6 +832,51 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             }
         }
 
+        // Jitsi local: WebRTC has no test of this.
+        "CongestionControlFeedbackTimestampWraps" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            // The compact NTP timestamp of a report holds the seconds modulo 2^16. It wraps at this time.
+            val kWrapTime = Instant.EPOCH + 33152.secs
+
+            val packets = listOf(
+                PacketTemplate(
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    sendTimestamp = Instant.EPOCH + 100.ms,
+                    receiveTimestamp = kWrapTime - 50.ms
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 102,
+                    sendTimestamp = Instant.EPOCH + 200.ms,
+                    receiveTimestamp = kWrapTime + 50.ms
+                ),
+            )
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            val adaptedFeedback1 = test.adapter.processCongestionControlFeedback(
+                buildRtcpCongestionControlFeedbackPacket(listOf(packets[0])),
+                feedbackReceiveTime = Instant.EPOCH + 1000.ms
+            )
+            // The second report is delayed on the way back.
+            val adaptedFeedback2 = test.adapter.processCongestionControlFeedback(
+                buildRtcpCongestionControlFeedbackPacket(listOf(packets[1])),
+                feedbackReceiveTime = Instant.EPOCH + 1150.ms
+            )
+
+            // The receive times follow the timestamps of the reports, not the times the reports arrived.
+            val receiveTimeDelta = Duration.between(
+                adaptedFeedback1!!.packetFeedbacks[0].receiveTime,
+                adaptedFeedback2!!.packetFeedbacks[0].receiveTime
+            )
+            (receiveTimeDelta - 100.ms).abs() shouldBeLessThanOrEqualTo 1.ms
+        }
+
         "CongestionControlFeedbackResultHasEcn" {
             val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
 
