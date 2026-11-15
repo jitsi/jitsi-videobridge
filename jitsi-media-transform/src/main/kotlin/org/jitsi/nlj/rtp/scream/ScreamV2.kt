@@ -205,10 +205,55 @@ class ScreamV2(
 
     fun isApplicationLimited(): Boolean = isApplicationLimited
 
+    // Minimum interval between congestion backoff reactions.
     private fun reactionInterval(): Duration = if (params.useFeedbackIntervalForVirtualRtt) {
         max(params.virtualRtt, feedbackInterval)
     } else {
         params.virtualRtt
+    }
+
+    // Scales `backoff` so a full reduction is applied immediately, and a new
+    // backoff cycle only starts one RTT after `data_in_flight <= ref_window_`.
+    // Until then, only increases in `backoff` above `last_backoff_` are applied.
+    private fun scaleBackoff(parsed: ScreamFeedback, backoff: Double): Double {
+        if (!params.useNonLinearBackoffScale) {
+            // Legacy linear scaling: spread `backoff` evenly across the estimated
+            // number of feedbacks per RTT (`rtt / ReactionInterval()`).
+            return backoff / max(1.0, delayBasedCongestionControl.rtt().ratioTo(reactionInterval()))
+        }
+        if (!lastBackoffRttStartTime.isInfinite() && parsed.dataInFlight > refWindow) {
+            // State 1: Draining in-flight data after a window reduction.
+            // A reduction in `ref_window_` does not reduce the bottleneck queue until
+            // actual `data_in_flight` drops down to the reduced `ref_window_`. Keep
+            // resetting the 1-RTT observation timer until `data_in_flight <=
+            // ref_window_`.
+            lastBackoffRttStartTime = parsed.feedbackTime
+        }
+        if (timeBetween(lastBackoffRttStartTime, parsed.feedbackTime) >= delayBasedCongestionControl.rtt()) {
+            // State 2: Start of a new backoff cycle.
+            // Either this is the very first congestion event
+            // (`last_backoff_rtt_start_time_` is MinusInfinity), or at least one full
+            // RTT has elapsed since `data_in_flight` drained to `ref_window_` and
+            // congestion is still present. Apply the full `backoff` immediately.
+            lastBackoffRttStartTime = parsed.feedbackTime
+            lastBackoff = backoff
+            return backoff
+        }
+        if (backoff > lastBackoff && lastBackoff < 1.0) {
+            // State 3: Congestion is worsening within the current backoff cycle.
+            // `l4s_alpha_` or `l4s_alpha_v()` has increased since the cycle started.
+            // Apply only the incremental reduction `delta_backoff` such that
+            // `(1 - last_backoff_) * (1 - delta_backoff) = 1 - backoff`, ensuring
+            // the cumulative reduction over the cycle matches the peak `backoff`.
+            val deltaBackoff = (backoff - lastBackoff) / (1.0 - lastBackoff)
+            lastBackoff = backoff
+            return deltaBackoff
+        }
+        // State 4: Waiting for the current backoff to take effect.
+        // Within the current cycle and `backoff <= last_backoff_`; do not reduce
+        // `ref_window_` further while waiting one RTT after `data_in_flight <=
+        // ref_window_` to observe the effect of the already-applied reduction.
+        return 0.0
     }
 
     private fun updateL4SAlpha(parsed: ScreamFeedback) {
@@ -252,37 +297,35 @@ class ScreamV2(
             timeSinceLastReaction >= min(delayBasedCongestionControl.rtt(), reactionInterval)
         ) {
             lastReactionToCongestionTime = parsed.feedbackTime
+            var backoff = 0.0
             if (allowInitialRefWindowClamping && receivedRate.isFinite()) {
                 // Clamp ref_window to received rate on the first congestion event,
                 // to adjust if starting rate was much higher than link capacity.
-                refWindow = clamp(
+                val clampedRefWindow = clamp(
                     dataSentAt(receivedRate, delayBasedCongestionControl.rtt() + feedbackHoldTime),
                     params.minRefWindow,
                     refWindow
                 )
+                backoff = 1.0 - clampedRefWindow.ratioTo(refWindow)
                 allowInitialRefWindowClamping = false
             }
 
-            var backoff = 0.0
             if (isLoss) { // Back off due to loss
-                backoff = 1.0 - params.betaLoss
+                backoff = max(backoff, 1.0 - params.betaLoss)
             } else if (isCe) { // Backoff due to ECN-CE marking
-                backoff = l4sAlpha / 2.0
-                // Scale down backoff when RTT is high as several backoff events occur
-                // per RTT. Scaling is relative to reaction_interval to account for
-                // how often feedback is actually received.
-                backoff /= max(1.0, delayBasedCongestionControl.rtt().ratioTo(reactionInterval))
+                var ceBackoff = scaleBackoff(parsed, max(backoff, l4sAlpha / 2.0))
 
                 if (!delayBasedCongestionControl.isQueueDelayDetected()) {
                     // Scale down backoff if close to the last known max reference window
                     // This is complemented with a scale down of the reference window
                     // increase
-                    backoff *= max(0.25, refWindowScaleFactorCloseToRefWindowI())
+                    ceBackoff *= max(0.25, refWindowScaleFactorCloseToRefWindowI())
                     // Counterbalance the limitation in reference window increase when the
                     // queue delay varies. This helps to avoid starvation in the presence
                     // of competing TCP Prague flows.
-                    backoff *= max(0.1, delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay())
+                    ceBackoff *= max(0.1, delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay())
                 }
+                backoff = max(backoff, ceBackoff)
 
                 if (timeSinceLastReaction.isFinite() &&
                     timeSinceLastReaction >
@@ -302,8 +345,7 @@ class ScreamV2(
                     l4sAlpha = 0.25
                 }
             } else if (isVirtualCe) { // Back off due to delay
-                backoff = delayBasedCongestionControl.l4sAlphaV() / 2.0
-                backoff /= max(1.0, delayBasedCongestionControl.rtt().ratioTo(reactionInterval))
+                backoff = scaleBackoff(parsed, max(backoff, delayBasedCongestionControl.l4sAlphaV() / 2.0))
             }
             refWindow = refWindow.scaledBy(1.0 - backoff)
         }
@@ -484,6 +526,8 @@ class ScreamV2(
     // since `ref_window_i_` was last set.
     private var allowRefWindowIUpdate = true
     private var lastRefWindowIncreaseScaleFactor = 1.0
+    private var lastBackoff = 0.0
+    private var lastBackoffRttStartTime: Instant = NEVER
 
     // `l4s_alpha_` tracks the average fraction of ECN-CE marked data units per
     // Round-Trip Time.
