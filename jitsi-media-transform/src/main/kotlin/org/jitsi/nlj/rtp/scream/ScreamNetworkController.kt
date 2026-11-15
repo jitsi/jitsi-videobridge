@@ -313,7 +313,7 @@ class ScreamNetworkController(
             ) {
                 defaultPacingWindow
             } else {
-                10.ms
+                params.burstSize
             }
 
         var allowPadding = false

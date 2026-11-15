@@ -260,6 +260,10 @@ data class ScreamV2Parameters(
     // bursts.
     val allowLargePacingBurstsAfterCongestionTime: Duration = 15.secs,
 
+    // Pacing burst size (time window) used when congestion has occurred within
+    // `allow_large_pacing_bursts_after_congestion_time`.
+    val burstSize: Duration = 2.ms,
+
     // Enable application-limited (ALR) state tracking.
     // In ALR, reference window can not increase, and RTT is updated slower.
     val enableAlr: Boolean = true,

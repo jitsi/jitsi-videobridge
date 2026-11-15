@@ -448,7 +448,7 @@ class ScreamNetworkControllerTest : FreeSpec() {
                 update.targetRate?.let { sendRate = it.targetRate }
             }
             update.pacerConfig shouldNotBe null
-            update.pacerConfig!!.timeWindow shouldBeLessThan PacerConfig.kDefaultTimeInterval
+            update.pacerConfig!!.timeWindow shouldBe 2.ms
         }
 
         "PacingWindowReducedIfDelayCongestedStreamsConfigured" {
@@ -478,7 +478,7 @@ class ScreamNetworkControllerTest : FreeSpec() {
                 update.targetRate?.let { sendRate = it.targetRate }
             }
             update.pacerConfig shouldNotBe null
-            update.pacerConfig!!.timeWindow shouldBeLessThan PacerConfig.kDefaultTimeInterval
+            update.pacerConfig!!.timeWindow shouldBe 2.ms
         }
 
         "PacingWindowNotReducedIfNotCongested" {
