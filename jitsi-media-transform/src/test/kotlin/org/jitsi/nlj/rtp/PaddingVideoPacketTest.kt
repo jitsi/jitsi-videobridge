@@ -17,9 +17,13 @@
 package org.jitsi.nlj.rtp
 
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.rtp.RtpPacket
 
 class PaddingVideoPacketTest : ShouldSpec() {
 
@@ -50,6 +54,34 @@ class PaddingVideoPacketTest : ShouldSpec() {
                 }
                 should("have the version set") {
                     paddingPacket.version shouldBe RtpHeader.VERSION
+                }
+            }
+            context("from a pool which gives buffers of exactly the size asked for") {
+                BufferPool.getBuffer = { size -> ByteArray(size) }
+                for (length in listOf(205, 220, 267)) {
+                    val paddingPacket = PaddingVideoPacket.create(length)
+                    should("leave room before and after the $length bytes of the packet") {
+                        paddingPacket.length shouldBe length
+                        paddingPacket.paddingSize shouldBe length - 12
+                        paddingPacket.offset shouldBe RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET
+                        val room = paddingPacket.buffer.size - paddingPacket.offset - paddingPacket.length
+                        room shouldBeGreaterThanOrEqual Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
+                    }
+                }
+                should("take a header extension without a new buffer, and without moving the padding") {
+                    val paddingPacket = PaddingVideoPacket.create(267)
+                    val buffer = paddingPacket.buffer
+                    val payloadOffset = paddingPacket.payloadOffset
+
+                    // The size of the transport-cc header extension.
+                    paddingPacket.addHeaderExtension(5, 2)
+                    paddingPacket.encodeHeaderExtensions()
+
+                    paddingPacket.buffer shouldBeSameInstanceAs buffer
+                    paddingPacket.payloadOffset shouldBe payloadOffset
+                    paddingPacket.paddingSize shouldBe 267 - 12
+                    val room = paddingPacket.buffer.size - paddingPacket.offset - paddingPacket.length
+                    room shouldBeGreaterThanOrEqual Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
                 }
             }
         }

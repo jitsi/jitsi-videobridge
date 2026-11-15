@@ -935,7 +935,7 @@ class RtpPacketTest : ShouldSpec() {
     }
 }
 
-// This imitates PaddingVideoPacket in jmt
+// This imitates PaddingVideoPacket in jmt, but in a buffer with no room around the packet.
 class PaddingOnlyPacket private constructor(
     buffer: ByteArray,
     offset: Int,

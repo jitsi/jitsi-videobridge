@@ -17,7 +17,9 @@
 package org.jitsi.nlj.rtp
 
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.rtp.Packet.Companion.BYTES_TO_LEAVE_AT_END_OF_PACKET
 import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.rtp.RtpPacket.Companion.BYTES_TO_LEAVE_AT_START_OF_PACKET
 
 class PaddingVideoPacket private constructor(
     buffer: ByteArray,
@@ -36,13 +38,16 @@ class PaddingVideoPacket private constructor(
          * could fail, so we use a helper here instead
          */
         fun create(length: Int): PaddingVideoPacket {
-            val buf = BufferPool.getBuffer(length)
+            // Like other packets, leave room around the data for what is added on the way out: before it for header
+            // extensions, and after it for things such as the SRTP authentication tag.
+            val offset = BYTES_TO_LEAVE_AT_START_OF_PACKET
+            val buf = BufferPool.getBuffer(offset + length + BYTES_TO_LEAVE_AT_END_OF_PACKET)
             // It's possible we the buffer we pulled from the pool already has
             // data in it, and we won't be overwriting it with anything so clear
             // out the data
-            buf.fill(0, 0, length)
+            buf.fill(0, offset, offset + length)
 
-            return PaddingVideoPacket(buf, 0, length).apply {
+            return PaddingVideoPacket(buf, offset, length).apply {
                 // Recalculate the header length now that we've zero'd everything out
                 // and set the fields
                 version = RtpHeader.VERSION
