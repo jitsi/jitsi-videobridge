@@ -64,6 +64,7 @@ data class PacketTemplate(
     // TODO do we need mediaType?
     val packetSize: DataSize = 100.bytes,
 
+    val sendAsEct1: Boolean = true,
     val ecn: EcnMarking = EcnMarking.kNotEct,
     val sendTimestamp: Instant = Instant.EPOCH,
     val pacingInfo: PacedPacketInfo = PacedPacketInfo(),
@@ -146,6 +147,7 @@ private fun createPacketToSend(packet: PacketTemplate): org.jitsi.nlj.PacketInfo
     }
     val packetInfo = org.jitsi.nlj.PacketInfo(sendPacket).apply {
         probingInfo = packet.pacingInfo
+        sendAsEct1 = packet.sendAsEct1
     }
 
     return packetInfo
@@ -201,6 +203,10 @@ enum class FeedbackType {
 }
 
 private fun timeNow() = Instant.EPOCH + 1234.ms
+
+// Returns feedback matching transport sequence number.
+private fun findFeedback(report: TransportPacketsFeedback?, transportSequenceNumber: Long): PacketResult? =
+    report?.packetFeedbacks?.find { it.sentPacket.sequenceNumber == transportSequenceNumber }
 
 class OneTransportFeedbackAdapterTest(val feedbackType: FeedbackType) {
     private val logger = createLogger()
@@ -660,6 +666,39 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             adaptedFeedback.transportSupportsEcn shouldBe true
         }
 
+        "CongestionControlFeedbackResultPassSentWithEct1PerPacket" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            val packets = listOf(
+                PacketTemplate(
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    sendAsEct1 = true,
+                    sendTimestamp = Instant.EPOCH + 100.ms,
+                    receiveTimestamp = Instant.EPOCH + 200.ms
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 102,
+                    sendAsEct1 = false,
+                    sendTimestamp = Instant.EPOCH + 110.ms,
+                    receiveTimestamp = Instant.EPOCH + 210.ms
+                ),
+            )
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
+            val adaptedFeedback = test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow())
+
+            adaptedFeedback!!.packetFeedbacks.size shouldBe 2
+            adaptedFeedback.packetFeedbacks[0].sentWithEct1 shouldBe true
+            adaptedFeedback.packetFeedbacks[1].sentWithEct1 shouldBe false
+        }
+
         "ReportTransportDoesNotSupportEcnIfFeedbackContainNotEctPacket" {
             val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
 
@@ -821,6 +860,117 @@ class TransportFeedbackAdapterTest : FreeSpec() {
                 feedbackReceiveTime = packets[1].sendTimestamp + kExpectedBaseRtt + 10.ms
             )
             adaptedFeedback!!.smoothedRtt shouldBeGreaterThan firstAdaptedFeedback.smoothedRtt
+        }
+
+        "CongestionControlFeedbackResultReportsLostPacketOnce" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            val packets = listOf(
+                PacketTemplate(
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    sendTimestamp = Instant.EPOCH + 100.ms,
+                    receiveTimestamp = Instant.EPOCH + 200.ms
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 102,
+                    sendTimestamp = Instant.EPOCH + 110.ms,
+                    receiveTimestamp = NEVER
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 3,
+                    rtpSequenceNumber = 103,
+                    sendTimestamp = Instant.EPOCH + 120.ms,
+                    receiveTimestamp = Instant.EPOCH + 210.ms
+                ),
+            )
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
+            var packetFeedback = findFeedback(
+                test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow()),
+                transportSequenceNumber = 2
+            )
+            packetFeedback shouldNotBe null
+            packetFeedback!!.isReceived() shouldBe false
+            packetFeedback.reportedLostForTheFirstTime shouldBe true
+
+            // Process the same report again.
+            packetFeedback = findFeedback(
+                test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow()),
+                transportSequenceNumber = 2
+            )
+            packetFeedback shouldNotBe null
+            packetFeedback!!.isReceived() shouldBe false
+            packetFeedback.reportedLostForTheFirstTime shouldBe false
+        }
+
+        "CongestionControlFeedbackResultReportsRecoveredPacketOnce" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            val packets = listOf(
+                PacketTemplate(
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    sendTimestamp = Instant.EPOCH + 100.ms
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 102,
+                    sendTimestamp = Instant.EPOCH + 110.ms
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 3,
+                    rtpSequenceNumber = 103,
+                    sendTimestamp = Instant.EPOCH + 120.ms
+                ),
+            )
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            // Produce feedback where 2nd packet is lost.
+            packets[0].receiveTimestamp = Instant.EPOCH + 200.ms
+            packets[2].receiveTimestamp = Instant.EPOCH + 220.ms
+            var packetFeedback = findFeedback(
+                test.adapter.processCongestionControlFeedback(
+                    buildRtcpCongestionControlFeedbackPacket(packets),
+                    timeNow()
+                ),
+                transportSequenceNumber = 2
+            )
+            packetFeedback shouldNotBe null
+            packetFeedback!!.isReceived() shouldBe false
+
+            // Produce feedback where 2nd packet is received.
+            packets[1].receiveTimestamp = Instant.EPOCH + 240.ms
+            val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
+            packetFeedback = findFeedback(
+                test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow()),
+                transportSequenceNumber = 2
+            )
+            packetFeedback shouldNotBe null
+            packetFeedback!!.isReceived() shouldBe true
+            packetFeedback.reportedRecoveredForTheFirstTime shouldBe true
+
+            // Process the same report again.
+            // Packet either shouldn't be reported again, or, if reported, shouldn't be
+            // set as recovered again.
+            packetFeedback = findFeedback(
+                test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow()),
+                transportSequenceNumber = 2
+            )
+            if (packetFeedback != null) {
+                packetFeedback.isReceived() shouldBe true
+                packetFeedback.reportedRecoveredForTheFirstTime shouldBe false
+            }
         }
     }
 }

@@ -165,11 +165,21 @@ class TransportLossReport(
 class PacketResult(
     var sentPacket: SentPacket = SentPacket(),
     var receiveTime: Instant = NEVER,
+    // Ecn marking from the feedback report how this packet was received.
     var ecn: EcnMarking = EcnMarking.kNotEct,
+
+    // Indicates if packet was sent with ECN marking 'ect1'.
+    var sentWithEct1: Boolean = false,
+
+    // Indicates if packet was reported lost for the first time.
+    var reportedLostForTheFirstTime: Boolean = false,
+
+    // Indicates if packet was recovered, i.e., previously feedback report marked
+    // this packet as lost, but current report marks it as received.
+    var reportedRecoveredForTheFirstTime: Boolean = false,
+
     // `rtp_packet_info` is only set if the feedback is related to a RTP packet.
-    var rtpPacketInfo: RtpPacketInfo? = null,
-    // Jitsi extension: Whether a packet was previously reported lost
-    var previouslyReportedLost: Boolean = false
+    var rtpPacketInfo: RtpPacketInfo? = null
 ) {
     data class RtpPacketInfo(
         val ssrc: Long = 0,
@@ -179,7 +189,15 @@ class PacketResult(
 
     fun isReceived() = receiveTime.isFinite()
 
-    fun copy(): PacketResult = PacketResult(sentPacket.copy(), receiveTime, ecn, rtpPacketInfo, previouslyReportedLost)
+    fun copy(): PacketResult = PacketResult(
+        sentPacket.copy(),
+        receiveTime,
+        ecn,
+        sentWithEct1,
+        reportedLostForTheFirstTime,
+        reportedRecoveredForTheFirstTime,
+        rtpPacketInfo
+    )
 }
 
 /**
