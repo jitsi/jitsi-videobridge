@@ -36,6 +36,8 @@ import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.min
+import org.jitsi.nlj.util.rateOf
+import org.jitsi.nlj.util.scaledBy
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.logging2.createLogger

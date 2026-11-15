@@ -22,13 +22,13 @@ import org.jitsi.nlj.rtp.bandwidthestimation2.BitrateProberConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacerConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.ProbeClusterConfig
-import org.jitsi.nlj.rtp.scream.dataSentAt
-import org.jitsi.nlj.rtp.scream.rateOf
-import org.jitsi.nlj.rtp.scream.timeToSend
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.dataSentAt
 import org.jitsi.nlj.util.min
+import org.jitsi.nlj.util.rateOf
+import org.jitsi.nlj.util.timeToSend
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite

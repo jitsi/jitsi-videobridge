@@ -17,9 +17,9 @@
 
 package org.jitsi.nlj.rtp.pacing
 
-import org.jitsi.nlj.rtp.scream.microsToDuration
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.microsToDuration
 import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.logging2.Logger

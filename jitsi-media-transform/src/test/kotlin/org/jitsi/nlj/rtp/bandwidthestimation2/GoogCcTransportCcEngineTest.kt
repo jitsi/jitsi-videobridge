@@ -28,9 +28,9 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.scream.ScreamNetworkController
-import org.jitsi.nlj.rtp.scream.scaledBy
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.util.scaledBy
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.ReceivedPacketInfo
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacketBuilder
