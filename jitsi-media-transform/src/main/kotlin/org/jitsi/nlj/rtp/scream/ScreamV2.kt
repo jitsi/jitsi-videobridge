@@ -380,7 +380,7 @@ class ScreamV2(
             // Limit increase for small RTTs
             if (delayBasedCongestionControl.rtt() + feedbackHoldTime < params.virtualRtt) {
                 val rttRatio = (delayBasedCongestionControl.rtt() + feedbackHoldTime).ratioTo(params.virtualRtt)
-                increaseScaleFactor = increaseScaleFactor * (rttRatio * rttRatio)
+                increaseScaleFactor = increaseScaleFactor * rttRatio
             }
 
             // Limit increase when close to the last inflection point.
