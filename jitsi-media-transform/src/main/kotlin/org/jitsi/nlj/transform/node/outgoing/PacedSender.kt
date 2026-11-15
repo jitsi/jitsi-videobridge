@@ -32,6 +32,8 @@ import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.MonotonicClock
 import org.jitsi.nlj.util.wholeBytes
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.MAX_DURATION
+import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.ms
@@ -114,6 +116,9 @@ class PacedSender(
     @Volatile
     private var queueSize = DataSize.ZERO
 
+    @Volatile
+    private var expectedQueueTime: Duration = Duration.ZERO
+
     // Statistics
     private var numPacketsPaced = 0L
     private var numPacketsPassedThrough = 0L
@@ -145,6 +150,8 @@ class PacedSender(
     }
 
     override fun queueSizeData(): DataSize = queueSize
+
+    override fun expectedQueueTime(): Duration = expectedQueueTime
 
     /** Runs the pacer on [executor], to apply the pending updates and send what they allow. */
     private fun requestProcess() {
@@ -224,6 +231,7 @@ class PacedSender(
             earlyExecuteMargin = earlyExecuteMargin()
         }
         queueSize = controller.queueSizeData()
+        expectedQueueTime = expectedQueueTimeOfController()
 
         if (!needsTimer()) {
             cancelTimer()
@@ -246,6 +254,13 @@ class PacedSender(
                 TimeUnit.NANOSECONDS
             )
         }
+    }
+
+    /** The expected queue time of the controller. The queue never empties at a pacing rate of zero. */
+    private fun expectedQueueTimeOfController(): Duration = when {
+        controller.pacingRate() > Bandwidth.ZERO -> controller.expectedQueueTime()
+        controller.queueSizePackets() == 0 -> Duration.ZERO
+        else -> MAX_DURATION
     }
 
     private fun earlyExecuteMargin(): Duration =
@@ -361,6 +376,7 @@ class PacedSender(
                 queuedSsrcs.forEach { controller.removePacketsForSsrc(it) }
                 queuedSsrcs.clear()
                 queueSize = DataSize.ZERO
+                expectedQueueTime = Duration.ZERO
             }
         }
         super.stop()
@@ -374,7 +390,11 @@ class PacedSender(
             addNumber("queue_size_bytes", controller.queueSizeData().wholeBytes())
             if (configured) {
                 addNumber("pacing_rate_bps", controller.pacingRate().bps)
-                addNumber("expected_queue_time_ms", controller.expectedQueueTime().toMillis())
+                val expectedQueueTime = expectedQueueTimeOfController()
+                addNumber(
+                    "expected_queue_time_ms",
+                    if (expectedQueueTime.isFinite()) expectedQueueTime.toMillis() else -1
+                )
             }
             addNumber("padding_rate_bps", paddingRate.bps)
             addNumber("num_packets_paced", numPacketsPaced)

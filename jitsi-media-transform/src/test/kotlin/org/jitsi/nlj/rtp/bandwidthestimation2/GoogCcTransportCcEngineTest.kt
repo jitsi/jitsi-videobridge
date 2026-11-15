@@ -34,6 +34,8 @@ import org.jitsi.nlj.rtp.scream.ScreamNetworkController
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.bps
+import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.scaledBy
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.ReceivedPacketInfo
@@ -44,6 +46,7 @@ import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 import java.time.Duration
 
 /** Jitsi local: tests of how GoogCcTransportCcEngine chooses its network controller and marks packets ECT(1). */
@@ -129,7 +132,12 @@ class GoogCcTransportCcEngineTest : ShouldSpec() {
             probeClusters.addAll(configs)
         }
 
-        override fun queueSizeData(): DataSize = DataSize.ZERO
+        var queueSize = DataSize.ZERO
+        var expectedQueueTime: Duration = Duration.ZERO
+
+        override fun queueSizeData(): DataSize = queueSize
+
+        override fun expectedQueueTime(): Duration = expectedQueueTime
     }
 
     init {
@@ -161,11 +169,23 @@ class GoogCcTransportCcEngineTest : ShouldSpec() {
                 pacer.probeClusters.isNotEmpty() shouldBe true
                 numProbesRequested shouldBe 0
             }
-            should("not report congestion, since Google CC sets no congestion window") {
+            should("not report congestion before there is feedback, since Google CC has no congestion window then") {
                 for (i in 1..200) {
                     engine.sendPacket()
                 }
                 pacer.congestedStates shouldBe emptyList()
+            }
+            should("report a rate of zero while the queue of the pacer is too long") {
+                val targetRate = targetRates.last()
+                targetRate shouldBeGreaterThan Bandwidth.ZERO
+
+                pacer.expectedQueueTime = 3.secs
+                scheduler.runUntil(clock.instant() + 30.ms)
+                targetRates.last() shouldBe Bandwidth.ZERO
+
+                pacer.expectedQueueTime = 100.ms
+                scheduler.runUntil(clock.instant() + 30.ms)
+                targetRates.last() shouldBe targetRate
             }
         }
 
@@ -193,6 +213,19 @@ class GoogCcTransportCcEngineTest : ShouldSpec() {
                     engine.receiveFeedback(seqNum, EcnMarking.kEct1)
                 }
                 pacer.congestedStates shouldBe listOf(true, false)
+            }
+            should("report a lower rate when the controller reports a reduce ratio for the queue of the pacer") {
+                val targetRate = targetRates.last()
+
+                // SCReAM asks for the most reduction when the queue takes more than 500 ms to send.
+                pacer.queueSize = (10 * 1000 * 1000).bytes
+                scheduler.runUntil(clock.instant() + 30.ms)
+                // The most that is taken off the target rate is half.
+                targetRates.last() shouldBe (targetRate.bps - targetRate.bps / 2).bps
+
+                pacer.queueSize = DataSize.ZERO
+                scheduler.runUntil(clock.instant() + 30.ms)
+                targetRates.last() shouldBe targetRate
             }
         }
 

@@ -23,9 +23,11 @@ import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo.Companion.kNotAProbe
 import org.jitsi.nlj.rtp.pacing.PacerControl
+import org.jitsi.nlj.rtp.pacing.PacingController
 import org.jitsi.nlj.rtp.scream.ScreamNetworkController
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
@@ -198,6 +200,79 @@ class GoogCcTransportCcEngine(
 
     /** Whether the data in flight has reached the congestion window. */
     private var isCongested = false
+
+    /** The reduce ratio that the network controller reported with its last target rate. */
+    private var lastCwndReduceRatio = 0.0
+
+    /** Whether the rate reported to the listeners is zero because the queue of the pacer is too long. */
+    private var pacerQueueTooLong = false
+
+    /**
+     * Reports the rate that the listeners can send at. Without a pacer this is the target rate of the network
+     * controller. With a pacer the engine makes two adjustments that WebRTC makes outside the controller:
+     *
+     * The target rate is reduced by the controller's reduce ratio, as in VideoStreamEncoder::UpdateTargetBitrate.
+     * A controller reports that ratio, and leaves its target rate unchanged, when too much data is in flight or
+     * waiting in the pacer. WebRTC's encoder drops frames in answer. Here the listener allocates less.
+     *
+     * The rate is zero while the packets waiting in the pacer would take longer to send than
+     * [PacingController.kMaxExpectedQueueLength], as in CongestionControlHandler::GetUpdate.
+     *
+     * Throws the first exception that a listener throws, after all listeners have been called.
+     */
+    private fun reportTargetRate() {
+        val targetRate = lastTargetRate ?: return
+        val rate = when {
+            pacer == null -> targetRate
+            pacerQueueTooLong -> Bandwidth.ZERO
+            else -> reduceTargetRate(targetRate, lastCwndReduceRatio)
+        }
+        var listenerFailure: Throwable? = null
+        listeners.forEach { listener ->
+            try {
+                listener.bandwidthEstimationChanged(rate)
+            } catch (t: Throwable) {
+                val first = listenerFailure
+                if (first == null) {
+                    listenerFailure = t
+                } else {
+                    first.addSuppressed(t)
+                }
+            }
+        }
+        listenerFailure?.let { throw it }
+    }
+
+    /** VideoStreamEncoder::UpdateTargetBitrate in WebRTC, with the minimum rate of the estimator as the minimum. */
+    private fun reduceTargetRate(targetRate: Bandwidth, cwndReduceRatio: Double): Bandwidth {
+        val minRate = BandwidthEstimatorConfig.minBw
+        if (cwndReduceRatio > 0.01 && targetRate > Bandwidth.ZERO && targetRate > minRate) {
+            val reduceBitrateBps = minOf((targetRate.bps * cwndReduceRatio).toLong(), targetRate.bps - minRate.bps)
+            if (reduceBitrateBps > 0) {
+                // At maximum the congestion window can drop 1/2 frames.
+                val frameDropInterval = maxOf(2L, targetRate.bps / reduceBitrateBps)
+                return (targetRate.bps - targetRate.bps / frameDropInterval).bps
+            }
+        }
+        return targetRate
+    }
+
+    /** Stops the listeners from sending while the queue of the pacer is too long, and lets them send again after. */
+    private fun updatePacerQueueTooLong() {
+        val pacer = pacer ?: return
+        val tooLong = pacer.expectedQueueTime() > PacingController.kMaxExpectedQueueLength
+        if (tooLong != pacerQueueTooLong) {
+            pacerQueueTooLong = tooLong
+            logger.info(
+                if (tooLong) {
+                    "The queue of the pacer is too long, reporting a rate of zero."
+                } else {
+                    "The queue of the pacer is short again, reporting the target rate."
+                }
+            )
+            reportTargetRate()
+        }
+    }
 
     /**
      * Tells the pacer when the data in flight reaches the congestion window or falls below it, as
@@ -431,6 +506,7 @@ class GoogCcTransportCcEngine(
             processExceptionLog.loggingExceptions {
                 synchronized(this@GoogCcTransportCcEngine) {
                     val now = clock.instant()
+                    updatePacerQueueTooLong()
                     processUpdate(
                         networkController.onProcessInterval(
                             ProcessInterval(atTime = now, pacerQueue = pacer?.queueSizeData())
@@ -499,17 +575,11 @@ class GoogCcTransportCcEngine(
         update.targetRate?.let { targetRate ->
             logger.debug { "GoogleCcEstimator setting TargetRate to $targetRate" }
             lastTargetRate = targetRate.targetRate
-            listeners.forEach { listener ->
-                try {
-                    listener.bandwidthEstimationChanged(targetRate.targetRate)
-                } catch (t: Throwable) {
-                    val first = listenerFailure
-                    if (first == null) {
-                        listenerFailure = t
-                    } else {
-                        first.addSuppressed(t)
-                    }
-                }
+            lastCwndReduceRatio = targetRate.cwndReduceRatio
+            try {
+                reportTargetRate()
+            } catch (t: Throwable) {
+                listenerFailure = t
             }
         }
         val pacer = pacer

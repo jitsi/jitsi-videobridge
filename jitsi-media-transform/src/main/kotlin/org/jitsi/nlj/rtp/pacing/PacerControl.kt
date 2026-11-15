@@ -18,6 +18,7 @@ package org.jitsi.nlj.rtp.pacing
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacerConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.ProbeClusterConfig
 import org.jitsi.nlj.util.DataSize
+import java.time.Duration
 
 /**
  * The part of a pacer that the code which runs a network controller uses. These are the calls that
@@ -38,4 +39,7 @@ interface PacerControl {
 
     /** The total size of the packets that are waiting in the pacer. */
     fun queueSizeData(): DataSize
+
+    /** The time it takes to send the packets that are waiting in the pacer, at the current pacing rate. */
+    fun expectedQueueTime(): Duration
 }
