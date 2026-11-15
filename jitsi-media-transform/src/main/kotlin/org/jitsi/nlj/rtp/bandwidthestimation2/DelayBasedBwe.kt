@@ -228,8 +228,6 @@ class DelayBasedBwe(
         rateControl.setMinBitrate(minBitrate)
     }
 
-    fun getExpectedBwePeriod(): Duration = rateControl.getExpectedBandwidthPeriod()
-
     fun lastEstimate(): Bandwidth = prevBitrate
     fun lastState(): BandwidthUsage = prevState
 

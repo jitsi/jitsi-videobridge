@@ -240,13 +240,12 @@ class NetworkEstimate {
     // Deprecated, use TargetTransferRate::target_rate instead.
     var bandwidth = Bandwidth.INFINITY
     var roundTripTime = MAX_DURATION
-    var bwePeriod = MAX_DURATION
 
     var lossRateRatio = 0.0f
 
     /* Jitsi local */
     override fun toString(): String = "atTime $atTime: " +
-        "bandwidth $bandwidth, rtt $roundTripTime, bwePeriod $bwePeriod, lossRateRatio $lossRateRatio"
+        "bandwidth $bandwidth, rtt $roundTripTime, lossRateRatio $lossRateRatio"
 }
 
 class PacerConfig {
@@ -355,7 +354,6 @@ open class NetworkControlUpdate(
             point.addField("target_rate_bps", it.targetRate.bps)
             point.addField("cwnd_reduce_ratio", it.cwndReduceRatio)
             point.addField("rtt_ms", it.networkEstimate.roundTripTime.toDoubleMillis())
-            point.addField("bwe_period_ms", it.networkEstimate.bwePeriod.toDoubleMillis())
             point.addField("loss_rate_ratio", it.networkEstimate.lossRateRatio)
         }
         congestionWindow?.let {
