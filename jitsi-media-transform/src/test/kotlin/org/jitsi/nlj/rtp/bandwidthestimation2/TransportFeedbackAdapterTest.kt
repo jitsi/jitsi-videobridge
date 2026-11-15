@@ -24,6 +24,7 @@ import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
@@ -1259,6 +1260,161 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             // The arrival_time_offset should be clamped to max expected ATO
             // (feedback_delta + 1ms = 31ms) rather than remaining 400ms.
             packetFeedback.arrivalTimeOffset!! shouldBeLessThanOrEqualTo 31.ms
+            packetFeedback.ambiguousReceiveTime shouldBe false
+        }
+
+        "AmbiguousReceiveTimeForRetransmissionWithoutRtx" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            // Packet 1: Original audio packet
+            val packet1 = PacketTemplate(
+                ssrc = 1234,
+                transportSequenceNumber = 1,
+                rtpSequenceNumber = 101,
+                sendTimestamp = Instant.EPOCH + 100.ms,
+                receiveTimestamp = Instant.EPOCH + 120.ms,
+                isAudio = true
+            )
+            test.adapter.addPacket(createPacketToSend(packet1), packet1.transportSequenceNumber, 0.bytes, timeNow())
+            test.adapter.processSentPacket(SentPacketInfo(packet1.transportSequenceNumber, packet1.sendTimestamp))
+
+            // Packet 2: Retransmission of packet 1 without RTX (same SSRC and sequence
+            // number)
+            val packet2 = packet1.copy(transportSequenceNumber = 2, sendTimestamp = Instant.EPOCH + 150.ms)
+            val resendPacket = createPacketToSend(packet2)
+            resendPacket.packetOrigin = PacketOrigin.Retransmission
+            test.adapter.addPacket(resendPacket, packet2.transportSequenceNumber, 0.bytes, timeNow())
+            test.adapter.processSentPacket(SentPacketInfo(packet2.transportSequenceNumber, packet2.sendTimestamp))
+
+            // Feedback received for the RTP packet
+            val packetInfo = ReceivedPacketInfo(
+                ssrc = 1234,
+                sequenceNumber = 101,
+                arrivalTimeOffset = 10.ms,
+                ecn = EcnMarking.kNotEct
+            )
+            val compactNtp = TimeUtils.toNtpShortFormat(TimeUtils.toNtpTime(160))
+            val feedback =
+                RtcpFbCcfbPacketBuilder(reportTimestampCompactNtp = compactNtp, packets = listOf(packetInfo)).build()
+
+            val result = test.adapter.processCongestionControlFeedback(feedback, Instant.EPOCH + 200.ms)
+            result shouldNotBe null
+            result!!.packetFeedbacks.size shouldBe 1
+            result.packetFeedbacks[0].ambiguousReceiveTime shouldBe true
+        }
+
+        "AmbiguousReceiveTimeForRetransmissionWhenOriginalAlreadyAcked" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+            val clock = FakeClock().apply { setTime(Instant.EPOCH + 100.ms) }
+
+            // Packet 1: Original audio packet.
+            val packet1 = PacketTemplate(
+                ssrc = 1234,
+                transportSequenceNumber = 1,
+                rtpSequenceNumber = 101,
+                sendTimestamp = clock.instant(),
+                receiveTimestamp = clock.instant() + 20.ms,
+                isAudio = true
+            )
+            test.adapter.addPacket(
+                createPacketToSend(packet1),
+                packet1.transportSequenceNumber,
+                0.bytes,
+                clock.instant()
+            )
+            test.adapter.processSentPacket(SentPacketInfo(packet1.transportSequenceNumber, packet1.sendTimestamp))
+
+            // Feedback received for packet 1.
+            clock.elapse(30.ms)
+            val packetInfo1 = ReceivedPacketInfo(
+                ssrc = 1234,
+                sequenceNumber = 101,
+                arrivalTimeOffset = 10.ms,
+                ecn = EcnMarking.kNotEct
+            )
+            val compactNtp1 = TimeUtils.toNtpShortFormat(TimeUtils.toNtpTime(clock.instant().toEpochMilli()))
+            val feedback1 =
+                RtcpFbCcfbPacketBuilder(reportTimestampCompactNtp = compactNtp1, packets = listOf(packetInfo1)).build()
+            val result1 = test.adapter.processCongestionControlFeedback(feedback1, clock.instant())
+            result1 shouldNotBe null
+            result1!!.packetFeedbacks[0].ambiguousReceiveTime shouldBe false
+
+            // 1ms later, a queued/spurious retransmission of packet 1 without RTX is
+            // sent.
+            clock.elapse(1.ms)
+            val packet2 = packet1.copy(transportSequenceNumber = 2, sendTimestamp = clock.instant())
+            val resendPacket = createPacketToSend(packet2)
+            resendPacket.packetOrigin = PacketOrigin.Retransmission
+            resendPacket.originalSsrc = 1234
+            test.adapter.addPacket(resendPacket, packet2.transportSequenceNumber, 0.bytes, clock.instant())
+            test.adapter.processSentPacket(SentPacketInfo(packet2.transportSequenceNumber, packet2.sendTimestamp))
+
+            // Feedback received for the retransmission.
+            clock.elapse(30.ms)
+            val packetInfo2 = ReceivedPacketInfo(
+                ssrc = 1234,
+                sequenceNumber = 101,
+                arrivalTimeOffset = 10.ms,
+                ecn = EcnMarking.kNotEct
+            )
+            val compactNtp2 = TimeUtils.toNtpShortFormat(TimeUtils.toNtpTime(clock.instant().toEpochMilli()))
+            val feedback2 =
+                RtcpFbCcfbPacketBuilder(reportTimestampCompactNtp = compactNtp2, packets = listOf(packetInfo2)).build()
+            val result2 = test.adapter.processCongestionControlFeedback(feedback2, clock.instant())
+            result2 shouldNotBe null
+            result2!!.packetFeedbacks.size shouldBe 1
+            result2.packetFeedbacks[0].ambiguousReceiveTime shouldBe true
+        }
+
+        "VideoRtxIsNotAmbiguous" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            // Video packet
+            val packet1 = PacketTemplate(
+                ssrc = 1234,
+                transportSequenceNumber = 1,
+                rtpSequenceNumber = 101,
+                sendTimestamp = Instant.EPOCH + 100.ms,
+                receiveTimestamp = Instant.EPOCH + 120.ms,
+                isAudio = false
+            )
+            test.adapter.addPacket(createPacketToSend(packet1), packet1.transportSequenceNumber, 0.bytes, timeNow())
+            test.adapter.processSentPacket(SentPacketInfo(packet1.transportSequenceNumber, packet1.sendTimestamp))
+
+            // RTX packet sent on RTX SSRC 5678 with sequence number 501
+            val rtxTemplate = PacketTemplate(
+                ssrc = 5678,
+                transportSequenceNumber = 2,
+                rtpSequenceNumber = 501,
+                sendTimestamp = Instant.EPOCH + 150.ms,
+                receiveTimestamp = Instant.EPOCH + 170.ms,
+                isAudio = false
+            )
+            val rtxPacket = createPacketToSend(rtxTemplate)
+            rtxPacket.packetOrigin = PacketOrigin.Retransmission
+            rtxPacket.originalSsrc = 1234
+            test.adapter.addPacket(rtxPacket, rtxTemplate.transportSequenceNumber, 0.bytes, timeNow())
+            test.adapter.processSentPacket(
+                SentPacketInfo(rtxTemplate.transportSequenceNumber, rtxTemplate.sendTimestamp)
+            )
+
+            // Feedback received for RTX packet on RTX SSRC
+            val rtxFeedbackInfo = ReceivedPacketInfo(
+                ssrc = 5678,
+                sequenceNumber = 501,
+                arrivalTimeOffset = 10.ms,
+                ecn = EcnMarking.kNotEct
+            )
+            val compactNtp = TimeUtils.toNtpShortFormat(TimeUtils.toNtpTime(180))
+            val feedback = RtcpFbCcfbPacketBuilder(
+                reportTimestampCompactNtp = compactNtp,
+                packets = listOf(rtxFeedbackInfo)
+            ).build()
+
+            val result = test.adapter.processCongestionControlFeedback(feedback, Instant.EPOCH + 200.ms)
+            result shouldNotBe null
+            result!!.packetFeedbacks.size shouldBe 1
+            result.packetFeedbacks[0].ambiguousReceiveTime shouldBe false
         }
     }
 }
