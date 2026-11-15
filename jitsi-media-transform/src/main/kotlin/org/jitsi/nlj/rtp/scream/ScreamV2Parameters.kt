@@ -88,8 +88,13 @@ data class ScreamV2Parameters(
     val backoffScaleFactorCloseToRefWindowI: Double = 2.0,
 
     // If CE is detected and this number of RTTs has passed since last
-    // congestion, ref_window_i will be reset.
+    // congestion, ref_window will be clamped to max_data_in_flight_prev_rtt.
     val numberOfRttsBetweenResetRefWindowIOnCongestion: Int = 100,
+
+    // Maximum number of RTTs before `ref_window_i` is allowed to be updated on
+    // congestion even if `ref_window` has not increased by 5% above the lowest
+    // `ref_window` (`REF_WND_I_UPDATE_MAX_HOLD_RTTS` in the RFC).
+    val refWindowIUpdateMaxHoldRtts: Int = 50,
 
     // Max/Min used for calculating how much larger the send window is allowed to
     // be than the ref window.

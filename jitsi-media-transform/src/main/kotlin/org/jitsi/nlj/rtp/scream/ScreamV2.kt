@@ -363,9 +363,7 @@ class ScreamV2(
             val postCongestionScale = timeBetween(lastReactionToCongestionTime, parsed.feedbackTime)
                 .ratioTo(maxOfVirtualAndSmothedRtt.multipliedBy(params.postCongestionDelayRtts.toLong()))
                 .coerceIn(0.0, 1.0)
-            val multiplicativeScale = 1.0 +
-                (refWindowMultiplicativeScaleFactor() - 1.0) * postCongestionScale *
-                refWindowScaleFactorCloseToRefWindowI()
+            val multiplicativeScale = 1.0 + (refWindowMultiplicativeScaleFactor() - 1.0) * postCongestionScale
             check(multiplicativeScale >= 1.0)
             increaseScaleFactor = increaseScaleFactor * multiplicativeScale
 
@@ -377,18 +375,21 @@ class ScreamV2(
             }
         }
 
-        if (previousRefWindow < refWindow) {
-            // Allow setting a new `ref_window_i` if `ref_window_` increase.
-            // It means that `ref_window_i` can increase if `rew_window` increase and
-            // there is a congestion event.
-            allowRefWindowIUpdate = true
-        }
         if (previousRefWindow > refWindow) {
             lastRefWindowDecreaseTime = parsed.feedbackTime
-            if (allowRefWindowIUpdate) {
+            // Allow update of `ref_window_i_` only if `ref_window_` before decrease
+            // had increased sufficiently (>5%) above `ref_window_lowest_` or the hold
+            // time has expired. This prevents `ref_window_i_` from being stepped down
+            // during a period of congestion (4.2.2.1).
+            val maxOfVirtualAndSmoothedRtt = max(params.virtualRtt, delayBasedCongestionControl.rtt())
+            if (previousRefWindow > refWindowLowest.scaledBy(1.05) ||
+                timeBetween(lastRefWindowIUpdateTime, parsed.feedbackTime) >
+                maxOfVirtualAndSmoothedRtt.multipliedBy(params.refWindowIUpdateMaxHoldRtts.toLong())
+            ) {
                 refWindowI = previousRefWindow
-                allowRefWindowIUpdate = false
+                lastRefWindowIUpdateTime = parsed.feedbackTime
             }
+            refWindowLowest = refWindow
         }
 
         if (previousRefWindow != refWindow) {
@@ -499,9 +500,13 @@ class ScreamV2(
     // `ref_window_i_`.
     private var refWindowI: DataSize = 1.bytes
 
-    // `allow_ref_window_i_update_` is set to true if `ref_window_` has increased
-    // since `ref_window_i_` was last set.
-    private var allowRefWindowIUpdate = true
+    // Lowest `ref_window_` observed on a reference window decrease
+    // (`ref_wnd_lowest` in 4.2.2.1). `ref_window_i_` is only updated when
+    // `ref_window_` before decrease has increased by >5% above
+    // `ref_window_lowest_` or `ref_window_i_update_max_hold_rtts` has elapsed
+    // since `last_ref_window_i_update_time_`.
+    private var refWindowLowest = DataSize.ZERO
+    private var lastRefWindowIUpdateTime: Instant = NEVER
     private var lastRefWindowIncreaseScaleFactor = 1.0
 
     // `l4s_alpha_` tracks the average fraction of ECN-CE marked data units per
@@ -522,10 +527,10 @@ class ScreamV2(
     private var accumulatedReceivedBytes = DataSize.ZERO
     private var lastWindowReceiveTime: Instant = NEVER
 
-    // `last_reaction_to_congestion_time` is called
-    // `last_congestion_detected_time` in 4.2.2. Reference Window Update.
-    // Last received feedback that contained a congestion event that may have
-    // caused a reaction.
+    // `last_reaction_to_congestion_time_` tracks the last received feedback that
+    // contained a congestion event (`is_loss`, `is_ce`, or `is_virtual_ce`) that
+    // caused a reaction (corresponding to `last_reaction_to_congestion_time` and
+    // `last_congestion_detected_time` in 4.2.2).
     private var lastReactionToCongestionTime: Instant = NEVER
 
     // Last time the reference window decreased. This is not the same
