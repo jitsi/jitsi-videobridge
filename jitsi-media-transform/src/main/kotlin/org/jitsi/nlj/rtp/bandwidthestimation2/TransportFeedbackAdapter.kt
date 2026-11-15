@@ -35,6 +35,7 @@ import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.max
+import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration
 import java.time.Instant
@@ -270,7 +271,8 @@ class TransportFeedbackAdapter(
             )
         } ?: Duration.ZERO
         lastFeedbackCompactNtpTime = feedback.reportTimestampCompactNtp
-        if (feedbackDelta < Duration.ZERO) {
+
+        if (feedbackDelta < (-500).ms) {
             logger.warn("Unexpected feedback ntp time delta $feedbackDelta")
             currentOffset = feedbackReceiveTime
         } else {
