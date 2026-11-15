@@ -177,6 +177,12 @@ open class PacketInfo @JvmOverloads constructor(
     var probingInfo: Any? = null
 
     /**
+     * Whether the transport is capable of handling explicit congestion notification and the packet should be
+     * sent as ECT(1). See RFC 9331.
+     */
+    var sendAsEct1: Boolean = false
+
+    /**
      * The origin of the packet, used for tracking the sources of media being routed.
      */
     var packetOrigin: PacketOrigin = PacketOrigin.Misc
@@ -212,6 +218,7 @@ open class PacketInfo @JvmOverloads constructor(
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
         clone.probingInfo = probingInfo
+        clone.sendAsEct1 = sendAsEct1
         clone.packetOrigin = packetOrigin
         @Suppress("UNCHECKED_CAST") // ArrayList.clone() really does return ArrayList, not Object.
         clone.onSentActions = onSentActions?.clone() as ArrayList<(PacketInfo) -> Unit>?

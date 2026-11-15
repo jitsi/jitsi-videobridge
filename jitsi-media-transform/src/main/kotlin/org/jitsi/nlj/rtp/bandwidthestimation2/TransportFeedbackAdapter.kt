@@ -57,11 +57,10 @@ private data class PacketFeedback(
     val sent: SentPacket,
     val ssrc: Long = 0,
     val rtpSequenceNumber: Int = 0,
-    val isRetransmission: Boolean = false
-) {
-    // Jitsi extension: whether the packet was previously reported lost
-    var reportedLost: Boolean = false
-}
+    val isRetransmission: Boolean = false,
+    val sentWithEct1: Boolean = false,
+    var previouslyReportedLost: Boolean = false
+)
 
 private class InFlightBytesTracker {
     fun addInFlightPacketBytes(packet: PacketFeedback) {
@@ -108,7 +107,8 @@ class TransportFeedbackAdapter(
             ),
             ssrc = rtpPacket.ssrc,
             rtpSequenceNumber = rtpPacket.sequenceNumber,
-            isRetransmission = packet.packetOrigin == PacketOrigin.Retransmission
+            isRetransmission = packet.packetOrigin == PacketOrigin.Retransmission,
+            sentWithEct1 = packet.sendAsEct1
         )
         while (history.isNotEmpty() &&
             Duration.between(history.firstEntry().value.creationTime, creationTime) > kSendTimeHistoryWindow
@@ -212,24 +212,23 @@ class TransportFeedbackAdapter(
                 return@forEach
             }
 
-            val previouslyReportedLost = packetFeedback.reportedLost
-
             val result = PacketResult()
             result.sentPacket = packetFeedback.sent
 
             if (report is ReceivedPacketReport) {
                 deltaSinceBase += report.deltaDuration
                 result.receiveTime = currentOffset + deltaSinceBase
-                history.remove(seqNum)
-            } else {
-                packetFeedback.reportedLost = true
             }
+            // Jitsi local: WebRTC sets these only for congestion control feedback. The loss listeners use them.
+            result.reportedRecoveredForTheFirstTime =
+                report is ReceivedPacketReport && packetFeedback.previouslyReportedLost
+            result.reportedLostForTheFirstTime =
+                report !is ReceivedPacketReport && !packetFeedback.previouslyReportedLost
             result.rtpPacketInfo = PacketResult.RtpPacketInfo(
                 packetFeedback.ssrc,
                 packetFeedback.rtpSequenceNumber,
                 packetFeedback.isRetransmission
             )
-            result.previouslyReportedLost = previouslyReportedLost
             packetResultVector.add(result)
         }
 
@@ -294,6 +293,12 @@ class TransportFeedbackAdapter(
                 result.ecn = packetInfo.ecn
                 supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
             }
+            result.sentWithEct1 = packetFeedback.sentWithEct1
+            result.reportedRecoveredForTheFirstTime =
+                packetInfo is ReceivedPacketInfo && packetFeedback.previouslyReportedLost
+            result.reportedLostForTheFirstTime =
+                packetInfo !is ReceivedPacketInfo && !packetFeedback.previouslyReportedLost
+
             result.rtpPacketInfo = PacketResult.RtpPacketInfo(
                 ssrc = packetFeedback.ssrc,
                 rtpSequenceNumber = packetFeedback.rtpSequenceNumber,
@@ -304,9 +309,9 @@ class TransportFeedbackAdapter(
 
         totalUnmatchedReports += failedLookups
         if (failedLookups > 0) {
-            logger.warn {
-                "Failed to lookup send time for $failedLookups packets. " +
-                    "Packets reordered or send time history too small?"
+            logger.info {
+                "Failed to lookup send time for $failedLookups packet${if (failedLookups > 1) "s" else ""}. " +
+                    "Packets reordered or send time history too small, or packet reported received more than once."
             }
         }
 
@@ -381,9 +386,15 @@ class TransportFeedbackAdapter(
                 SsrcAndRtpSequenceNumber(packetFeedback.ssrc, packetFeedback.rtpSequenceNumber)
             )
             history.remove(transportSeqNum)
+            return packetFeedback
         }
-
-        return packetFeedback
+        // Update `previously_reported_lost` after taking copy of the
+        // `packet_feedback'. Thus the new value would be returned next time caller
+        // retrieves the feedback. This way caller can distinguish when packet was
+        // reported lost for the first time and thus account such loss only once.
+        val copy = packetFeedback.copy()
+        packetFeedback.previouslyReportedLost = true
+        return copy
     }
 
     private fun retrievePacketFeedback(key: SsrcAndRtpSequenceNumber, received: Boolean): PacketFeedback? {
