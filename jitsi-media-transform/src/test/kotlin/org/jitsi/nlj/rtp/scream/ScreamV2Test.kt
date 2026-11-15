@@ -757,5 +757,16 @@ class ScreamV2Test : FreeSpec() {
             // Rate is calculated using remote receive duration: 5000 bytes / 101ms.
             scream.receivedRate() shouldBe rateOf(5000.bytes, 101.ms)
         }
+
+        "MaxDataInFlightBoundedByMinMaxDataInFlightMss" {
+            val screamDefault = ScreamV2(logger)
+            // Default min_ref_window is 1000 bytes, max_segment_size is 1280 bytes, and
+            // min_max_data_in_flight_mss is 4 -> 4 * 1280 = 5120 bytes.
+            screamDefault.refWindow() shouldBe 1000.bytes
+            screamDefault.maxDataInFlight() shouldBe (4 * 1280).bytes
+
+            val screamCustom = ScreamV2(logger, ScreamV2Parameters(minMaxDataInFlightMss = 5))
+            screamCustom.maxDataInFlight() shouldBe (5 * 1280).bytes
+        }
     }
 }

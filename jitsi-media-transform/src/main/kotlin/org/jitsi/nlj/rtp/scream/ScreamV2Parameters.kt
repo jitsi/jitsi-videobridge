@@ -96,6 +96,9 @@ data class ScreamV2Parameters(
     val refWindowOverheadMin: Double = 1.5,
     val refWindowOverheadMax: Double = 3.0,
 
+    // Minimum send window (max_data_in_flight), expressed in number of MSS.
+    val minMaxDataInFlightMss: Int = 4,
+
     // Exponentially Weighted Moving Average (EWMA) factor for updating queue
     // delay.
     val queueDelayAvgG: Double = 1.0 / 4.0,

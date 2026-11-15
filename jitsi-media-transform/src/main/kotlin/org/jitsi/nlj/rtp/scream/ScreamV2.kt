@@ -139,7 +139,7 @@ class ScreamV2(
             (params.refWindowOverheadMax - params.refWindowOverheadMin) *
             delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay(allowZero = true)
 
-        return refWindow.scaledBy(refWindowOverhead)
+        return maxOf(refWindow.scaledBy(refWindowOverhead), params.maxSegmentSize * params.minMaxDataInFlightMss)
     }
 
     // Target for the upper limit of the number of bytes that can be in
