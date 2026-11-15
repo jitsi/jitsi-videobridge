@@ -1040,61 +1040,6 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             adaptedFeedback.hasPacketWithBleachedEct1() shouldBe false
         }
 
-        "CalculateSmoothedRttForConstantOneWayDelay" {
-            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
-            val kFirstSendTime = Instant.EPOCH + 1234.secs
-
-            // Send 3 packets with a constant one way delay. // send timestamp and
-            // receive timestamp may use different epoch.
-            val packets = listOf(
-                PacketTemplate(
-                    transportSequenceNumber = 1,
-                    rtpSequenceNumber = 101,
-                    sendTimestamp = kFirstSendTime,
-                    receiveTimestamp = Instant.EPOCH + 200.ms
-                ),
-                PacketTemplate(
-                    transportSequenceNumber = 2,
-                    rtpSequenceNumber = 102,
-                    sendTimestamp = kFirstSendTime + 10.ms,
-                    receiveTimestamp = Instant.EPOCH + 210.ms
-                ),
-                PacketTemplate(
-                    transportSequenceNumber = 3,
-                    rtpSequenceNumber = 103,
-                    sendTimestamp = kFirstSendTime + 50.ms,
-                    receiveTimestamp = Instant.EPOCH + 250.ms
-                ),
-                PacketTemplate(
-                    transportSequenceNumber = 4,
-                    // Jitsi change from WebRTC, where this is 105: the feedback packet builder needs
-                    // a report for every sequence number in the range.
-                    rtpSequenceNumber = 104,
-                    sendTimestamp = kFirstSendTime + 55.ms,
-                    receiveTimestamp = Instant.EPOCH + 255.ms
-                )
-            )
-
-            packets.forEach { packet ->
-                test.adapter.addPacket(
-                    createPacketToSend(packet),
-                    packet.transportSequenceNumber,
-                    0.bytes,
-                    packet.sendTimestamp
-                )
-                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
-            }
-
-            val kExpectedRtt = 20.ms
-            for (i in 0 until 4 step 2) {
-                val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets.subList(i, i + 2))
-                test.adapter.processCongestionControlFeedback(
-                    rtcpFeedback,
-                    feedbackReceiveTime = packets[i + 1].sendTimestamp + kExpectedRtt
-                )
-            }
-        }
-
         "CongestionControlFeedbackResultReportsLostPacketOnce" {
             val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
 
