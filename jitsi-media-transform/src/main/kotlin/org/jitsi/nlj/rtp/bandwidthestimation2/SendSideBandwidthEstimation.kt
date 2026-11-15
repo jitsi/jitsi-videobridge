@@ -225,16 +225,18 @@ class SendSideBandwidthEstimation(
             }
         }
         updateMinHistory(atTime)
-        if (lastLossPacketReport.isInfinite()) {
-            // No feedback received.
-            // TODO(srte): This is likely redundant in most cases.
-            applyTargetLimits(atTime)
-            return
-        }
+
         if (lossBasedBandwidthEstimatorV2.isReady()) {
             val result = lossBasedBandwidthEstimatorV2.getLossBasedResult()
             lossBasedState = result.state
             updateTargetBitrate(result.bandwidthEstimate, atTime)
+            return
+        }
+
+        if (lastLossPacketReport.isInfinite()) {
+            // No feedback received.
+            // TODO(srte): This is likely redundant in most cases.
+            applyTargetLimits(atTime)
             return
         }
 
