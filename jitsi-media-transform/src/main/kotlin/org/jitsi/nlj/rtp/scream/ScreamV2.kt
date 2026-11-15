@@ -363,10 +363,19 @@ class ScreamV2(
             // lot.
             // Better to enforce a slow increase in reference window and get
             // a more stable bitrate.
-            increaseScaleFactor =
-                increaseScaleFactor * delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay()
-            increaseScaleFactor =
-                increaseScaleFactor * delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
+            if (params.useMinDelayScaleOnIncrease) {
+                increaseScaleFactor = increaseScaleFactor *
+                    min(
+                        delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay(),
+                        delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
+                    )
+            } else {
+                increaseScaleFactor = increaseScaleFactor *
+                    (
+                        delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay() *
+                            delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
+                        )
+            }
 
             // Use lower multiplicative scale factor if congestion was detected
             // recently.

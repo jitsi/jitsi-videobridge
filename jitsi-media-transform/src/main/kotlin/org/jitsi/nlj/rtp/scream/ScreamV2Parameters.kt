@@ -120,6 +120,11 @@ data class ScreamV2Parameters(
     // increase.
     val latencyDiffThreshold: Duration = 10.ms,
 
+    // If true, uses the minimum of the avg min delay scale factor and latency
+    // difference scale factor when limiting ref_window increase, instead of
+    // multiplying them.
+    val useMinDelayScaleOnIncrease: Boolean = true,
+
     // Minimum (base) window from the latest sent packet in feedback to compute
     // min and max one-way delay.
     val burstWindowMin: Duration = 25.ms,
