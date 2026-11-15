@@ -221,23 +221,36 @@ class ScreamV2(
             // number of feedbacks per RTT (`rtt / ReactionInterval()`).
             return backoff / max(1.0, delayBasedCongestionControl.rtt().ratioTo(reactionInterval()))
         }
-        if (!lastBackoffRttStartTime.isInfinite() && parsed.dataInFlight > refWindow) {
+        // During a burst (e.g. a keyframe or pacing burst), `data_in_flight` can
+        // temporarily exceed `ref_window_`. Scale down the backoff proportionally so
+        // `ref_window_` is not overly reduced due to queue buildup caused by the
+        // excess in-flight bytes rather than `ref_window_` itself being too large.
+        val refWindowShare = if (parsed.dataInFlight > refWindow.scaledBy(params.bytesInFlightHeadRoom)) {
+            refWindow.ratioTo(parsed.dataInFlight)
+        } else {
+            1.0
+        }
+
+        if (timeBetween(lastRefWindowDecreaseTime, parsed.feedbackTime) < delayBasedCongestionControl.rtt() &&
+            parsed.dataInFlight > refWindow
+        ) {
             // State 1: Draining in-flight data after a window reduction.
             // A reduction in `ref_window_` does not reduce the bottleneck queue until
             // actual `data_in_flight` drops down to the reduced `ref_window_`. Keep
             // resetting the 1-RTT observation timer until `data_in_flight <=
-            // ref_window_`.
+            // ref_window_`, for at most one RTT after the last window reduction.
             lastBackoffRttStartTime = parsed.feedbackTime
         }
         if (timeBetween(lastBackoffRttStartTime, parsed.feedbackTime) >= delayBasedCongestionControl.rtt()) {
             // State 2: Start of a new backoff cycle.
             // Either this is the very first congestion event
             // (`last_backoff_rtt_start_time_` is MinusInfinity), or at least one full
-            // RTT has elapsed since `data_in_flight` drained to `ref_window_` and
-            // congestion is still present. Apply the full `backoff` immediately.
+            // RTT has elapsed since `data_in_flight` drained to `ref_window_` (or at
+            // most two RTTs since the last window reduction). Apply the full `backoff`
+            // immediately.
             lastBackoffRttStartTime = parsed.feedbackTime
             lastBackoff = backoff
-            return backoff
+            return backoff * refWindowShare
         }
         if (backoff > lastBackoff && lastBackoff < 1.0) {
             // State 3: Congestion is worsening within the current backoff cycle.
@@ -245,7 +258,7 @@ class ScreamV2(
             // Apply only the incremental reduction `delta_backoff` such that
             // `(1 - last_backoff_) * (1 - delta_backoff) = 1 - backoff`, ensuring
             // the cumulative reduction over the cycle matches the peak `backoff`.
-            val deltaBackoff = (backoff - lastBackoff) / (1.0 - lastBackoff)
+            val deltaBackoff = refWindowShare * (backoff - lastBackoff) / (1.0 - lastBackoff)
             lastBackoff = backoff
             return deltaBackoff
         }
@@ -298,34 +311,21 @@ class ScreamV2(
         ) {
             lastReactionToCongestionTime = parsed.feedbackTime
             var backoff = 0.0
-            if (allowInitialRefWindowClamping && receivedRate.isFinite()) {
-                // Clamp ref_window to received rate on the first congestion event,
-                // to adjust if starting rate was much higher than link capacity.
-                val clampedRefWindow = clamp(
-                    dataSentAt(receivedRate, delayBasedCongestionControl.rtt() + feedbackHoldTime),
-                    params.minRefWindow,
-                    refWindow
-                )
-                backoff = 1.0 - clampedRefWindow.ratioTo(refWindow)
-                allowInitialRefWindowClamping = false
-            }
-
             if (isLoss) { // Back off due to loss
-                backoff = max(backoff, 1.0 - params.betaLoss)
+                backoff = 1.0 - params.betaLoss
             } else if (isCe) { // Backoff due to ECN-CE marking
-                var ceBackoff = scaleBackoff(parsed, max(backoff, l4sAlpha / 2.0))
+                backoff = scaleBackoff(parsed, l4sAlpha / 2.0)
 
                 if (!delayBasedCongestionControl.isQueueDelayDetected()) {
                     // Scale down backoff if close to the last known max reference window
                     // This is complemented with a scale down of the reference window
                     // increase
-                    ceBackoff *= max(0.25, refWindowScaleFactorCloseToRefWindowI())
+                    backoff *= max(0.25, refWindowScaleFactorCloseToRefWindowI())
                     // Counterbalance the limitation in reference window increase when the
                     // queue delay varies. This helps to avoid starvation in the presence
                     // of competing TCP Prague flows.
-                    ceBackoff *= max(0.1, delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay())
+                    backoff *= max(0.1, delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay())
                 }
-                backoff = max(backoff, ceBackoff)
 
                 if (timeSinceLastReaction.isFinite() &&
                     timeSinceLastReaction >
@@ -345,7 +345,22 @@ class ScreamV2(
                     l4sAlpha = 0.25
                 }
             } else if (isVirtualCe) { // Back off due to delay
-                backoff = scaleBackoff(parsed, max(backoff, delayBasedCongestionControl.l4sAlphaV() / 2.0))
+                backoff = scaleBackoff(parsed, delayBasedCongestionControl.l4sAlphaV() / 2.0)
+            }
+            if (allowInitialRefWindowClamping && receivedRate.isFinite()) {
+                // Clamp ref_window to received rate on the first congestion event,
+                // to adjust if starting rate was much higher than link capacity.
+                val clampedRefWindow = clamp(
+                    dataSentAt(receivedRate, delayBasedCongestionControl.rtt() + feedbackHoldTime),
+                    params.minRefWindow,
+                    refWindow
+                )
+                val initialBackoff = 1.0 - clampedRefWindow.ratioTo(refWindow)
+                if (initialBackoff > backoff) {
+                    backoff = initialBackoff
+                    lastBackoff = max(lastBackoff, initialBackoff)
+                }
+                allowInitialRefWindowClamping = false
             }
             refWindow = refWindow.scaledBy(1.0 - backoff)
         }
