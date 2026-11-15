@@ -142,6 +142,9 @@ class RtpSenderImpl(
             null
         }
 
+    private val retransmissionSender =
+        RetransmissionSender(streamInformationStore, logger, deferSequenceNumbers = pacedSender != null)
+
     private val transportCcEngine: TransportCcEngine =
         when (BandwidthEstimatorConfig.engine) {
             BandwidthEstimatorEngine.GoogleCc ->
@@ -207,7 +210,14 @@ class RtpSenderImpl(
             node(headerExtensionStripper)
             node(outgoingPacketCache)
             // The pacer is where the RTX pipeline and probing join the main pipeline, so that they are paced too.
-            pacedSender?.let { node(it) }
+            pacedSender?.let {
+                node(it)
+                // RTX packets are numbered in the order in which the pacer sends them.
+                simpleNode("RTX sequence number assigner") { packetInfo ->
+                    retransmissionSender.assignRtxSequenceNumber(packetInfo)
+                    packetInfo
+                }
+            }
             node(absSendTime)
             // Placed right after absSendTime, which follows the point where the RTX pipeline joins the main
             // pipeline, so that both media packets and their retransmissions get the mid stamped.
@@ -223,7 +233,7 @@ class RtpSenderImpl(
         }
 
         outgoingRtxRoot = pipeline {
-            node(RetransmissionSender(streamInformationStore, logger))
+            node(retransmissionSender)
             // We want RTX packets to hook into the main RTP pipeline starting at the pacer if there is one, and at
             // AbsSendTime otherwise.
             node(pacedSender ?: absSendTime)
