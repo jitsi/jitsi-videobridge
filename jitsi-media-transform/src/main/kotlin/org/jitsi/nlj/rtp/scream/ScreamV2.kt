@@ -339,10 +339,6 @@ class ScreamV2(
                     // bytes in flight, so we reduce it here to get it better on
                     // track and thus the congestion episode is shortened.
                     refWindow = clamp(maxDataInFlightPrevRtt, params.minRefWindow, refWindow)
-                    // In addition, bump up l4sAlpha to a more credible value
-                    // This may over react but it is better than
-                    // excessive queue delay
-                    l4sAlpha = 0.25
                 }
             } else if (isVirtualCe) { // Back off due to delay
                 backoff = scaleBackoff(parsed, delayBasedCongestionControl.l4sAlphaV() / 2.0)
