@@ -89,7 +89,8 @@ data class ScreamV2Parameters(
 
     // If CE is detected and this number of RTTs has passed since last
     // congestion, ref_window will be clamped to max_data_in_flight_prev_rtt.
-    val numberOfRttsBetweenResetRefWindowIOnCongestion: Int = 100,
+    // Set high in order to not back down ref_window_ on spurious CE.
+    val numberOfRttsBetweenResetRefWindowIOnCongestion: Int = 100000000,
 
     // Maximum number of RTTs before `ref_window_i` is allowed to be updated on
     // congestion even if `ref_window` has not increased by 5% above the lowest
