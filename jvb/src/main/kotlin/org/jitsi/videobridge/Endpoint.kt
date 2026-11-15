@@ -1043,6 +1043,16 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    /**
+     * With SSRC rewriting, a packet sent to this endpoint carries a send SSRC in place of the SSRC of its source, and
+     * is cached for retransmission with that SSRC. The SSRC associations from signaling only cover the SSRCs of the
+     * sources. So the RTX SSRC of a send SSRC is added here: without it the retransmission sender finds no RTX SSRC
+     * for a rewritten packet, and retransmits it with the SSRC and sequence number it was first sent with. The
+     * association is never removed.
+     */
+    override fun addSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) =
+        transceiver.addSsrcAssociation(RemoteSsrcAssociation(primarySsrc, rtxSsrc, SsrcAssociationType.RTX))
+
     override fun send(packetInfo: PacketInfo) = transceiver.sendPacket(packetInfo)
 
     /**

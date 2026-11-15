@@ -206,7 +206,14 @@ class SendSsrc(val ssrc: Long) {
  * Associates primary and secondary send SSRCs.
  * Primary constructor preserves state of the existing send SSRCs.
  */
-class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc, val mid: String? = null) {
+class SendSource(
+    val props: SourceDesc,
+    val send1: SendSsrc,
+    val send2: SendSsrc,
+    val mid: String? = null,
+    /** Whether the slot was created for this source, as opposed to remapped to it from another source. */
+    val firstOfSlot: Boolean = false
+) {
 
     /**
      * If false, do not send on this SSRC until a packet with start=true arrives.
@@ -267,6 +274,13 @@ interface SsrcRewriter {
      * Get a unique send SSRC.
      */
     fun getNextSendSsrc(): Long
+
+    /**
+     * Tells this endpoint the RTX send SSRC of a slot. SSRC rewriting replaces the SSRC of a packet with the primary
+     * send SSRC [primarySsrc], so a retransmission of the packet has to use the RTX send SSRC [rtxSsrc], not the RTX
+     * SSRC of its source.
+     */
+    fun addSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long)
 
     /**
      * Sends a specific message to this endpoint over its bridge channel.
@@ -342,6 +356,28 @@ abstract class SsrcCache(
     protected abstract fun notifyMappings(sources: List<SendSource>)
 
     /**
+     * Called when a slot is created, with its send SSRCs, after the [sendSources] lock is released. The send SSRCs
+     * stay with the slot when it is remapped to another source, so this is not called then.
+     */
+    protected open fun sendSsrcsCreated(send1: SendSsrc, send2: SendSsrc) {}
+
+    /**
+     * Reports the slots which were created for [remappings], then notifies the mappings to the client. Called without
+     * the [sendSources] lock.
+     */
+    private fun slotsMapped(remappings: List<SendSource>) {
+        if (remappings.isEmpty()) {
+            return
+        }
+        remappings.forEach {
+            if (it.firstOfSlot) {
+                sendSsrcsCreated(it.send1, it.send2)
+            }
+        }
+        notifyMappings(remappings)
+    }
+
+    /**
      * Assign a group of send SSRCs to use for the specified source.
      * If remapping the send SSRCs from another source, transfer RTP state from the old source.
      * Returns null if no current mapping exists and allowCreate is false.
@@ -377,7 +413,7 @@ abstract class SsrcCache(
                 val ssrc1 = ep.getNextSendSsrc()
                 val ssrc2 = ep.getNextSendSsrc()
                 val mid = if (midDemux) "$midPrefix${nextMidIndex++}" else null
-                sendSource = SendSource(props, SendSsrc(ssrc1), SendSsrc(ssrc2), mid)
+                sendSource = SendSource(props, SendSsrc(ssrc1), SendSsrc(ssrc2), mid, firstOfSlot = true)
                 logger.debug { "Added send SSRC: ${props.ssrc1}->$sendSource" }
             }
             sendSources[ssrc] = sendSource
@@ -439,9 +475,7 @@ abstract class SsrcCache(
             logger.debug { this.toString() }
         }
 
-        if (remappings.isNotEmpty()) {
-            notifyMappings(remappings)
-        }
+        slotsMapped(remappings)
     }
 
     /**
@@ -495,9 +529,7 @@ abstract class SsrcCache(
                 }
             }
 
-            if (remappings.isNotEmpty()) {
-                notifyMappings(remappings)
-            }
+            slotsMapped(remappings)
         } catch (e: Exception) {
             logger.error("Error rewriting SSRC, packet $packet", e)
             send = false
@@ -646,6 +678,12 @@ class VideoSsrcCache(size: Int, ep: SsrcRewriter, midDemux: Boolean, parentLogge
             ep.sendMessage(VideoSourcesMap(it))
         }
     }
+
+    /**
+     * Packets of a slot are rewritten to the slot's primary send SSRC, and retransmitted with its RTX send SSRC. The
+     * mappings sent to the client give the same RTX SSRC.
+     */
+    override fun sendSsrcsCreated(send1: SendSsrc, send2: SendSsrc) = ep.addSendRtxSsrc(send1.ssrc, send2.ssrc)
 }
 
 /** Codec-specific packet state. */
