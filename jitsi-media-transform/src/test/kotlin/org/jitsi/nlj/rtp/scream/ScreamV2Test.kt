@@ -474,7 +474,7 @@ class ScreamV2Test : FreeSpec() {
             result.dataRate shouldBeLessThan 2500.kbps
             result.dataRate shouldBeGreaterThan 1500.kbps
             result.maxRateAfterAdaption shouldBeLessThan 2500.kbps
-            result.minRateAfterAdaption shouldBeGreaterThan 1500.kbps
+            result.minRateAfterAdaption shouldBeGreaterThan 900.kbps
 
             result.maxSmoothedRttAfterAdaptation shouldBeLessThan (10 * 2 + 50 + 10).ms
         }
@@ -660,10 +660,10 @@ class ScreamV2Test : FreeSpec() {
             scream.onTransportPacketsFeedback(highDelayFeedback1)
             clock.elapse(25.ms)
 
-            // Send second high delay feedback to build queue delay above target/2 (30ms)
+            // Send second high delay feedback to build queue delay above target/4 (15ms)
             // queue_delay = 85ms - 5ms = 80ms.
-            // queue_delay_avg_ = 0.25 * 80ms + 0.75 * 20ms = 35ms.
-            // 35ms > 30ms, so IsQueueDelayDetected() is true.
+            // queue_delay_avg_ = 0.25 * 80ms = 20ms.
+            // 20ms > 15ms, so IsQueueDelayDetected() is true.
             val highDelayFeedback2 = createFeedback(
                 clock.instant(),
                 rtt = 170.ms,

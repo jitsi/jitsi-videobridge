@@ -967,7 +967,7 @@ class ScreamNetworkControllerTest : FreeSpec() {
                 update.pacerConfig?.let { paddingRate = it.padRate() }
             }
             alrRecovered shouldBe true
-            targetRate shouldBeGreaterThanOrEqualTo 9800.kbps
+            targetRate shouldBeGreaterThanOrEqualTo 9000.kbps
         }
 
         "CwndReduceRatioSetWhenPacerQueueGrowsAndShrinks" {

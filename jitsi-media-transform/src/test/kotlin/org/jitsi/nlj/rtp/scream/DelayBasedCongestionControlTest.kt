@@ -154,7 +154,7 @@ class DelayBasedCongestionControlTest : FreeSpec() {
 
         "RefWindowScaleFactorDueToMinAverageQueueDelay" {
             val clock = createClock()
-            val params = ScreamV2Parameters()
+            val params = ScreamV2Parameters(reduceJitter = false)
             val delayController = DelayBasedCongestionControl(params)
 
             val kQueueDelyMinThreshold = params.queueDelayMinThreshold
@@ -196,7 +196,7 @@ class DelayBasedCongestionControlTest : FreeSpec() {
 
         "RefWindowScaleFactorDueToLatencyDifference" {
             val clock = createClock()
-            val params = ScreamV2Parameters()
+            val params = ScreamV2Parameters(reduceJitter = false)
             val delayController = DelayBasedCongestionControl(params)
 
             val kLatencyThreshold = params.latencyDiffThreshold
@@ -387,6 +387,45 @@ class DelayBasedCongestionControlTest : FreeSpec() {
 
             delayController.latencyDifferenceAvg() shouldBe Duration.ZERO
             delayController.refWindowScaleFactorDueToLatencyDifference() shouldBe 1.0
+        }
+
+        "ReduceJitterTracksShortAndLongQueueDelayTrend" {
+            val clock = createClock()
+            val delayController = DelayBasedCongestionControl(ScreamV2Parameters(reduceJitter = true))
+
+            fun sendFeedbackWithQdelay(qdelay: Duration) {
+                clock.elapse(25.ms)
+                val msg = TransportPacketsFeedback()
+                msg.feedbackTime = clock.instant()
+                val packet = PacketResult()
+                packet.receiveTime = clock.instant()
+                packet.sentPacket.sendTime = clock.instant() - 50.ms - qdelay
+                packet.sentPacket.sequenceNumber = 0
+                msg.packetFeedbacks.add(packet)
+                delayController.update(parseScreamFeedback(msg), alr = false)
+            }
+
+            sendFeedbackWithQdelay(qdelay = Duration.ZERO)
+            delayController.refWindowScaleFactorDueToLatencyDifference() shouldBe 1.0
+
+            // Simulate rising queue delay.
+            var startTime = clock.instant()
+            while (clock.instant() < startTime + 500.ms) {
+                sendFeedbackWithQdelay(qdelay = 20.ms)
+            }
+            delayController.refWindowScaleFactorDueToLatencyDifference() shouldBeLessThan 0.8
+
+            // When queue delay stabilizes, the scale factor recovers back above 0.95
+            // despite queue delay staying high.
+            startTime = clock.instant()
+            while (delayController.refWindowScaleFactorDueToLatencyDifference() <= 0.95 &&
+                clock.instant() < startTime + 30.secs
+            ) {
+                sendFeedbackWithQdelay(qdelay = 20.ms)
+            }
+            delayController.refWindowScaleFactorDueToLatencyDifference() shouldBeGreaterThan 0.95
+            Duration.between(startTime, clock.instant()) shouldBeLessThan 20.secs
+            Duration.between(startTime, clock.instant()) shouldBeGreaterThan 10.secs
         }
     }
 }

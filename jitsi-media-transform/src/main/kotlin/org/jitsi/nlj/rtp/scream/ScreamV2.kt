@@ -136,9 +136,13 @@ class ScreamV2(
     // Max data in flight before the send window is full.
     fun maxDataInFlight(): DataSize {
         // 4.3.1. Send Window Calculation
-        val refWindowOverhead = params.refWindowOverheadMin +
-            (params.refWindowOverheadMax - params.refWindowOverheadMin) *
+        val delayScale = if (params.reduceJitter) {
+            delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
+        } else {
             delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay(allowZero = true)
+        }
+        val refWindowOverhead = params.refWindowOverheadMin +
+            (params.refWindowOverheadMax - params.refWindowOverheadMin) * delayScale
 
         return maxOf(refWindow.scaledBy(refWindowOverhead), params.maxSegmentSize * params.minMaxDataInFlightMss)
     }
@@ -148,7 +152,7 @@ class ScreamV2(
     fun refWindow(): DataSize = refWindow
 
     // Last inflection point where ref_window started to decrease.
-    fun refWindowI(): DataSize = refWindowI
+    fun refWindowI(): DataSize? = refWindowI
 
     // Returns the maximum allowed reference window based on data in flight during
     // the last RTT.
@@ -190,13 +194,24 @@ class ScreamV2(
     // when close to the last known inflection point.
     // (4.2.2.1)
     fun refWindowScaleFactorCloseToRefWindowI(): Double {
+        val refWindowI = this.refWindowI ?: return 1.0
         val scaleFactor = params.backoffScaleFactorCloseToRefWindowI
-        val scl = if (refWindow > refWindowI) {
+        var scl = if (refWindow > refWindowI) {
             (refWindow - refWindowI).scaledBy(scaleFactor).ratioTo(refWindowI)
         } else {
             (refWindowI - refWindow).scaledBy(scaleFactor).ratioTo(refWindowI)
         }
-        return (scl * scl).coerceIn(0.1, 1.0)
+        if (params.reduceJitter) {
+            scl = (scl * scl).coerceIn(0.2, 1.0)
+            // Restrict `ref_window_` increase when `ref_window_` has grown past the
+            // last inflection point `ref_window_i_` (but is still close to it, i.e.
+            // `scl < 1.0`) and queue delay is increasing.
+            if (refWindow > refWindowI && scl < 1.0) {
+                scl = max(0.2, scl * delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference())
+            }
+            return scl
+        }
+        return (scl * scl).coerceIn(0.25, 1.0)
     }
 
     // Scale factor for reference window increase. (4.2.2.2)
@@ -267,13 +282,13 @@ class ScreamV2(
             if (timeSinceLastReaction >= minReactionInterval &&
                 !isLoss &&
                 !isCe &&
-                delayBasedCongestionControl.isQueueDelayDetected() &&
+                delayBasedCongestionControl.l4sAlphaV() > 0.0 &&
                 delayBasedCongestionControl.queueDelay() >= queueDelayAvgPrev
             ) {
                 isVirtualCe = true
             }
         } else {
-            isVirtualCe = delayBasedCongestionControl.isQueueDelayDetected()
+            isVirtualCe = delayBasedCongestionControl.l4sAlphaV() > 0.0
         }
 
         val previousRefWindow = refWindow
@@ -290,11 +305,13 @@ class ScreamV2(
                     // Scale down backoff if close to the last known max reference window
                     // This is complemented with a scale down of the reference window
                     // increase
-                    backoff *= max(0.25, refWindowScaleFactorCloseToRefWindowI())
-                    // Counterbalance the limitation in reference window increase when the
-                    // queue delay varies. This helps to avoid starvation in the presence
-                    // of competing TCP Prague flows.
-                    backoff *= max(0.1, delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay())
+                    backoff *= refWindowScaleFactorCloseToRefWindowI()
+                    if (!params.reduceJitter) {
+                        // Counterbalance the limitation in reference window increase when the
+                        // queue delay varies. This helps to avoid starvation in the presence
+                        // of competing TCP Prague flows.
+                        backoff *= max(0.1, delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay())
+                    }
                 }
 
                 if (timeSinceLastReaction.isFinite() &&
@@ -356,33 +373,42 @@ class ScreamV2(
                 increaseScaleFactor = increaseScaleFactor * rttRatio
             }
 
-            // Limit increase when close to the last inflection point.
-            increaseScaleFactor = increaseScaleFactor * max(0.25, refWindowScaleFactorCloseToRefWindowI())
-
-            // Put a additional restriction on reference window growth if rtt varies a
-            // lot.
-            // Better to enforce a slow increase in reference window and get
-            // a more stable bitrate.
-            if (params.useMinDelayScaleOnIncrease) {
-                increaseScaleFactor = increaseScaleFactor *
-                    min(
-                        delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay(),
-                        delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
-                    )
-            } else {
-                increaseScaleFactor = increaseScaleFactor *
-                    (
-                        delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay() *
-                            delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
-                        )
-            }
-
             // Use lower multiplicative scale factor if congestion was detected
             // recently.
             val maxOfVirtualAndSmothedRtt = max(params.virtualRtt, delayBasedCongestionControl.rtt())
-            val postCongestionScale = timeBetween(lastReactionToCongestionTime, parsed.feedbackTime)
+            var postCongestionScale = timeBetween(lastReactionToCongestionTime, parsed.feedbackTime)
                 .ratioTo(maxOfVirtualAndSmothedRtt.multipliedBy(params.postCongestionDelayRtts.toLong()))
                 .coerceIn(0.0, 1.0)
+            // Limit increase when close to the last inflection point.
+            increaseScaleFactor *= refWindowScaleFactorCloseToRefWindowI()
+            if (params.reduceJitter) {
+                // When queue delay is increasing
+                // (`ref_window_scale_factor_due_to_latency_difference() < 1.0`),
+                // multiplicative increase is restricted just as if congestion occurred
+                // recently.
+                postCongestionScale *= delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
+                // Scale the increment by 0.25 to 1.0 on how much the queue delay varies.
+                increaseScaleFactor *= 1.0 /
+                    (4.0 - 3.0 * delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference())
+            } else {
+                // Put a additional restriction on reference window growth if rtt varies a
+                // lot.
+                // Better to enforce a slow increase in reference window and get
+                // a more stable bitrate.
+                if (params.useMinDelayScaleOnIncrease) {
+                    increaseScaleFactor = increaseScaleFactor *
+                        min(
+                            delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay(),
+                            delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
+                        )
+                } else {
+                    increaseScaleFactor = increaseScaleFactor *
+                        (
+                            delayBasedCongestionControl.refWindowScaleFactorDueToAvgMinDelay() *
+                                delayBasedCongestionControl.refWindowScaleFactorDueToLatencyDifference()
+                            )
+                }
+            }
             val multiplicativeScale = 1.0 + (refWindowMultiplicativeScaleFactor() - 1.0) * postCongestionScale
             check(multiplicativeScale >= 1.0)
             increaseScaleFactor = increaseScaleFactor * multiplicativeScale
@@ -398,11 +424,16 @@ class ScreamV2(
         if (previousRefWindow > refWindow) {
             lastRefWindowDecreaseTime = parsed.feedbackTime
             // Allow update of `ref_window_i_` only if `ref_window_` before decrease
-            // had increased sufficiently (>5%) above `ref_window_lowest_` or the hold
-            // time has expired. This prevents `ref_window_i_` from being stepped down
-            // during a period of congestion (4.2.2.1).
+            // had increased sufficiently (>5% or >1 MSS) above `ref_window_lowest_` or
+            // the hold time has expired. This prevents `ref_window_i_` from being
+            // stepped down during a period of congestion (4.2.2.1).
             val maxOfVirtualAndSmoothedRtt = max(params.virtualRtt, delayBasedCongestionControl.rtt())
-            if (previousRefWindow > refWindowLowest.scaledBy(1.05) ||
+            val minRefWindowForUpdate = if (params.reduceJitter) {
+                maxOf(refWindowLowest + params.maxSegmentSize, refWindowLowest.scaledBy(1.05))
+            } else {
+                refWindowLowest.scaledBy(1.05)
+            }
+            if (previousRefWindow > minRefWindowForUpdate ||
                 timeBetween(lastRefWindowIUpdateTime, parsed.feedbackTime) >
                 maxOfVirtualAndSmoothedRtt.multipliedBy(params.refWindowIUpdateMaxHoldRtts.toLong())
             ) {
@@ -414,7 +445,7 @@ class ScreamV2(
 
         if (previousRefWindow != refWindow) {
             logger.trace {
-                "ScreamV2: , ref_window = $refWindow ref_window_i_=$refWindowI, " +
+                "ScreamV2: , ref_window = $refWindow ref_window_i_=${refWindowI ?: DataSize.ZERO}, " +
                     "change=${refWindow.wholeBytes() - previousRefWindow.wholeBytes()} bytes , " +
                     "l4s_alpha=$l4sAlpha, is_ce=$isCe is_virtual_ce=$isVirtualCe is_loss=$isLoss " +
                     "smoothed_rtt=${delayBasedCongestionControl.rtt().toRoundedMillis()}, " +
@@ -518,11 +549,11 @@ class ScreamV2(
     // Reference window inflection point. I.e, `ref_window_` when congestion was
     // noticed. Increase and decrease of `ref_window_` is scaled down around
     // `ref_window_i_`.
-    private var refWindowI: DataSize = 1.bytes
+    private var refWindowI: DataSize? = null
 
     // Lowest `ref_window_` observed on a reference window decrease
     // (`ref_wnd_lowest` in 4.2.2.1). `ref_window_i_` is only updated when
-    // `ref_window_` before decrease has increased by >5% above
+    // `ref_window_` before decrease has increased by >5% or >1 MSS above
     // `ref_window_lowest_` or `ref_window_i_update_max_hold_rtts` has elapsed
     // since `last_ref_window_i_update_time_`.
     private var refWindowLowest = DataSize.ZERO

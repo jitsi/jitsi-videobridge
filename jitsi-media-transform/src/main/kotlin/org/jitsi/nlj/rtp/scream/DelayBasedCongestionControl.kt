@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.rtp.scream
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.util.WindowedMinFilter
 import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.NEVER
@@ -25,6 +24,7 @@ import org.jitsi.utils.min
 import org.jitsi.utils.times
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.min
 
 /** Delay based congestion control,
  * based on WebRTC modules/congestion_controller/scream/delay_based_congestion_control.{h,cc} in
@@ -46,6 +46,7 @@ class DelayBasedCongestionControl(private val params: ScreamV2Parameters) {
         updateSmoothedRtt(delay.rttSample, alr)
 
         val minQueueDelay = delay.minOneWayDelay - minBaseDelay()
+        val maxQueueDelay = delay.maxOneWayDelay - minBaseDelay()
         if (minQueueDelay > params.queueDelayDrainThreshold) {
             if (minQueueDelayAboveThresholdStart.isInfinite()) {
                 minQueueDelayAboveThresholdStart = feedback.feedbackTime
@@ -55,8 +56,12 @@ class DelayBasedCongestionControl(private val params: ScreamV2Parameters) {
         }
         updateQueueDelayAverage(min(minQueueDelay, lastQueueDelaySample))
         lastQueueDelaySample = minQueueDelay
-        updateQueueDelayMinAverage(minQueueDelay)
-        updateLatencyDifferenceAverage(delay.maxOneWayDelay - delay.minOneWayDelay)
+        if (params.reduceJitter) {
+            calculateQueueDelayTrend(maxQueueDelay)
+        } else {
+            updateQueueDelayMinAverage(minQueueDelay)
+            updateLatencyDifferenceAverage(delay.maxOneWayDelay - delay.minOneWayDelay)
+        }
 
         if (timeBetween(lastBaseDelayUpdate, feedback.feedbackTime) >= params.baseDelayHistoryUpdateInterval) {
             baseDelayHistory.insert(nextBaseDelay)
@@ -65,9 +70,10 @@ class DelayBasedCongestionControl(private val params: ScreamV2Parameters) {
         }
     }
 
-    // Returns true if queue delay is detected and above a threshold.
-    fun isQueueDelayDetected(): Boolean =
-        queueDelayAvg.isFinite() && queueDelayAvg > params.queueDelayTarget.dividedBy(2)
+    // Returns true if queue delay is detected and above a threshold
+    // (`queue_delay_target * queue_delay_detected_factor`).
+    fun isQueueDelayDetected(): Boolean = queueDelayAvg.isFinite() &&
+        queueDelayAvg > params.queueDelayTarget.scaledBy(params.queueDelayDetectedFactor)
 
     // Returns false if the minimum queue delay has been above the drain threshold
     // for a prolonged time. This can happen if minimum possible latency has
@@ -85,15 +91,19 @@ class DelayBasedCongestionControl(private val params: ScreamV2Parameters) {
         baseDelayHistory.insert(MAX_DURATION)
 
         minQueueDelayAboveThresholdStart = NEVER
-        lastUpdateQdelayAvgTime = NEVER
         queueDelayAvg = MAX_DURATION
         queueDelayMinAvg = Duration.ZERO
         latencyDifferenceAvg = Duration.ZERO
+        qdelayShortAvg = Duration.ZERO
+        qdelayLongAvg = Duration.ZERO
+        queueDelayTrend = 0.0
     }
 
     fun queueDelay(): Duration = queueDelayAvg
     fun queueDelayMinAvg(): Duration = queueDelayMinAvg
     fun latencyDifferenceAvg(): Duration = latencyDifferenceAvg
+    fun qdelayShortAvg(): Duration = qdelayShortAvg
+    fun qdelayLongAvg(): Duration = qdelayLongAvg
 
     // Scale factor used for scaling reference window increase/decrease due to
     // minimum average queue delay per feedback. The scale factor is 0.1
@@ -111,6 +121,9 @@ class DelayBasedCongestionControl(private val params: ScreamV2Parameters) {
     // rate is close to link capacity, the difference between min and max latency
     // per feedback increases and the scale factor decreases.
     fun refWindowScaleFactorDueToLatencyDifference(): Double {
+        if (params.reduceJitter) {
+            return 1.0 - queueDelayTrend
+        }
         val norm = params.latencyDiffThreshold
         // Reaches 0.1 at norm, and 1.0 at norm / 4
         return (0.1 + (norm - latencyDifferenceAvg).scaledBy(1.2).ratioTo(norm)).coerceIn(0.1, 1.0)
@@ -164,6 +177,35 @@ class DelayBasedCongestionControl(private val params: ScreamV2Parameters) {
             min(packetLatencyDiff, 2 * params.latencyDiffThreshold).scaledBy(params.delayMinAndLatencyDiffAvgG)
     }
 
+    private fun calculateQueueDelayTrend(maxQueueDelay: Duration) {
+        // 4.2.1.4. Detecting Increased Queue Delay (`calculate_latency_diff_avg`).
+        // Unlike the draft, `queue_delay_trend_` (`latency_diff_avg` in the draft) is
+        // updated even before the first congestion event so that rising queue delay
+        // during initial ramp-up is tracked and moderates reference window growth and
+        // in-flight headroom before the first congestion event occurs.
+        check(maxQueueDelay >= Duration.ZERO)
+        qdelayShortAvg = qdelayShortAvg.scaledBy(1.0 - params.queueDelayShortAvgG) +
+            maxQueueDelay.scaledBy(params.queueDelayShortAvgG)
+        qdelayLongAvg = qdelayLongAvg.scaledBy(1.0 - params.queueDelayLongAvgG) +
+            maxQueueDelay.scaledBy(params.queueDelayLongAvgG)
+
+        val diff = clamp(
+            qdelayShortAvg - qdelayLongAvg - params.latencyDiffMargin1,
+            params.latencyDiffMargin1.negated(),
+            params.latencyDiffMargin1
+        )
+        if (diff > Duration.ZERO) {
+            // Attenuate the increase when `queue_delay_avg_` is below
+            // `latency_diff_margin_2` to avoid over-sensitivity to small delay
+            // variations when overall queue delay is low.
+            val lowQdelayScale = min(1.0, queueDelayAvg.ratioTo(params.latencyDiffMargin2))
+            queueDelayTrend += params.latencyDiffUpGain * diff.secondsAsDouble() * lowQdelayScale
+        } else {
+            queueDelayTrend += params.latencyDiffDownGain * diff.secondsAsDouble()
+        }
+        queueDelayTrend = queueDelayTrend.coerceIn(0.0, 1.0)
+    }
+
     // For computing min one way delay and compensate for clock drift.
     // Based on https://datatracker.ietf.org/doc/html/rfc6817
     private var lastBaseDelayUpdate: Instant = NEVER
@@ -174,12 +216,16 @@ class DelayBasedCongestionControl(private val params: ScreamV2Parameters) {
 
     private var lastSmoothedRtt: Duration = Duration.ZERO
 
-    @SuppressFBWarnings("URF_UNREAD_FIELD")
-    private var lastUpdateQdelayAvgTime: Instant = NEVER
     private var lastQueueDelaySample: Duration = MAX_DURATION
     private var queueDelayAvg: Duration = MAX_DURATION
     private var queueDelayMinAvg: Duration = Duration.ZERO
     private var latencyDifferenceAvg: Duration = Duration.ZERO
+    private var qdelayShortAvg: Duration = Duration.ZERO
+    private var qdelayLongAvg: Duration = Duration.ZERO
+
+    // Normalized indicator in [0.0, 1.0] of how much the queue delay is
+    // increasing (`latency_diff_avg` in the SCReAMv2 draft).
+    private var queueDelayTrend = 0.0
 
     init {
         resetQueueDelay()

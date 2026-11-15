@@ -106,7 +106,7 @@ data class ScreamV2Parameters(
 
     // Exponentially Weighted Moving Average (EWMA) factor for updating queue
     // delay.
-    val queueDelayAvgG: Double = 1.0 / 4.0,
+    val queueDelayAvgG: Double = 1.0 / 2.0,
 
     // Exponentially Weighted Moving Average (EWMA) factor for updating average
     // min queue delay and average latency difference.
@@ -124,6 +124,44 @@ data class ScreamV2Parameters(
     // difference scale factor when limiting ref_window increase, instead of
     // multiplying them.
     val useMinDelayScaleOnIncrease: Boolean = true,
+
+    // If true, uses the spec's `REDUCE_JITTER` latency difference trend
+    // calculation (`calculate_latency_diff_avg`) and reference window scaling
+    // (`latency_diff_ref_wnd_scale_t`).
+    val reduceJitter: Boolean = true,
+
+    // Exponentially Weighted Moving Average (EWMA) factor for the short-term
+    // queue delay average (`QDELAY_SHORT_AVG_G` in the RFC). Used when
+    // `reduce_jitter` is true to track recent queue delay changes.
+    val queueDelayShortAvgG: Double = 1.0 / 5.0,
+
+    // Exponentially Weighted Moving Average (EWMA) factor for the long-term
+    // queue delay average (`QDELAY_LONG_AVG_G` in the RFC). Used when
+    // `reduce_jitter` is true as the baseline to detect sustained queue delay
+    // increases vs. short-term jitter.
+    val queueDelayLongAvgG: Double = 1.0 / 50.0,
+
+    // Deadband margin (`LATENCY_DIFF_MARGIN_1` in the RFC) subtracted from
+    // `qdelay_short_avg - qdelay_long_avg` before accumulating into
+    // `latency_diff_avg`, and also the clamp magnitude (`[-latency_diff_margin_1,
+    // +latency_diff_margin_1]`) for the per-feedback difference (`diff_t`).
+    val latencyDiffMargin1: Duration = 1.ms,
+
+    // Queue delay threshold (`LATENCY_DIFF_MARGIN_2` in the RFC) used to scale
+    // down `latency_diff_avg` increases (`min(1.0, queue_delay_avg /
+    // latency_diff_margin_2)`) to avoid over-sensitivity when average queue delay
+    // is low.
+    val latencyDiffMargin2: Duration = 10.ms,
+
+    // Gain factor (`LATENCY_DIFF_UP_GAIN` in the RFC) applied when increasing
+    // `latency_diff_avg` as `qdelay_short_avg` exceeds `qdelay_long_avg +
+    // latency_diff_margin_1`.
+    val latencyDiffUpGain: Double = 20.0,
+
+    // Gain factor (`LATENCY_DIFF_DOWN_GAIN` in the RFC) applied when decreasing
+    // `latency_diff_avg` as `qdelay_short_avg` falls below `qdelay_long_avg +
+    // latency_diff_margin_1`.
+    val latencyDiffDownGain: Double = 2.0,
 
     // Minimum (base) window from the latest sent packet in feedback to compute
     // min and max one-way delay.
@@ -149,6 +187,10 @@ data class ScreamV2Parameters(
     // TODO: bugs.webrtc.org/447037083 -  Consider implementing 4.2.1.4.1.
     // Competing Flows Compensation.
     val queueDelayTarget: Duration = 60.ms,
+
+    // Factor of `queue_delay_target` above which `IsQueueDelayDetected()` returns
+    // true.
+    val queueDelayDetectedFactor: Double = 0.25,
 
     // If the minimum queue delay is below this threshold, queues are deamed to be
     // drained.

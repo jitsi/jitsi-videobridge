@@ -66,6 +66,9 @@ internal fun Duration.ratioTo(other: Duration): Double = when (this) {
     else -> toMicros().toDouble()
 } / other.toMicros().toDouble()
 
+/** `TimeDelta::seconds<double>()` in WebRTC. The duration has to be finite. */
+internal fun Duration.secondsAsDouble(): Double = toMicros().toDouble() * (1.0 / 1_000_000.0)
+
 /** `Timestamp - Timestamp` in WebRTC, where either timestamp can be infinite. */
 internal fun timeBetween(earlier: Instant, later: Instant): Duration = when {
     later == Instant.MAX || earlier == Instant.MIN -> MAX_DURATION

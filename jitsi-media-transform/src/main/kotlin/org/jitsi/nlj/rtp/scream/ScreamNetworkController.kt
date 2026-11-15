@@ -438,7 +438,7 @@ class ScreamNetworkController(
         padding = reportedPaddingRate,
         rtt = scream.rtt(),
         refWindow = scream.refWindow(),
-        refWindowI = scream.refWindowI(),
+        refWindowI = scream.refWindowI() ?: DataSize.ZERO,
         maxDataInFlight = scream.maxDataInFlight(),
         dataInFlight = dataInFlight,
         l4sAlpha = scream.l4sAlpha(),
