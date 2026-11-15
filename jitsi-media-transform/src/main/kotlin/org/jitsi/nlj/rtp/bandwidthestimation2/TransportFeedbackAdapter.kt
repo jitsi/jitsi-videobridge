@@ -270,6 +270,8 @@ class TransportFeedbackAdapter(
 
         var failedLookups = 0
         var supportsEcn = true
+        var rttSum = Duration.ZERO
+        var packetsReceived = 0
         val packetResultVector = mutableListOf<PacketResult>()
         feedback.packets.forEach { packetInfo ->
             val packetFeedback = retrievePacketFeedback(
@@ -283,13 +285,10 @@ class TransportFeedbackAdapter(
             val result = PacketResult()
             result.sentPacket = packetFeedback.sent
             if (packetInfo is ReceivedPacketInfo) {
+                ++packetsReceived
                 result.receiveTime = currentOffset - packetInfo.arrivalTimeOffset
-                val rtt = Duration.between(result.sentPacket.sendTime, feedbackReceiveTime) -
+                rttSum += Duration.between(result.sentPacket.sendTime, feedbackReceiveTime) -
                     packetInfo.arrivalTimeOffset
-                if (smoothedRtt.isInfinite()) {
-                    smoothedRtt = rtt
-                }
-                smoothedRtt = (smoothedRtt * 7 + rtt) / 8L // RFC 6298, alpha = 1/8
                 result.ecn = packetInfo.ecn
                 supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
             }
@@ -305,6 +304,14 @@ class TransportFeedbackAdapter(
                 isRetransmission = packetFeedback.isRetransmission,
             )
             packetResultVector.add(result)
+        }
+        if (packetsReceived > 0) {
+            if (smoothedRtt.isInfinite()) {
+                smoothedRtt = rttSum / packetsReceived.toLong()
+            } else {
+                // RFC 6298, alpha = 1/8
+                smoothedRtt = (smoothedRtt * 7 + rttSum / packetsReceived.toLong()) / 8L
+            }
         }
 
         totalUnmatchedReports += failedLookups
