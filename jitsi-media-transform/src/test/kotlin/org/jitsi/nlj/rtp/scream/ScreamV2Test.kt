@@ -44,6 +44,7 @@ import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.pow
 
 private val kPacketSize = 1000.bytes
 
@@ -339,26 +340,62 @@ class ScreamV2Test : FreeSpec() {
             val startTime = clock.instant()
             val feedbackInterval = 25.ms
 
-            val feedback = createFeedback(
-                clock.instant(),
-                rtt = 10.ms,
-                numberOfEct1Packets = 20,
-                numberOfPacketsInFlight = 20
-            )
-            // CE mark 20% of packets.
-            for (i in 0 until 4) {
-                feedback.packetFeedbacks[i].ecn = EcnMarking.kCe
-            }
-
             val l4sAlpha = scream.l4sAlpha()
             while (clock.instant() < startTime + 2.secs) {
-                feedback.feedbackTime = clock.instant()
+                val feedback = createFeedback(
+                    clock.instant(),
+                    rtt = 10.ms,
+                    numberOfEct1Packets = 20,
+                    numberOfPacketsInFlight = 20
+                )
+                // CE mark 20% of packets.
+                for (i in 0 until 4) {
+                    feedback.packetFeedbacks[i].ecn = EcnMarking.kCe
+                }
                 scream.onTransportPacketsFeedback(feedback)
                 scream.l4sAlpha() shouldBeGreaterThan l4sAlpha
                 clock.elapse(feedbackInterval)
             }
 
             scream.l4sAlpha() shouldBe (0.2 plusOrMinus 0.01)
+        }
+
+        "L4sAlphaScalesUpAndDownWithRtt" {
+            val clock = createClock()
+            val scream = ScreamV2(logger)
+
+            val rtt = 100.ms
+            val feedbackInterval = 25.ms
+
+            // First feedback with 100% CE marks at RTT = 100ms (steps_per_rtt = 4).
+            // With L4sAvgGUp = 1/8 and steps_per_rtt = 4, g_up = (1/8) / 4 = 1/32.
+            val ceFeedback = createFeedback(
+                clock.instant(),
+                rtt,
+                numberOfEct1Packets = 20,
+                numberOfPacketsInFlight = 20
+            )
+            for (packet in ceFeedback.packetFeedbacks) {
+                packet.ecn = EcnMarking.kCe
+            }
+            scream.onTransportPacketsFeedback(ceFeedback)
+            scream.l4sAlpha() shouldBe ((1.0 / 8.0) / 4.0 plusOrMinus 1e-15)
+
+            // Next 4 feedbacks (1 RTT) with 0% CE marks.
+            // With L4sAvgGDown = 1/16 and steps_per_rtt = 4, g_down = (1/16) / 4 = 1/64.
+            val alphaBeforeDecay = scream.l4sAlpha()
+            for (i in 0 until 4) {
+                clock.elapse(feedbackInterval)
+                val clearFeedback = createFeedback(
+                    clock.instant(),
+                    rtt,
+                    numberOfEct1Packets = 20,
+                    numberOfPacketsInFlight = 20
+                )
+                scream.onTransportPacketsFeedback(clearFeedback)
+            }
+            val expectedDecayFactor = (1.0 - (1.0 / 16.0) / 4.0).pow(4)
+            scream.l4sAlpha() shouldBe (alphaBeforeDecay * expectedDecayFactor plusOrMinus 1e-6)
         }
 
         "AdaptsToEcnLinkCapacity1Mbps" {

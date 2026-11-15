@@ -205,18 +205,31 @@ class ScreamV2(
 
     fun isApplicationLimited(): Boolean = isApplicationLimited
 
+    private fun reactionInterval(): Duration = if (params.useFeedbackIntervalForVirtualRtt) {
+        max(params.virtualRtt, feedbackInterval)
+    } else {
+        params.virtualRtt
+    }
+
     private fun updateL4SAlpha(parsed: ScreamFeedback) {
         // 4.2.1.3.
         if (parsed.numReceivedPackets == 0) {
             return
         }
 
+        val stepsPerRtt = if (params.scaleL4sAlphaWithRtt) {
+            max(1.0, delayBasedCongestionControl.rtt().ratioTo(reactionInterval()))
+        } else {
+            1.0
+        }
         val fractionMarked = parsed.numCeMarkedPackets.toDouble() / parsed.numReceivedPackets
         // Fast attack slow decay EWMA filter.
         if (fractionMarked > l4sAlpha) {
-            l4sAlpha = min(params.l4sAvgGUp * fractionMarked + (1.0 - params.l4sAvgGUp) * l4sAlpha, 1.0)
+            val gUp = params.l4sAvgGUp / stepsPerRtt
+            l4sAlpha = min(gUp * fractionMarked + (1.0 - gUp) * l4sAlpha, 1.0)
         } else {
-            l4sAlpha = (1.0 - params.l4sAvgGDown) * l4sAlpha
+            val gDown = params.l4sAvgGDown / stepsPerRtt
+            l4sAlpha = (1.0 - gDown) * l4sAlpha
         }
     }
 
@@ -233,11 +246,7 @@ class ScreamV2(
         val previousRefWindow = refWindow
 
         val timeSinceLastReaction = timeBetween(lastReactionToCongestionTime, parsed.feedbackTime)
-        val reactionInterval = if (params.useFeedbackIntervalForVirtualRtt) {
-            max(params.virtualRtt, feedbackInterval)
-        } else {
-            params.virtualRtt
-        }
+        val reactionInterval = reactionInterval()
 
         if ((isVirtualCe || isCe || isLoss) &&
             timeSinceLastReaction >= min(delayBasedCongestionControl.rtt(), reactionInterval)
