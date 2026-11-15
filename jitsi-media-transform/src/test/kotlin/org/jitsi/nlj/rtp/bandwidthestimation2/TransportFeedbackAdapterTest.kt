@@ -1205,5 +1205,60 @@ class TransportFeedbackAdapterTest : FreeSpec() {
                 packetFeedback.reportedRecoveredForTheFirstTime shouldBe false
             }
         }
+
+        "ClampsExcessiveArrivalTimeOffsetToMaxExpectedAto" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            val packets = listOf(
+                PacketTemplate(
+                    ssrc = 1234,
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    sendTimestamp = Instant.EPOCH + 100.ms,
+                    receiveTimestamp = Instant.EPOCH + 150.ms
+                ),
+                PacketTemplate(
+                    ssrc = 1234,
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 102,
+                    sendTimestamp = Instant.EPOCH + 120.ms,
+                    receiveTimestamp = Instant.EPOCH + 180.ms
+                ),
+            )
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            // First feedback at t = 200ms with report timestamp 150ms.
+            val feedback1 = listOf(packets[0])
+            test.adapter.processCongestionControlFeedback(
+                buildRtcpCongestionControlFeedbackPacket(feedback1),
+                Instant.EPOCH + 200.ms
+            )
+
+            // Second feedback at t = 230ms with report timestamp 180ms (feedback_delta =
+            // 30ms). But reported arrival_time_offset is 400ms (exceeding
+            // feedback_delta).
+            val packetInfo = ReceivedPacketInfo(
+                ssrc = 1234,
+                sequenceNumber = 102,
+                arrivalTimeOffset = 400.ms,
+                ecn = EcnMarking.kNotEct
+            )
+            val compactNtp = TimeUtils.toNtpShortFormat(TimeUtils.toNtpTime(180))
+            val feedback2 =
+                RtcpFbCcfbPacketBuilder(reportTimestampCompactNtp = compactNtp, packets = listOf(packetInfo)).build()
+
+            val result = test.adapter.processCongestionControlFeedback(feedback2, Instant.EPOCH + 230.ms)
+            result shouldNotBe null
+            val packetFeedback = findFeedback(result, transportSequenceNumber = 2)
+            packetFeedback shouldNotBe null
+            packetFeedback!!.arrivalTimeOffset shouldNotBe null
+            // The arrival_time_offset should be clamped to max expected ATO
+            // (feedback_delta + 1ms = 31ms) rather than remaining 400ms.
+            packetFeedback.arrivalTimeOffset!! shouldBeLessThanOrEqualTo 31.ms
+        }
     }
 }
