@@ -223,6 +223,8 @@ class TransportPacketsFeedback {
     var feedbackTime: Instant = NEVER
     var dataInFlight: DataSize = DataSize.ZERO
     var packetFeedbacks: MutableList<PacketResult> = ArrayList()
+
+    @Deprecated("Use hasPacketWithBleachedEct1() instead")
     var transportSupportsEcn: Boolean = false
 
     /** Arrival times for messages without send times information */
@@ -238,6 +240,15 @@ class TransportPacketsFeedback {
 
     // True if at least one packet is CE marked.
     fun hasPacketWithEcnCe(): Boolean = packetFeedbacks.any { it.ecn == EcnMarking.kCe }
+
+    // True if at least one packet that was sent with an ECT(1) marking was
+    // reported received without it, i.e. the path bleached the marking.
+    fun hasPacketWithBleachedEct1(): Boolean = packetFeedbacks.any { fb ->
+        // Only received packets say anything about what the path did to the
+        // marking. Packets reported lost carry a defaulted Not-ECT marking and
+        // would otherwise be indistinguishable from bleached ones.
+        fb.sentWithEct1 && fb.isReceived() && fb.ecn == EcnMarking.kNotEct
+    }
 }
 
 // Network estimation

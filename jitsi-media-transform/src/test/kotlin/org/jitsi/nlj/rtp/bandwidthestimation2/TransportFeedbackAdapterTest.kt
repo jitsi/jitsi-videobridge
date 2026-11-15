@@ -909,7 +909,7 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             adaptedFeedback!!.packetFeedbacks.size shouldBe 2
             adaptedFeedback.packetFeedbacks[0].ecn shouldBe EcnMarking.kCe
             adaptedFeedback.packetFeedbacks[1].ecn shouldBe EcnMarking.kEct1
-            adaptedFeedback.transportSupportsEcn shouldBe true
+            adaptedFeedback.hasPacketWithBleachedEct1() shouldBe false
         }
 
         "CongestionControlFeedbackResultPassSentWithEct1PerPacket" {
@@ -945,7 +945,7 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             adaptedFeedback.packetFeedbacks[1].sentWithEct1 shouldBe false
         }
 
-        "ReportTransportDoesNotSupportEcnIfFeedbackContainNotEctPacket" {
+        "ReportBleachedEct1IfEct1PacketIsReceivedAsNotEct" {
             val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
 
             val packets = listOf(
@@ -973,8 +973,71 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
             val adaptedFeedback = test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow())
 
-            adaptedFeedback!!.transportSupportsEcn shouldBe false
+            adaptedFeedback!!.hasPacketWithBleachedEct1() shouldBe true
             adaptedFeedback.packetFeedbacks.size shouldBe 2
+        }
+
+        "DoesNotReportBleachedEct1IfNotEctPacketIsReceivedAsNotEct" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            // A packet that was sent as Not-ECT is expected to be received as Not-ECT.
+            // That says nothing about whether the path bleaches ECT(1).
+            val packets = listOf(
+                PacketTemplate(
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    sendAsEct1 = false,
+                    ecn = EcnMarking.kNotEct,
+                    sendTimestamp = Instant.EPOCH + 100.ms,
+                    receiveTimestamp = Instant.EPOCH + 200.ms
+                ),
+            )
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
+            val adaptedFeedback = test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow())
+            adaptedFeedback!!.packetFeedbacks.size shouldBe 1
+            adaptedFeedback.hasPacketWithBleachedEct1() shouldBe false
+        }
+
+        "DoesNotReportBleachedEct1IfEct1PacketIsLost" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            // A lost packet is reported with a defaulted Not-ECT marking. Treating that
+            // as bleaching would turn every burst of loss into a permanent verdict that
+            // the path does not support ECN.
+            val packets = listOf(
+                PacketTemplate(
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    sendAsEct1 = true,
+                    ecn = EcnMarking.kEct1,
+                    sendTimestamp = Instant.EPOCH + 100.ms,
+                    receiveTimestamp = Instant.EPOCH + 200.ms
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 102,
+                    sendAsEct1 = true,
+                    sendTimestamp = Instant.EPOCH + 110.ms,
+                    receiveTimestamp = NEVER
+                ),
+            )
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
+            val adaptedFeedback = test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow())
+            adaptedFeedback!!.packetFeedbacks.size shouldBe 2
+            adaptedFeedback.packetFeedbacks[1].isReceived() shouldBe false
+            adaptedFeedback.hasPacketWithBleachedEct1() shouldBe false
         }
 
         "CalculateSmoothedRttForConstantOneWayDelay" {

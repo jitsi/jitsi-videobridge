@@ -367,6 +367,9 @@ class TransportFeedbackAdapter(
                 }
                 result.receiveTime = currentOffset - arrivalTimeOffset
                 result.ecn = packetInfo.ecn
+                // Note that this deliberately does not look at how the packet was sent,
+                // in order to keep the deprecated `transport_supports_ecn` bit for bit
+                // compatible. Use `HasPacketWithBleachedEct1()` instead.
                 supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
                 result.arrivalTimeOffset = arrivalTimeOffset
             }
@@ -446,6 +449,7 @@ class TransportFeedbackAdapter(
         }
         msg.packetFeedbacks = packetResults
         msg.dataInFlight = inFlight.getOutstandingData()
+        @Suppress("DEPRECATION")
         msg.transportSupportsEcn = supportsEcn
 
         return msg
