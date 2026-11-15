@@ -44,7 +44,7 @@ private fun Duration.toMsDouble(): Double = toMicros() / 1000.0
 
 /** Unit tests for DelayBasedCongestionControl,
  * based on WebRTC modules/congestion_controller/scream/delay_based_congestion_control_unittest.cc in
- * WebRTC tag branch-heads/8078 (Chromium 156).
+ * WebRTC commit 42a497714596d8f726da4dae4fb4f133cbaa15df (main, 2026-11-15).
  */
 class DelayBasedCongestionControlTest : FreeSpec() {
     init {

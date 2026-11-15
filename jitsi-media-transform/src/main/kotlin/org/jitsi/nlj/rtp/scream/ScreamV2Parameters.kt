@@ -24,7 +24,7 @@ import java.time.Duration
 
 /** Parameters of ScreamV2,
  * based on WebRTC modules/congestion_controller/scream/scream_v2_parameters.{h,cc} in
- * WebRTC tag branch-heads/8078 (Chromium 156).
+ * WebRTC commit 42a497714596d8f726da4dae4fb4f133cbaa15df (main, 2026-11-15).
  *
  * In WebRTC these are parameters of the field trial WebRTC-Bwe-ScreamV2. The defaults here are the defaults there.
  */

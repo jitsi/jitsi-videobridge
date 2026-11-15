@@ -24,7 +24,7 @@ import kotlin.math.min
 
 /** Loss estimator,
  * based on WebRTC modules/congestion_controller/scream/loss_estimator.{h,cc} in
- * WebRTC tag branch-heads/8078 (Chromium 156).
+ * WebRTC commit 42a497714596d8f726da4dae4fb4f133cbaa15df (main, 2026-11-15).
  *
  * Estimates the short-term congestion level of the connection using a biased
  * asymmetric step filter (counting a weighted sum of RTTs with loss minus

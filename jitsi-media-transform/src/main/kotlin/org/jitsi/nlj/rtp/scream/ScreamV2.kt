@@ -38,7 +38,7 @@ import kotlin.math.min
 
 /** ScreamV2,
  * based on WebRTC modules/congestion_controller/scream/scream_v2.{h,cc} in
- * WebRTC tag branch-heads/8078 (Chromium 156).
+ * WebRTC commit 42a497714596d8f726da4dae4fb4f133cbaa15df (main, 2026-11-15).
  *
  * Implements ScreamV2 based on the draft RFC in
  * https://datatracker.ietf.org/doc/draft-johansson-ccwg-rfc8298bis-screamv2/

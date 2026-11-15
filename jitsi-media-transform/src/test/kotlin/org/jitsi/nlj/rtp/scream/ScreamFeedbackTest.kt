@@ -30,7 +30,7 @@ import java.time.Instant
 
 /** Unit tests for ScreamFeedback,
  * based on WebRTC modules/congestion_controller/scream/scream_feedback_unittest.cc in
- * WebRTC tag branch-heads/8078 (Chromium 156).
+ * WebRTC commit 42a497714596d8f726da4dae4fb4f133cbaa15df (main, 2026-11-15).
  */
 class ScreamFeedbackTest : FreeSpec() {
     init {

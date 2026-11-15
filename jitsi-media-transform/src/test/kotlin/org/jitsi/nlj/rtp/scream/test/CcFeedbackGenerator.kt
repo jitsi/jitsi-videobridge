@@ -43,7 +43,7 @@ fun instantOfEpochMicros(micros: Long): Instant = Instant.EPOCH + microsToDurati
 
 /** Feedback generator,
  * based on WebRTC modules/congestion_controller/scream/test/cc_feedback_generator.{h,cc} in
- * WebRTC tag branch-heads/8078 (Chromium 156).
+ * WebRTC commit 42a497714596d8f726da4dae4fb4f133cbaa15df (main, 2026-11-15).
  *
  * Simulates sending packets with a given send rate over a simulated network and
  * generates TransportPacketsFeedback that is supposed to match

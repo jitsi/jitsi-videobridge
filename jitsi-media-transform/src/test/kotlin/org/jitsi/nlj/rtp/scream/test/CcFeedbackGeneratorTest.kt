@@ -42,7 +42,7 @@ private fun createClock() = FakeClock().apply { setTime(Instant.ofEpochSecond(12
 
 /** Unit tests for CcFeedbackGenerator,
  * based on WebRTC modules/congestion_controller/scream/test/cc_feedback_generator_unittest.cc in
- * WebRTC tag branch-heads/8078 (Chromium 156).
+ * WebRTC commit 42a497714596d8f726da4dae4fb4f133cbaa15df (main, 2026-11-15).
  */
 class CcFeedbackGeneratorTest : FreeSpec() {
     init {
