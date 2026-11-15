@@ -30,7 +30,6 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.TimeUtils
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
@@ -42,6 +41,25 @@ import java.time.Instant
 import java.util.*
 
 private val kSendTimeHistoryWindow = 60.secs
+
+/**
+ * Converts the difference between two compact NTP timestamps, which are unsigned 32-bit values in units of
+ * 1/65536 seconds, to a [Duration]. The difference is taken modulo 2^32, and a value above 2^31 is negative.
+ * The result is rounded to the nearest microsecond.
+ *
+ * Based on CompactNtpIntervalToTimeDelta in WebRTC modules/rtp_rtcp/source/ntp_time_util.cc.
+ */
+private fun compactNtpIntervalToDuration(compactNtpInterval: Long): Duration {
+    var value = compactNtpInterval and 0xFFFF_FFFFL
+    if (value > 0x8000_0000L) {
+        value -= 1L shl 32
+    }
+    // To convert to Duration need to divide by 2^16 to get seconds,
+    // then multiply by 1'000'000 to get microseconds. To avoid float operations,
+    // multiplication and division are swapped.
+    val us = Math.floorDiv(value * 1_000_000 + (1L shl 15), 1L shl 16)
+    return Duration.ofNanos(us * 1000)
+}
 
 private class MinMax(value: Long) {
     var minimum = value
@@ -265,10 +283,7 @@ class TransportFeedbackAdapter(
             currentOffset = feedbackReceiveTime
         }
         val feedbackDelta = lastFeedbackCompactNtpTime?.let {
-            Duration.ofMillis(
-                TimeUtils.ntpShortToMs(feedback.reportTimestampCompactNtp) -
-                    TimeUtils.ntpShortToMs(it)
-            )
+            compactNtpIntervalToDuration(feedback.reportTimestampCompactNtp - it)
         } ?: Duration.ZERO
         lastFeedbackCompactNtpTime = feedback.reportTimestampCompactNtp
 
