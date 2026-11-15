@@ -335,6 +335,13 @@ abstract class SsrcCache(
     )
 
     /**
+     * The primary send SSRC of each source in [sendSources], by the primary SSRC of the source. [sendSources] is an
+     * LRU map: a lookup in it marks the slot as recently used, so the slot is remapped later. A lookup here does not
+     * do that. Updated under the [sendSources] lock whenever [sendSources] changes, and read without the lock.
+     */
+    private val sendSsrcBySource = ConcurrentHashMap<Long, Long>()
+
+    /**
      * Whether an incoming RTP packet can automatically activate its source (i.e. acquire a send SSRC).
      * If false, sources must be activated using the activate() method.
      */
@@ -402,6 +409,8 @@ abstract class SsrcCache(
                 /* Reuse the eldest slot's send SSRCs *and* its mid: the mid is bound to the slot (i.e. to the send
                    SSRCs), not to the source, so it stays stable across remaps. */
                 sendSource = SendSource(props, eldest.value.send1, eldest.value.send2, eldest.value.mid)
+                /* Adding the new source below removes the eldest one from [sendSources]. */
+                sendSsrcBySource.remove(eldest.key)
                 logger.debug { "Remapping SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
                 /* Request new deltas on next sent packet */
                 receivedSsrcs[props.ssrc1]?.hasDeltas = false
@@ -417,6 +426,7 @@ abstract class SsrcCache(
                 logger.debug { "Added send SSRC: ${props.ssrc1}->$sendSource" }
             }
             sendSources[ssrc] = sendSource
+            sendSsrcBySource[ssrc] = sendSource.send1.ssrc
             /* Bind both the primary and RTX send SSRCs to the slot's mid so the stamper can resolve either. */
             sendSource.mid?.let { mid ->
                 sendSsrcToMid[sendSource.send1.ssrc] = mid
@@ -427,6 +437,12 @@ abstract class SsrcCache(
 
         return sendSource
     }
+
+    /**
+     * Returns the send SSRCs which the sources with the primary SSRCs [ssrcs] are rewritten to. A source which has
+     * no slot is left out.
+     */
+    fun getSendSsrcs(ssrcs: Collection<Long>): List<Long> = ssrcs.mapNotNull { sendSsrcBySource[it] }
 
     /**
      * Returns the mid assigned to the slot whose (send-side) SSRC is [ssrc], or null if [ssrc] is not a slot SSRC of
@@ -440,8 +456,12 @@ abstract class SsrcCache(
      */
     fun removeByOwner(owner: String) {
         synchronized(sendSources) {
-            sendSources.values.removeIf { sendSource ->
-                sendSource.props.owner == owner
+            sendSources.entries.removeIf { (ssrc, sendSource) ->
+                (sendSource.props.owner == owner).also { removed ->
+                    if (removed) {
+                        sendSsrcBySource.remove(ssrc)
+                    }
+                }
             }
         }
     }

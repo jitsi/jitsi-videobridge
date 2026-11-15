@@ -45,11 +45,12 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Tests that an endpoint is sent retransmissions as RTX, with and without SSRC rewriting.
+ * Tests that an endpoint is sent retransmissions as RTX, in answer to a NACK and for probing, with and without SSRC
+ * rewriting.
  *
  * With SSRC rewriting, a packet sent to an endpoint carries a send SSRC in place of the SSRC of its source, and is
- * cached for retransmission with that SSRC. So the RTX SSRC to use is the RTX send SSRC which goes with it, not the
- * RTX SSRC of the source.
+ * cached for retransmission with that SSRC. So the cache has to be searched by the send SSRC, and the RTX SSRC to use
+ * is the RTX send SSRC which goes with it, not the RTX SSRC of the source.
  */
 class RtxTest : ConfigTest() {
     private val videobridge = mockk<Videobridge>(relaxed = true)
@@ -71,6 +72,20 @@ class RtxTest : ConfigTest() {
                         retransmission.ssrc shouldBe rtxSsrc
                         // An RTX packet has the original sequence number before the payload.
                         retransmission.length shouldBe nacked.length + 2
+                    }
+                }
+                should("receive probing as RTX") {
+                    withHarness(doSsrcRewriting) {
+                        val media = forward(100, 101, 102)
+                        // Room for the last two packets, and nothing left to send as padding.
+                        val numBytes = 2 * PACKET_LENGTH
+
+                        receiver.sendProbing(listOf(VIDEO_SSRC), numBytes) shouldBe numBytes
+
+                        eventually(5.seconds) { sent.size shouldBe media.size + 2 }
+                        val probing = sent.drop(media.size)
+                        probing.map { it.payloadType } shouldContainExactly listOf(RTX_PAYLOAD_TYPE, RTX_PAYLOAD_TYPE)
+                        probing.map { it.ssrc } shouldContainExactly listOf(rtxSsrc, rtxSsrc)
                     }
                 }
             }
