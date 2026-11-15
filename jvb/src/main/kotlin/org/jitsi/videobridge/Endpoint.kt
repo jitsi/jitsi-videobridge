@@ -55,6 +55,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.utils.LRUCache
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.NEVER
@@ -514,6 +515,7 @@ class Endpoint @JvmOverloads constructor(
                     val pktInfo =
                         PacketInfo(UnparsedPacket(buffer.buffer, buffer.offset, buffer.length)).apply {
                             this.receivedTime = buffer.receivedTime
+                            this.receivedEcn = EcnMarking.fromBits(buffer.ecn.toByte())
                         }
                     pktInfo.packetOrigin = PacketOrigin.Routed
                     transceiver.handleIncomingPacket(pktInfo)

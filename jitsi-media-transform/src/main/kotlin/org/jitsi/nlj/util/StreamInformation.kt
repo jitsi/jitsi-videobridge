@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.format.supportsCcfb
 import org.jitsi.nlj.format.supportsPli
 import org.jitsi.nlj.format.supportsRemb
 import org.jitsi.nlj.format.supportsTcc
@@ -27,6 +28,7 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.logging2.createLogger
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -77,6 +79,12 @@ interface ReadOnlyStreamInformationStore {
     val supportsFir: Boolean
     val supportsRemb: Boolean
     val supportsTcc: Boolean
+
+    /**
+     * Whether RTCP congestion control feedback (RFC 8888) has been negotiated. It is then used in both directions
+     * in place of transport-cc feedback.
+     */
+    val supportsCcfb: Boolean
 }
 
 /**
@@ -136,6 +144,12 @@ class StreamInformationStoreImpl : StreamInformationStore {
     override var supportsTcc: Boolean = false
         private set
 
+    override var supportsCcfb: Boolean = false
+        private set
+
+    /** Whether a warning has been logged for the current payload types, see [updateSupportsCcfb]. */
+    private var warnedOfPartialCcfb = false
+
     override fun addRtpExtensionMapping(rtpExtension: RtpExtension) {
         synchronized(extensionsLock) {
             _rtpExtensions.add(rtpExtension)
@@ -183,7 +197,26 @@ class StreamInformationStoreImpl : StreamInformationStore {
             supportsPli = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsPli() } != null
             supportsRemb = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsRemb() } != null
             supportsTcc = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsTcc() } != null
+            updateSupportsCcfb()
             payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
+        }
+    }
+
+    /**
+     * RFC 8888 feedback reports on every RTP stream of the session, whatever its payload type, and replaces
+     * transport-cc feedback, so it is only in use if it is signaled for all the payload types (in SDP it is signaled
+     * with the wildcard payload type, in every media section). If it is signaled for only some of them it is not
+     * used at all, which is also what libwebrtc does.
+     */
+    private fun updateSupportsCcfb() {
+        val numWithCcfb = rtpPayloadTypes.values.count { it.rtcpFeedbackSet.supportsCcfb() }
+        supportsCcfb = numWithCcfb > 0 && numWithCcfb == rtpPayloadTypes.size
+        if (numWithCcfb > 0 && !supportsCcfb && !warnedOfPartialCcfb) {
+            warnedOfPartialCcfb = true
+            logger.warn(
+                "RFC 8888 feedback (ack ccfb) is signaled for $numWithCcfb of ${rtpPayloadTypes.size} payload " +
+                    "types. It will not be used unless it is signaled for all of them."
+            )
         }
     }
 
@@ -193,6 +226,8 @@ class StreamInformationStoreImpl : StreamInformationStore {
             supportsPli = false
             supportsRemb = false
             supportsTcc = false
+            supportsCcfb = false
+            warnedOfPartialCcfb = false
             payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
         }
     }
@@ -239,5 +274,9 @@ class StreamInformationStoreImpl : StreamInformationStore {
             put("remote_ssrc_associations", remoteSsrcAssociations.toString())
             set<ObjectNode>("receive_ssrc_store", receiveSsrcStore.debugState())
         }
+    }
+
+    companion object {
+        private val logger = createLogger()
     }
 }

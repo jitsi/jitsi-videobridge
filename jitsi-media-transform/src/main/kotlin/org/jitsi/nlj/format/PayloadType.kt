@@ -28,6 +28,11 @@ fun RtcpFeedbackSet.supportsFir(): Boolean = this.contains("ccm fir")
 fun RtcpFeedbackSet.supportsRemb(): Boolean = this.contains("goog-remb")
 fun RtcpFeedbackSet.supportsTcc(): Boolean = this.contains("transport-cc")
 
+/** RTCP congestion control feedback, RFC 8888. */
+const val CCFB = "ack ccfb"
+
+fun RtcpFeedbackSet.supportsCcfb(): Boolean = this.contains(CCFB)
+
 /**
  * Represents an RTP payload type.
  *
@@ -151,8 +156,9 @@ class H264PayloadType(
 
 class RtxPayloadType(
     pt: Byte,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters) {
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
+) : VideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters, rtcpFeedbackSet = rtcpFeedbackSet) {
     val associatedPayloadType: Int =
         parameters["apt"]?.toInt() ?: error("RtxPayloadType must contain 'apt'")
 }
@@ -165,8 +171,9 @@ abstract class AudioPayloadType(
      * The number of channels
      */
     val channels: Int = 1,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : PayloadType(pt, encoding, MediaType.AUDIO, clockRate, parameters) {
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
+) : PayloadType(pt, encoding, MediaType.AUDIO, clockRate, parameters, rtcpFeedbackSet) {
     override fun channelsString(): String = if (channels > 1) "/$channels" else ""
 }
 
@@ -174,22 +181,25 @@ class OpusPayloadType(
     pt: Byte,
     clockRate: Int = 48000,
     channels: Int = 2,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, clockRate, channels, parameters = parameters)
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
+) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, clockRate, channels, parameters, rtcpFeedbackSet)
 
 class TelephoneEventPayloadType(
     pt: Byte,
     clockRate: Int,
     channels: Int = 1,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.TELEPHONE_EVENT, clockRate, channels, parameters)
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
+) : AudioPayloadType(pt, PayloadTypeEncoding.TELEPHONE_EVENT, clockRate, channels, parameters, rtcpFeedbackSet)
 
 class AudioRedPayloadType(
     pt: Byte,
     clockRate: Int = 48000,
     channels: Int = 1,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.RED, clockRate, channels, parameters)
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
+) : AudioPayloadType(pt, PayloadTypeEncoding.RED, clockRate, channels, parameters, rtcpFeedbackSet)
 
 class VideoRedPayloadType(
     pt: Byte,
@@ -203,8 +213,9 @@ class OtherAudioPayloadType(
     private val encodingName: String,
     clockRate: Int,
     channels: Int = 1,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, channels, parameters) {
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
+) : AudioPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, channels, parameters, rtcpFeedbackSet) {
     override fun encodingName() = encodingName.lowercase()
 }
 
@@ -212,7 +223,8 @@ class OtherVideoPayloadType(
     pt: Byte,
     private val encodingName: String,
     clockRate: Int,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters) {
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
+) : VideoPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters, rtcpFeedbackSet) {
     override fun encodingName() = encodingName.lowercase()
 }

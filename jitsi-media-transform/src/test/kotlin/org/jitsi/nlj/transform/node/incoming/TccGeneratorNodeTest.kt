@@ -86,6 +86,23 @@ class TccGeneratorNodeTest : ShouldSpec() {
                 tccPackets.size shouldBe 0
             }
         }
+        context("when RFC 8888 feedback is signaled as well") {
+            // The same payload type, now with both kinds of feedback.
+            streamInformationStore.addRtpPayloadType(Vp8PayloadType(100, emptyMap(), setOf("transport-cc", "ack ccfb")))
+            with(clock) {
+                repeat(100) { tccSeqNum ->
+                    tccGenerator.processPacket(
+                        PacketInfo(createPacket(tccSeqNum)).apply {
+                            receivedTime = clock.instant()
+                        }
+                    )
+                    elapse(10.ms)
+                }
+            }
+            should("send no TCC packets, as that feedback replaces them") {
+                tccPackets.size shouldBe 0
+            }
+        }
         context("when a series of packets (without marking) is received") {
             with(clock) {
                 repeat(11) { tccSeqNum ->

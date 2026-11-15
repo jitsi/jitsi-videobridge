@@ -45,6 +45,7 @@ import org.jitsi.nlj.transform.node.SrtpDecryptNode
 import org.jitsi.nlj.transform.node.ToggleablePcapWriter
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
+import org.jitsi.nlj.transform.node.incoming.CcfbGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.DiscardableDiscarder
 import org.jitsi.nlj.transform.node.incoming.DuplicateTermination
 import org.jitsi.nlj.transform.node.incoming.EncodingLivenessNode
@@ -116,6 +117,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtpDecryptWrapper = SrtpDecryptNode()
     private val srtcpDecryptWrapper = SrtcpDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender, streamInformationStore, logger)
+    private val ccfbGenerator = CcfbGeneratorNode(rtcpSender, streamInformationStore, backgroundExecutor, logger)
     private val remoteBandwidthEstimator = RemoteBandwidthEstimator(streamInformationStore, logger, diagnosticContext)
     private val audioLevelReader = AudioLevelReader(streamInformationStore).apply {
         audioLevelListener = object : AudioLevelListener {
@@ -164,6 +166,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun addLossListener(lossListener: LossListener) {
         tccGenerator.addLossListener(lossListener)
+        ccfbGenerator.addLossListener(lossListener)
     }
 
     companion object {
@@ -236,6 +239,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(videoMuteNode)
                         node(srtpDecryptWrapper)
                         node(tccGenerator)
+                        node(ccfbGenerator)
                         node(remoteBandwidthEstimator)
                         node(toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_rtp"))
                         // Drop packets with an SSRC the endpoint did not signal, so they reach neither the media
