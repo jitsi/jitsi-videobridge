@@ -41,9 +41,10 @@ class RetransmissionSender(
     private val origPtToRtxPayloadType: MutableMap<Int, RtxPayloadType> = ConcurrentHashMap()
 
     /**
-     * A map of rtx stream ssrc to the current sequence number for that stream
+     * A map of rtx stream ssrc to the current sequence number for that stream. Retransmissions in answer to a NACK
+     * and retransmissions for probing come on different threads.
      */
-    private val rtxStreamSeqNums: MutableMap<Long, Int> = mutableMapOf()
+    private val rtxStreamSeqNums: MutableMap<Long, Int> = ConcurrentHashMap()
 
     private var numRetransmissionsRequested = 0
     private var numRetransmittedRtxPackets = 0
