@@ -289,7 +289,7 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             var currentTime = Instant.ofEpochMilli(123)
             var update =
                 controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
-            currentTime += 1.secs
+            currentTime += 3.secs
 
             update = controller.onNetworkRouteChange(
                 createRouteChange(currentTime, 2 * kInitialBitrate, Bandwidth.ZERO, 20 * kInitialBitrate)
