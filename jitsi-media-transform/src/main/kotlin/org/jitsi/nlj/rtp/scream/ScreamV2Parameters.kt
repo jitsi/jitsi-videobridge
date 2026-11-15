@@ -193,11 +193,13 @@ data class ScreamV2Parameters(
     // congestion event after the first RTT.
     val allowInitialRefWindowClamping: Boolean = true,
 
-    // If true, `ref_window_` is reduced immediately according to `alpha` and then
-    // waits for one RTT after `data_in_flight` drops below `ref_window_` before
-    // starting another full reduction, applying only positive `alpha` deltas in
-    // the meantime.
-    val useNonLinearBackoffScale: Boolean = true,
+    // If true, uses the draft specification's linear per-RTT backoff scaling,
+    // inhibits `is_virtual_ce` when `queue_delay_avg` is decreasing, and scales
+    // down backoff when `target_rate` is below `acked_bitrate_margin *
+    // received_rate`.
+    val useSpecBackoff: Boolean = true,
+    val ackedBitrateMargin: Double = 0.8,
+    val backoffScaleLowTargetRate: Double = 0.25,
 
     // If the time since last reaction to congestion is larger than this, the
     // pacing window is increased. I.e. packets are allowed to be sent in larger

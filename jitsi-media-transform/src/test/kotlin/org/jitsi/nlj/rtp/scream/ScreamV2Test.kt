@@ -24,7 +24,9 @@ import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacketResult
 import org.jitsi.nlj.rtp.bandwidthestimation2.TransportPacketsFeedback
 import org.jitsi.nlj.rtp.scream.test.BuiltInNetworkBehaviorConfig
@@ -767,6 +769,54 @@ class ScreamV2Test : FreeSpec() {
 
             val screamCustom = ScreamV2(logger, ScreamV2Parameters(minMaxDataInFlightMss = 5))
             screamCustom.maxDataInFlight() shouldBe (5 * 1280).bytes
+        }
+
+        "DelayBackoffInhibitedWhenQueueDelayDecreases" {
+            val clock = createClock()
+            val scream = ScreamV2(logger)
+            scream.setTargetBitrateConstraints(Bandwidth.ZERO, 2000.kbps, 1000.kbps)
+            val feedbackGenerator = CcFeedbackGenerator(
+                CcFeedbackGenerator.Config(
+                    networkConfig = BuiltInNetworkBehaviorConfig(queueDelayMs = 25, linkCapacity = 1000.kbps),
+                    sendAsEct1 = false
+                )
+            )
+
+            // Overuse the 1 Mbps link by sending at 2 Mbps until queue delay builds up
+            // well above the congestion threshold (30 ms).
+            for (i in 0 until 10) {
+                val feedback = feedbackGenerator.processUntilNextFeedback(
+                    2000.kbps,
+                    clock,
+                    { packet -> scream.onPacketSent(packet.dataInFlight) }
+                )
+                scream.onTransportPacketsFeedback(feedback)
+            }
+            scream.delayBasedCongestionControl().isQueueDelayDetected() shouldBe true
+            scream.lastReferenceWindowDecreaseTime() shouldNotBe NEVER
+
+            // Reduce send rate below link capacity (500 kbps) so the queue drains.
+            var drainedFeedbacksWhileCongested = 0
+            for (i in 0 until 20) {
+                val prevQueueDelay = scream.delayBasedCongestionControl().queueDelay()
+                val prevRefWindow = scream.refWindow()
+                val feedback = feedbackGenerator.processUntilNextFeedback(
+                    500.kbps,
+                    clock,
+                    { packet -> scream.onPacketSent(packet.dataInFlight) }
+                )
+                scream.onTransportPacketsFeedback(feedback)
+
+                if (scream.delayBasedCongestionControl().isQueueDelayDetected() &&
+                    scream.delayBasedCongestionControl().queueDelay() < prevQueueDelay
+                ) {
+                    ++drainedFeedbacksWhileCongested
+                    // Even though queue delay is still above the congestion threshold,
+                    // reference window must not decrease while queue delay is decreasing.
+                    scream.refWindow() shouldBeGreaterThanOrEqualTo prevRefWindow
+                }
+            }
+            drainedFeedbacksWhileCongested shouldBeGreaterThan 0
         }
     }
 }
