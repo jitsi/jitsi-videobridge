@@ -66,7 +66,7 @@ class StreamsConfig(
     // If `enable_repeated_initial_probing` is set to true, Probes are sent
     // periodically every 1s during the first 5s after the network becomes
     // available. The probes ignores max_total_allocated_bitrate.
-    val enableRepeatedInitialProbing: Boolean? = null,
+    val enableRepeatedInitialProbing: Boolean = false,
 
     val pacingFactor: Double? = null,
 
