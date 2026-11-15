@@ -242,12 +242,23 @@ class TransportPacketsFeedback {
     fun hasPacketWithEcnCe(): Boolean = packetFeedbacks.any { it.ecn == EcnMarking.kCe }
 
     // True if at least one packet that was sent with an ECT(1) marking was
-    // reported received without it, i.e. the path bleached the marking.
+    // reported received without it, i.e. the path bleached the marking to
+    // Not-ECT or replaced it with ECT(0).
     fun hasPacketWithBleachedEct1(): Boolean = packetFeedbacks.any { fb ->
         // Only received packets say anything about what the path did to the
         // marking. Packets reported lost carry a defaulted Not-ECT marking and
-        // would otherwise be indistinguishable from bleached ones.
-        fb.sentWithEct1 && fb.isReceived() && fb.ecn == EcnMarking.kNotEct
+        // would otherwise be indistinguishable from bleached ones. ECT(0) counts
+        // as bleached since the path took the packet out of L4S.
+        fb.sentWithEct1 && fb.isReceived() && fb.ecn != EcnMarking.kEct1 && fb.ecn != EcnMarking.kCe
+    }
+
+    // True if at least one packet that was sent with an ECT(1) marking was
+    // reported received still marked ECT(1) or CE.
+    fun hasPacketWithEcn(): Boolean = packetFeedbacks.any { fb ->
+        // Only packets that were sent as ECT(1) say anything about what the path
+        // did to the marking. Some networks set the ECN bits on packets that were
+        // sent Not-ECT.
+        fb.sentWithEct1 && fb.isReceived() && (fb.ecn == EcnMarking.kEct1 || fb.ecn == EcnMarking.kCe)
     }
 }
 
