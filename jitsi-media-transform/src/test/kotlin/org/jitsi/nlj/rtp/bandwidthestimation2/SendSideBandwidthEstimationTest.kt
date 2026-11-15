@@ -30,7 +30,7 @@ import java.time.Instant
 /**
  * Unit tests for Loss-Based BWE,
  * based on WebRTC modules/congestion_controller/goog_cc/send_side_bandwidth_estimation_unittest.cc in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Tests of WebRTC's RtcEventLog and tests of field trial parameters are skipped.
  */

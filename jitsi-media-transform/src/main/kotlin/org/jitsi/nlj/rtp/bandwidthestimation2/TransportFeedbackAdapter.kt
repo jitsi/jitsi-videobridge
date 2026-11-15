@@ -77,7 +77,7 @@ private class MinMax(value: Long) {
 
 /** Transport feedback adapter,
  * based loosely on WebRTC modules/congestion_controller/rtp/transport_feedback_adapter.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128)
+ * WebRTC tag branch-heads/8078 (Chromium 156)
  * modified to use Jitsi types for objects outside the congestion controller,
  * and not using Network Routes.
  */

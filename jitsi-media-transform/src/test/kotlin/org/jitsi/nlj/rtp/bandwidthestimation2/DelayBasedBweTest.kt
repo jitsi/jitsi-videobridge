@@ -31,7 +31,7 @@ import org.jitsi.utils.ms
 /**
  * Unit tests for Delay-Based BWE,
  * based on WebRTC modules/congestion_controller/goog_cc/delay_based_bwe_unittest.cc in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  */
 class DelayBasedBweTest : FreeSpec() {

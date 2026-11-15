@@ -49,7 +49,7 @@ import kotlin.math.pow
  * will switch to a "slow-start mode" where we increase multiplicatively.
  *
  * Based on WebRTC modules/remote_bitrate_estimator/aimd_rate_control.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 class AimdRateControl(private val sendSide: Boolean = false) {
 

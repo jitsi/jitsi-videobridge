@@ -51,7 +51,7 @@ import java.time.Instant
 
 /** Unit tests for TransportFeedbackAdapter,
  * based loosely on WebRTC modules/congestion_controller/rtp/transport_feedback_adapter_unittest.cc in
- * WebRTC tag branch-heads/7204 (Chromium 138)
+ * WebRTC tag branch-heads/8078 (Chromium 156)
  * modified to use Jitsi types for objects outside the congestion controller,
  * and not using Network Routes.
  */
