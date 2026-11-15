@@ -154,6 +154,8 @@ class TransportFeedbackAdapter(
             )
             history.remove(history.firstEntry().key)
         }
+        // Jitsi local
+        trackedSsrcs.add(feedback.ssrc)
         // Note that it can happen that the same SSRC and sequence number is sent
         // again, e.g., audio retransmission. Delay metrics from such packets are
         // ambiguous, since it is not specified which of the two packets was
@@ -320,6 +322,12 @@ class TransportFeedbackAdapter(
         val packetResultVector = mutableListOf<PacketResult>()
         var sequenceNumberInReport: MinMax? = null
         feedback.packets.forEach { packetInfo ->
+            if (packetInfo.ssrc !in trackedSsrcs) {
+                // Jitsi local: RFC 8888 feedback reports on every RTP stream the peer receives, including those
+                // which are never added here because they are not congestion controlled (audio). That is not a
+                // failure to match a report with the history.
+                return@forEach
+            }
             val packetFeedback = retrievePacketFeedback(
                 SsrcAndRtpSequenceNumber(ssrc = packetInfo.ssrc, packetInfo.sequenceNumber),
                 received = packetInfo is ReceivedPacketInfo
@@ -531,6 +539,9 @@ class TransportFeedbackAdapter(
 
     // Used by RFC 8888 congestion control feedback to track base time.
     private var lastFeedbackCompactNtpTime: Long? = null
+
+    // Jitsi local: the SSRCs of the packets which have been added.
+    private val trackedSsrcs = HashSet<Long>()
 
     // Map SSRC and RTP sequence number to transport sequence number.
     private val rtpToTransportSequenceNumber = TreeMap<SsrcAndRtpSequenceNumber, Long>()
