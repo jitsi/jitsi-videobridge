@@ -18,6 +18,7 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -43,6 +44,9 @@ import java.time.Instant
 private const val kInitialBitrateKbps = 60
 private val kInitialBitrate = kInitialBitrateKbps.kbps
 private const val kDefaultPacingRate = 2.5
+
+// This is a float in WebRTC, so it is not exactly 1.1.
+private val kDefaultPacingRateSendSideBwe = 1.1f.toDouble()
 
 private fun createRouteChange(
     time: Instant,
@@ -167,7 +171,71 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             update.probeClusterConfigs[1].targetDataRate shouldBe kInitialBitrate * 5
         }
 
-        "ReactsToChangedNetworkConditions" {
+        "ChangeDefaultPacingFactorAfterFirstFeedback" {
+            val fixture = NetworkControllerTextFixture()
+            val controller = fixture.createController()
+
+            var update =
+                controller.onNetworkAvailability(
+                    NetworkAvailability(
+                        atTime = Instant.ofEpochMilli(123456),
+                        networkAvailable = true
+                    )
+                )
+            update = controller.onProcessInterval(ProcessInterval(atTime = Instant.ofEpochMilli(123456)))
+            update.pacerConfig!!.dataRate() shouldBe kInitialBitrate * kDefaultPacingRate
+
+            val feedback = TransportPacketsFeedback()
+            feedback.feedbackTime = Instant.ofEpochMilli(123457)
+            feedback.packetFeedbacks.add(
+                createPacketResult(feedback.feedbackTime, feedback.feedbackTime, 100, PacedPacketInfo())
+            )
+            update = controller.onTransportPacketsFeedback(feedback)
+            update.pacerConfig shouldNotBe null
+            update.pacerConfig!!.dataRate() shouldBeGreaterThanOrEqualTo
+                kInitialBitrate * kDefaultPacingRateSendSideBwe
+            update.pacerConfig!!.dataRate() shouldBeLessThan
+                (kInitialBitrate + 5.kbps) * kDefaultPacingRateSendSideBwe
+        }
+
+        "RespectsConfiguredPacingFactor" {
+            val fixture = NetworkControllerTextFixture()
+            val controller = fixture.createController()
+
+            var update =
+                controller.onNetworkAvailability(
+                    NetworkAvailability(
+                        atTime = Instant.ofEpochMilli(123456),
+                        networkAvailable = true
+                    )
+                )
+            update = controller.onProcessInterval(ProcessInterval(atTime = Instant.ofEpochMilli(123456)))
+            update.pacerConfig!!.dataRate() shouldBe kInitialBitrate * kDefaultPacingRate
+
+            var lastPacerConfig: PacerConfig? = null
+            val streamsConfig = StreamsConfig(pacingFactor = 10.0)
+
+            update = controller.onStreamsConfig(streamsConfig)
+            if (update.pacerConfig != null) {
+                lastPacerConfig = update.pacerConfig
+            }
+
+            val feedback = TransportPacketsFeedback()
+            feedback.feedbackTime = Instant.ofEpochMilli(123457)
+            feedback.packetFeedbacks.add(
+                createPacketResult(feedback.feedbackTime, feedback.feedbackTime, 100, PacedPacketInfo())
+            )
+            update = controller.onTransportPacketsFeedback(feedback)
+            if (update.pacerConfig != null) {
+                lastPacerConfig = update.pacerConfig
+            }
+
+            lastPacerConfig shouldNotBe null
+            lastPacerConfig!!.dataRate() shouldBeGreaterThanOrEqualTo kInitialBitrate * 10
+            lastPacerConfig.dataRate() shouldBeLessThan (kInitialBitrate + 5.kbps) * 10
+        }
+
+        "ReactsToChangedNetworkConditionsFromRemote" {
             val fixture = NetworkControllerTextFixture()
             val controller = fixture.createController()
             var currentTime = Instant.ofEpochMilli(123)

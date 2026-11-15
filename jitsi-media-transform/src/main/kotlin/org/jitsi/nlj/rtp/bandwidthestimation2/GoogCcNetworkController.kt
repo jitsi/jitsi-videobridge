@@ -294,6 +294,11 @@ class GoogCcNetworkController(
             // against building very large network queues.
             return NetworkControlUpdate()
         }
+        if (!firstTransportFeedbackReceived) {
+            // Send side BWE is used.
+            firstTransportFeedbackReceived = true
+        }
+
         if (congestionWindowPushbackController != null) {
             congestionWindowPushbackController.updateOutstandingData(report.dataInFlight.bytes.roundToLong())
         }
@@ -501,7 +506,14 @@ class GoogCcNetworkController(
     private fun getPacingRates(atTime: Instant): PacerConfig {
         // Pacing rate is based on target rate before congestion window pushback,
         // because we don't want to build queues in the pacer when pushback occurs.
-        val pacingRate = max(minTotalAllocatedBitrate, lastLossBasedTargetRate) * pacingFactor
+        val pacingRate = max(minTotalAllocatedBitrate, lastLossBasedTargetRate) *
+            (
+                pacingFactor ?: if (firstTransportFeedbackReceived) {
+                    kDefaultPaceMultiplierWithSendSideBwe
+                } else {
+                    kDefaultPaceMultiplier
+                }
+                )
         var paddingRate = if (lastLossBasedState == LossBasedState.kIncreaseUsingPadding) {
             max(maxPaddingRate, lastLossBasedTargetRate)
         } else {
@@ -659,6 +671,7 @@ class GoogCcNetworkController(
     private var startingRate: Bandwidth? = null
 
     private var firstPacketSent = false
+    private var firstTransportFeedbackReceived = false
 
     /* Skipping NetworkStateEstimate */
 
@@ -671,7 +684,7 @@ class GoogCcNetworkController(
     private var lastEstimatedFractionLoss: UByte? = 0u
     private var lastEstimatedRoundTripTime = MAX_DURATION
 
-    private var pacingFactor = config.streamBasedConfig.pacingFactor ?: kDefaultPaceMultiplier
+    private var pacingFactor: Double? = config.streamBasedConfig.pacingFactor
     private val pacingTimeWindow = config.defaultPacingTimeWindow
     private var minTotalAllocatedBitrate = config.streamBasedConfig.minTotalAllocatedBitrate ?: Bandwidth.ZERO
     private var maxPaddingRate = config.streamBasedConfig.maxPaddingRate ?: Bandwidth.ZERO
@@ -686,6 +699,11 @@ class GoogCcNetworkController(
         // Increasing this factor will result in lower delays in cases of bitrate
         // overshoots from the encoder.
         private const val kDefaultPaceMultiplier = 2.5
+
+        // If send side bandwidth estimation is used, this pacing multiplier is used per
+        // default.
+        // This is a float in WebRTC, so it is not exactly 1.1.
+        private val kDefaultPaceMultiplierWithSendSideBwe = 1.1f.toDouble()
 
         // If the probe result is far below the current throughput estimate
         // it's unlikely that the probe is accurate, so we don't want to drop too far.
