@@ -758,13 +758,13 @@ class ScreamNetworkControllerTest : FreeSpec() {
             )
             val screamController = ScreamNetworkController(config)
 
-            // Initially, is_bandwidth_limited should be true because
-            // is_application_limited starts as false.
+            // Initially, before any packets are sent, is_bandwidth_limited is false
+            // because the sender is application-limited (in ALR).
             var update: NetworkControlUpdate = screamController.onNetworkAvailability(
                 NetworkAvailability(atTime = clock.instant(), networkAvailable = true)
             )
             update.targetRate shouldNotBe null
-            update.targetRate!!.isBandwidthLimited shouldBe true
+            update.targetRate!!.isBandwidthLimited shouldBe false
 
             val feedbackGenerator = CcFeedbackGenerator(
                 CcFeedbackGenerator.Config(
@@ -773,7 +773,8 @@ class ScreamNetworkControllerTest : FreeSpec() {
             )
 
             var targetRate = 100.kbps
-            // Send at full BWE rate so we are not application limited.
+            // Send at full BWE rate so we exit ALR and become bandwidth-limited.
+            var exitedAlr = false
             for (i in 0 until 20) {
                 val feedback = feedbackGenerator.processUntilNextFeedback(
                     targetRate,
@@ -783,9 +784,12 @@ class ScreamNetworkControllerTest : FreeSpec() {
                 update = screamController.onTransportPacketsFeedback(feedback)
                 update.targetRate?.let {
                     targetRate = it.targetRate
-                    it.isBandwidthLimited shouldBe true
+                    if (it.isBandwidthLimited) {
+                        exitedAlr = true
+                    }
                 }
             }
+            exitedAlr shouldBe true
 
             // Now send at a very low rate (e.g. 50kbps) while BWE remains high.
             // This should trigger application limited state.
@@ -821,7 +825,7 @@ class ScreamNetworkControllerTest : FreeSpec() {
                 NetworkAvailability(atTime = clock.instant(), networkAvailable = true)
             )
             update.targetRate shouldNotBe null
-            update.targetRate!!.isBandwidthLimited shouldBe true
+            update.targetRate!!.isBandwidthLimited shouldBe false
             update.targetRate!!.targetRate shouldBe 500.kbps
 
             val feedbackGenerator = CcFeedbackGenerator(

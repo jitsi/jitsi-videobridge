@@ -80,7 +80,7 @@ class ScreamV2(
         updateReceiveRate(feedback)
 
         if (params.enableAlr) {
-            isApplicationLimited = maxAllowedRefWindow() < refWindow &&
+            isApplicationLimited = maxAllowedRefWindow() <= refWindow &&
                 receivedRate < targetRate.scaledBy(params.alrThreshold)
         }
 
@@ -600,7 +600,7 @@ class ScreamV2(
     // Tracks if the send rate is less than the network path can currently
     // support. This is done by checking if max_allowed_ref_window() <
     // ref_window_.
-    private var isApplicationLimited = false
+    private var isApplicationLimited = params.enableAlr
 }
 
 /** std::clamp */
