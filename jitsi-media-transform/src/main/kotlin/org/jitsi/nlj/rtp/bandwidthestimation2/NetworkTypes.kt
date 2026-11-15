@@ -96,7 +96,10 @@ class NetworkRouteChange(
     val atTime: Instant = Instant.MAX,
     // The TargetRateConstraints are set here so they can be changed synchronously
     // when network route changes.
-    val constraints: TargetRateConstraints = TargetRateConstraints()
+    val constraints: TargetRateConstraints = TargetRateConstraints(),
+    // If true, the change is significant enough to warrant a reset of the
+    // bandwidth estimator.
+    val restartBwe: Boolean = true
 )
 
 /**
