@@ -216,7 +216,7 @@ class ScreamV2(
     // Scales `backoff` across the estimated number of reactions per RTT, and
     // further attenuates it when `target_rate_` is below `acked_bitrate_margin *
     // received_rate_` (Section 4.5.3).
-    private fun scaleBackoff(backoff: Double): Double {
+    private fun scaleBackoff(backoff: Double, dataInFlight: DataSize): Double {
         var scaledBackoff = backoff
         if (params.useSpecBackoff) {
             // 4.5.3. Reference window undershoot at congestion.
@@ -224,7 +224,11 @@ class ScreamV2(
             // this may be an indication that the target rate is already reduced due to
             // an increased RTT.
             if (receivedRate.isFinite() && targetRate < receivedRate.scaledBy(params.ackedBitrateMargin)) {
-                scaledBackoff *= params.backoffScaleLowTargetRate
+                if (params.inhibitBackoffIfDataInFlightDecreases && dataInFlight < dataInFlightPrev) {
+                    scaledBackoff = 0.0
+                } else {
+                    scaledBackoff *= params.backoffScaleLowTargetRate
+                }
             }
         }
         return scaledBackoff / max(1.0, delayBasedCongestionControl.rtt().ratioTo(reactionInterval()))
@@ -268,10 +272,6 @@ class ScreamV2(
             ) {
                 isVirtualCe = true
             }
-            if (timeBetween(lastQueueDelayAvgCheckTime, parsed.feedbackTime) >= minReactionInterval) {
-                queueDelayAvgPrev = delayBasedCongestionControl.queueDelay()
-                lastQueueDelayAvgCheckTime = parsed.feedbackTime
-            }
         } else {
             isVirtualCe = delayBasedCongestionControl.isQueueDelayDetected()
         }
@@ -284,7 +284,7 @@ class ScreamV2(
             if (isLoss) { // Back off due to loss
                 backoff = 1.0 - params.betaLoss
             } else if (isCe) { // Backoff due to ECN-CE marking
-                backoff = scaleBackoff(l4sAlpha / 2.0)
+                backoff = scaleBackoff(l4sAlpha / 2.0, parsed.dataInFlight)
 
                 if (!delayBasedCongestionControl.isQueueDelayDetected()) {
                     // Scale down backoff if close to the last known max reference window
@@ -311,7 +311,7 @@ class ScreamV2(
                     refWindow = clamp(maxDataInFlightPrevRtt, params.minRefWindow, refWindow)
                 }
             } else if (isVirtualCe) { // Back off due to delay
-                backoff = scaleBackoff(delayBasedCongestionControl.l4sAlphaV() / 2.0)
+                backoff = scaleBackoff(delayBasedCongestionControl.l4sAlphaV() / 2.0, parsed.dataInFlight)
             }
             if (allowInitialRefWindowClamping && receivedRate.isFinite()) {
                 // Clamp ref_window to received rate on the first congestion event,
@@ -325,6 +325,17 @@ class ScreamV2(
                 allowInitialRefWindowClamping = false
             }
             refWindow = refWindow.scaledBy(1.0 - backoff)
+        }
+
+        if (params.useSpecBackoff &&
+            (
+                lastReactionToCongestionTime == parsed.feedbackTime ||
+                    timeBetween(lastQueueDelayAvgCheckTime, parsed.feedbackTime) >= minReactionInterval
+                )
+        ) {
+            queueDelayAvgPrev = delayBasedCongestionControl.queueDelay()
+            dataInFlightPrev = parsed.dataInFlight
+            lastQueueDelayAvgCheckTime = parsed.feedbackTime
         }
 
         // Increase ref_window.
@@ -540,6 +551,7 @@ class ScreamV2(
 
     private var drainQueueStart: Instant = NEVER
     private var queueDelayAvgPrev: Duration = MIN_DURATION
+    private var dataInFlightPrev = DataSize.ZERO
     private var lastQueueDelayAvgCheckTime: Instant = NEVER
 
     private val delayBasedCongestionControl = DelayBasedCongestionControl(params)

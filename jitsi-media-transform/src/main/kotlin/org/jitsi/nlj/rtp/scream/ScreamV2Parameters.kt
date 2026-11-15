@@ -205,6 +205,7 @@ data class ScreamV2Parameters(
     val useSpecBackoff: Boolean = true,
     val ackedBitrateMargin: Double = 0.8,
     val backoffScaleLowTargetRate: Double = 0.25,
+    val inhibitBackoffIfDataInFlightDecreases: Boolean = true,
 
     // If the time since last reaction to congestion is larger than this, the
     // pacing window is increased. I.e. packets are allowed to be sent in larger
