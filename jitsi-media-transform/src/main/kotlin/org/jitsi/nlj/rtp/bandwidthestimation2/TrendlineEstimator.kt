@@ -28,7 +28,7 @@ import kotlin.math.min
  * Trendline-based delay increase detector
  * *
  * Based on WebRTC modules/congestion_controller/goog_cc/trendline_estimator.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 class TrendlineEstimator(
     parentLogger: Logger,

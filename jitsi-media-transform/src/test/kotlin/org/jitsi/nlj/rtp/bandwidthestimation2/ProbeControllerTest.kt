@@ -45,7 +45,7 @@ private val kBitrateDropTimeout = 5.secs
 
 /** Unit tests for ProbeController,
  * based on WebRTC modules/congestion_controller/goog_cc/probe_controller_unittest.cc in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */

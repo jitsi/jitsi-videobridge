@@ -23,7 +23,7 @@ import kotlin.math.min
 
 /** Interval budget,
  * based on WebRTC modules/pacing/interval_budget.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 
 class IntervalBudget(
