@@ -165,6 +165,11 @@ class TransportLossReport(
 class PacketResult(
     var sentPacket: SentPacket = SentPacket(),
     var receiveTime: Instant = NEVER,
+
+    // Delta from when feedback was sent and the packet was received. Can be used
+    // for calculating round trip time per packet.
+    var arrivalTimeOffset: Duration? = null,
+
     // Ecn marking from the feedback report how this packet was received.
     var ecn: EcnMarking = EcnMarking.kNotEct,
 
@@ -192,6 +197,7 @@ class PacketResult(
     fun copy(): PacketResult = PacketResult(
         sentPacket.copy(),
         receiveTime,
+        arrivalTimeOffset,
         ecn,
         sentWithEct1,
         reportedLostForTheFirstTime,
@@ -208,12 +214,6 @@ class TransportPacketsFeedback {
     var dataInFlight: DataSize = DataSize.ZERO
     var packetFeedbacks: MutableList<PacketResult> = ArrayList()
     var transportSupportsEcn: Boolean = false
-
-    // Smoothed RTT calculated on the current network route.
-    // Calculated similarly as RFC 6298 using exponentially weighted moving
-    // average with alpha 1/8. Note that it is not calculated for all feedback
-    // types.
-    var smoothedRtt: Duration = MAX_DURATION
 
     /** Arrival times for messages without send times information */
     val sendlessArrivalTimes = ArrayList<Instant>()

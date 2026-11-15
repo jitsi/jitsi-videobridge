@@ -30,15 +30,12 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.TimeUtils
-import org.jitsi.utils.div
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.max
 import org.jitsi.utils.secs
-import org.jitsi.utils.times
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -270,8 +267,6 @@ class TransportFeedbackAdapter(
 
         var failedLookups = 0
         var supportsEcn = true
-        var rttSum = Duration.ZERO
-        var packetsReceived = 0
         val packetResultVector = mutableListOf<PacketResult>()
         feedback.packets.forEach { packetInfo ->
             val packetFeedback = retrievePacketFeedback(
@@ -285,12 +280,10 @@ class TransportFeedbackAdapter(
             val result = PacketResult()
             result.sentPacket = packetFeedback.sent
             if (packetInfo is ReceivedPacketInfo) {
-                ++packetsReceived
                 result.receiveTime = currentOffset - packetInfo.arrivalTimeOffset
-                rttSum += Duration.between(result.sentPacket.sendTime, feedbackReceiveTime) -
-                    packetInfo.arrivalTimeOffset
                 result.ecn = packetInfo.ecn
                 supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
+                result.arrivalTimeOffset = packetInfo.arrivalTimeOffset
             }
             result.sentWithEct1 = packetFeedback.sentWithEct1
             result.reportedRecoveredForTheFirstTime =
@@ -304,14 +297,6 @@ class TransportFeedbackAdapter(
                 isRetransmission = packetFeedback.isRetransmission,
             )
             packetResultVector.add(result)
-        }
-        if (packetsReceived > 0) {
-            if (smoothedRtt.isInfinite()) {
-                smoothedRtt = rttSum / packetsReceived.toLong()
-            } else {
-                // RFC 6298, alpha = 1/8
-                smoothedRtt = (smoothedRtt * 7 + rttSum / packetsReceived.toLong()) / 8L
-            }
         }
 
         totalUnmatchedReports += failedLookups
@@ -353,7 +338,6 @@ class TransportFeedbackAdapter(
         msg.packetFeedbacks = packetResults
         msg.dataInFlight = inFlight.getOutstandingData()
         msg.transportSupportsEcn = supportsEcn
-        msg.smoothedRtt = smoothedRtt
 
         return msg
     }
@@ -419,9 +403,6 @@ class TransportFeedbackAdapter(
 
     private var lastAckSeqNum = -1L
     private val inFlight = InFlightBytesTracker()
-
-    // Jitsi local: there are no network routes, so this is never reset.
-    private var smoothedRtt = MAX_DURATION
 
     private var currentOffset = Instant.MIN
 

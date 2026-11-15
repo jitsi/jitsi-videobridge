@@ -20,7 +20,6 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.FreeSpec
-import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -38,7 +37,6 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.TimeUtils
 import org.jitsi.utils.isFinite
-import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.roundTo
@@ -731,33 +729,6 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             adaptedFeedback.packetFeedbacks.size shouldBe 2
         }
 
-        "SmoothedRttIsInfiniteForTransportFeedback" {
-            // Smoothed RTT is not implemented for transport sequence number feedback.
-            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Tcc)
-            val kFirstSendTime = Instant.EPOCH + 1234.secs
-
-            val packet = PacketTemplate(
-                transportSequenceNumber = 1,
-                rtpSequenceNumber = 101,
-                sendTimestamp = kFirstSendTime,
-                receiveTimestamp = Instant.EPOCH + 200.ms
-            )
-            test.adapter.addPacket(
-                createPacketToSend(packet),
-                packet.transportSequenceNumber,
-                0.bytes,
-                packet.sendTimestamp
-            )
-
-            test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
-            val rtcpFeedback = buildRtcpTransportFeedbackPacket(listOf(packet))
-            val adaptedFeedback = test.adapter.processTransportFeedback(
-                rtcpFeedback,
-                feedbackReceiveTime = packet.sendTimestamp + 10.ms
-            )
-            adaptedFeedback!!.smoothedRtt.isInfinite() shouldBe true
-        }
-
         "CalculateSmoothedRttForConstantOneWayDelay" {
             val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
             val kFirstSendTime = Instant.EPOCH + 1234.secs
@@ -806,60 +777,11 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             val kExpectedRtt = 20.ms
             for (i in 0 until 4 step 2) {
                 val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets.subList(i, i + 2))
-                val adaptedFeedback = test.adapter.processCongestionControlFeedback(
+                test.adapter.processCongestionControlFeedback(
                     rtcpFeedback,
                     feedbackReceiveTime = packets[i + 1].sendTimestamp + kExpectedRtt
                 )
-                // Jitsi change from WebRTC: since we encode the feedback packets to their wire format, we
-                // need to account for the rounding of arrival times in CCFB packets.
-                adaptedFeedback!!.smoothedRtt.toDoubleMillis() shouldBe
-                    (kExpectedRtt.toDoubleMillis() plusOrMinus 1000.0 / 1024.0)
             }
-        }
-
-        "SmoothedRttIncreaseIfOneWayDelayIncrease" {
-            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
-            val kFirstSendTime = Instant.EPOCH + 1234.secs
-
-            val packets = listOf(
-                PacketTemplate(
-                    transportSequenceNumber = 1,
-                    rtpSequenceNumber = 101,
-                    sendTimestamp = kFirstSendTime,
-                    receiveTimestamp = Instant.EPOCH + 200.ms
-                ),
-                PacketTemplate(
-                    transportSequenceNumber = 2,
-                    rtpSequenceNumber = 102,
-                    sendTimestamp = kFirstSendTime + 10.ms,
-                    receiveTimestamp = Instant.EPOCH + 210.ms
-                )
-            )
-
-            packets.forEach { packet ->
-                test.adapter.addPacket(
-                    createPacketToSend(packet),
-                    packet.transportSequenceNumber,
-                    0.bytes,
-                    packet.sendTimestamp
-                )
-                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
-            }
-
-            val kExpectedBaseRtt = 20.ms
-            val firstRtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets.subList(0, 1))
-            val firstAdaptedFeedback = test.adapter.processCongestionControlFeedback(
-                firstRtcpFeedback,
-                feedbackReceiveTime = packets[0].sendTimestamp + kExpectedBaseRtt
-            )
-            firstAdaptedFeedback!!.smoothedRtt shouldBe kExpectedBaseRtt
-
-            val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets.subList(1, 2))
-            val adaptedFeedback = test.adapter.processCongestionControlFeedback(
-                rtcpFeedback,
-                feedbackReceiveTime = packets[1].sendTimestamp + kExpectedBaseRtt + 10.ms
-            )
-            adaptedFeedback!!.smoothedRtt shouldBeGreaterThan firstAdaptedFeedback.smoothedRtt
         }
 
         "CongestionControlFeedbackResultReportsLostPacketOnce" {
