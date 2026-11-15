@@ -29,6 +29,7 @@ import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -91,21 +92,12 @@ class GoogCcTransportCcEngine(
         when (rtcpPacket) {
             is RtcpFbTccPacket -> {
                 val time = receivedTime ?: clock.instant()
-                val feedback = feedbackAdapter.processTransportFeedback(rtcpPacket, time)
-                if (feedback != null) {
-                    val update = networkController.onTransportPacketsFeedback(feedback)
-                    processUpdate(update)
+                onTransportPacketsFeedback(feedbackAdapter.processTransportFeedback(rtcpPacket, time))
+            }
 
-                    feedback.packetFeedbacks.forEach { fb ->
-                        lossListeners.forEach { l ->
-                            if (fb.isReceived()) {
-                                l.packetReceived(fb.previouslyReportedLost)
-                            } else if (!fb.previouslyReportedLost) {
-                                l.packetLost(1)
-                            }
-                        }
-                    }
-                }
+            is RtcpFbCcfbPacket -> {
+                val time = receivedTime ?: clock.instant()
+                onTransportPacketsFeedback(feedbackAdapter.processCongestionControlFeedback(rtcpPacket, time))
             }
 
             is RtcpFbRembPacket -> {
@@ -180,6 +172,25 @@ class GoogCcTransportCcEngine(
         val update = networkController.onTransportLossReport(msg)
         processUpdate(update)
         lastReportBlockTime = receiveTime
+    }
+
+    /** Handles feedback about sent packets, whichever RTCP feedback format it arrived in. */
+    private fun onTransportPacketsFeedback(feedback: TransportPacketsFeedback?) {
+        if (feedback == null) {
+            return
+        }
+        val update = networkController.onTransportPacketsFeedback(feedback)
+        processUpdate(update)
+
+        feedback.packetFeedbacks.forEach { fb ->
+            lossListeners.forEach { l ->
+                if (fb.isReceived()) {
+                    l.packetReceived(fb.previouslyReportedLost)
+                } else if (!fb.previouslyReportedLost) {
+                    l.packetLost(1)
+                }
+            }
+        }
     }
 
     @Synchronized
