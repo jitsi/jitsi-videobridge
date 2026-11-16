@@ -50,6 +50,9 @@ class DcSctpTransport(
     /** Exceptions a callback raised that dcsctp4j surfaced from a socket method; see [withSocket]. */
     private val surfacedExceptions = AtomicLong()
 
+    /** See [isSending]. */
+    private val sendingOnThisThread = ThreadLocal.withInitial { false }
+
     fun start(callbacks: DcSctpSocketCallbacks, options: DcSctpOptions = DEFAULT_SOCKET_OPTIONS) {
         synchronized(lock) {
             socket = factory.create(name, callbacks, null, options)
@@ -112,8 +115,22 @@ class DcSctpTransport(
      * exception surfaced from the send: there is no status for that, the warning logged above
      * shows the real cause, and the socket should be treated as unusable from then on anyway.
      */
-    fun send(message: DcSctpMessage, options: SendOptions): SendStatus =
-        withSocket("sending SCTP message", SendStatus.kErrorShuttingDown) { it.send(message, options) }
+    fun send(message: DcSctpMessage, options: SendOptions): SendStatus {
+        sendingOnThisThread.set(true)
+        try {
+            return withSocket("sending SCTP message", SendStatus.kErrorShuttingDown) { it.send(message, options) }
+        } finally {
+            sendingOnThisThread.set(false)
+        }
+    }
+
+    /**
+     * Whether the current thread is in [send]. dcsctp calls the callbacks on the thread of the socket method that
+     * triggers them, before that method returns. So a callback can use this to tell an error about a message that
+     * we send (which [send] also reports with its status) from other errors.
+     */
+    val isSending: Boolean
+        get() = sendingOnThisThread.get()
 
     fun handleTimeout(timeoutId: Long) {
         withSocket("handling SCTP timeout", Unit) { it.handleTimeout(timeoutId) }

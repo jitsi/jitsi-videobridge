@@ -57,6 +57,10 @@ class SctpSendFailureLoggerTest : ShouldSpec() {
     private val clock = FakeClock()
     private val interval = Duration.ofSeconds(10)
     private val sendFailureLogger = SctpSendFailureLogger(logger, clock, interval)
+    private val start = clock.instant()
+
+    /** The time [ms] milliseconds after [start]. */
+    private fun at(ms: Long) = start.plusMillis(ms)
 
     /** Fails [n] sends with [status], 60 ms apart. */
     private fun failSends(n: Int, status: SendStatus? = SendStatus.kErrorResourceExhaustion) = repeat(n) {
@@ -71,6 +75,7 @@ class SctpSendFailureLoggerTest : ShouldSpec() {
             should("log one line") {
                 logger.lines shouldHaveSize 1
                 logger.lines[0] shouldContain "kErrorResourceExhaustion"
+                logger.lines[0] shouldContain "Further errors with the same status are logged at most once every 10 s"
             }
         }
         context("Failures over more than one interval") {
@@ -80,7 +85,7 @@ class SctpSendFailureLoggerTest : ShouldSpec() {
             should("log one line for each interval, with the number of failures not logged") {
                 logger.lines shouldHaveSize 2
                 // The failures between the first line (t=0) and the second line (t=10.02 s).
-                logger.lines[1] shouldContain "{kErrorResourceExhaustion=166}"
+                logger.lines[1] shouldContain "between ${at(60)} and ${at(9960)}: {kErrorResourceExhaustion=166}"
             }
         }
         context("A failure exactly one interval after the last line") {
@@ -125,7 +130,7 @@ class SctpSendFailureLoggerTest : ShouldSpec() {
                 failSends(50)
                 sendFailureLogger.flush()
                 logger.lines shouldHaveSize 2
-                logger.lines[1] shouldContain "{kErrorResourceExhaustion=49}"
+                logger.lines[1] shouldContain "between ${at(60)} and ${at(2940)}: {kErrorResourceExhaustion=49}"
                 // A second flush has nothing new to report.
                 sendFailureLogger.flush()
                 logger.lines shouldHaveSize 2

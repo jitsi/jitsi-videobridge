@@ -74,16 +74,9 @@ public class EndpointMessageTransport
     private final AtomicInteger numOutgoingMessagesDropped = new AtomicInteger(0);
 
     /**
-     * The number of sent messages by type. Does not include the messages in
-     * {@link #dataChannelDroppedMessagesCounts}.
+     * The number of sent messages by type. Does not include the messages that the data channel did not accept.
      */
     private final Map<String, AtomicLong> sentMessagesCounts = new ConcurrentHashMap<>();
-
-    /**
-     * The number of messages by type that the data channel did not accept (for example, because the SCTP send queue
-     * is full).
-     */
-    private final Map<String, AtomicLong> dataChannelDroppedMessagesCounts = new ConcurrentHashMap<>();
 
     @NotNull
     private final Endpoint endpoint;
@@ -237,34 +230,7 @@ public class EndpointMessageTransport
      */
     private boolean sendMessage(DataChannel dst, BridgeChannelMessage message)
     {
-        if (dst.sendString(message.toJson()))
-        {
-            VideobridgeMetrics.dataChannelMessagesSent.inc();
-            return true;
-        }
-
-        dataChannelDroppedMessagesCounts.computeIfAbsent(
-                message.getClass().getSimpleName(),
-                (k) -> new AtomicLong()).incrementAndGet();
-        return false;
-    }
-
-    /**
-     * Describes the messages that the data channel did not accept, by type.
-     * @return the description, or {@code null} if the data channel accepted every message.
-     */
-    @Nullable
-    public String droppedMessagesSummary()
-    {
-        if (dataChannelDroppedMessagesCounts.isEmpty())
-        {
-            return null;
-        }
-
-        long total = dataChannelDroppedMessagesCounts.values().stream().mapToLong(AtomicLong::get).sum();
-        Map<String, Long> byType = new TreeMap<>();
-        dataChannelDroppedMessagesCounts.forEach((k, v) -> byType.put(k, v.get()));
-        return "The data channel did not accept " + total + " messages, by type: " + byType;
+        return sendThroughDataChannel(dst, message);
     }
 
     /**
@@ -528,10 +494,6 @@ public class EndpointMessageTransport
         ObjectNode sentCounts = JsonNodeFactory.instance.objectNode();
         sentMessagesCounts.forEach((k, v) -> sentCounts.put(k, v.get()));
         debugState.set("sent_counts", sentCounts);
-
-        ObjectNode droppedCounts = JsonNodeFactory.instance.objectNode();
-        dataChannelDroppedMessagesCounts.forEach((k, v) -> droppedCounts.put(k, v.get()));
-        debugState.set("data_channel_dropped_counts", droppedCounts);
 
         return debugState;
     }

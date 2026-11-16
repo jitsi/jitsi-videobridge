@@ -23,13 +23,12 @@ import java.time.Instant
 import java.util.TreeMap
 
 /**
- * Logs failed SCTP sends for one association (of an endpoint or a relay), at most once per [interval] for a status
- * that was already logged.
+ * Logs failed SCTP sends for one association (of an endpoint or a relay).
  *
  * When the remote side stops acknowledging (for example, its network is gone) the send queue fills and stays full,
  * and every message the bridge sends to it fails until the endpoint or relay expires. That can be many failures per
- * second. So a status is logged right away only the first time it occurs. After that, at most one line is logged per
- * [interval], with the number of failures by status since the previous line.
+ * second. So a status is logged right away only the first time it occurs. Further errors with the same status are
+ * logged at most once per [interval], in one line with the number of failures by status since the previous line.
  */
 class SctpSendFailureLogger(
     private val logger: Logger,
@@ -38,14 +37,18 @@ class SctpSendFailureLogger(
 ) {
     private val lock = Any()
 
-    /** When the last line was logged, or null if nothing was logged yet. */
-    private var lastLogged: Instant? = null
+    /** When the last line was logged. [Instant.MIN] until the first line. */
+    private var lastLogged: Instant = Instant.MIN
 
     /** The statuses that were logged at least once. */
     private val loggedStatuses = mutableSetOf<String>()
 
     /** The number of failures by status since the last line was logged. */
     private val notLogged = TreeMap<String, Long>()
+
+    /** The times of the first and the last failure in [notLogged]. */
+    private var firstNotLogged: Instant? = null
+    private var lastNotLogged: Instant? = null
 
     /**
      * Records a failed send.
@@ -55,21 +58,23 @@ class SctpSendFailureLogger(
         val key = status?.name ?: "no transport"
         synchronized(lock) {
             val now = clock.instant()
-            val last = lastLogged
-            if (last == null || key !in loggedStatuses || Duration.between(last, now) >= interval) {
+            if (key !in loggedStatuses || Duration.between(lastLogged, now) >= interval) {
                 val message = StringBuilder("Error sending to SCTP: $key.")
-                if (notLogged.isNotEmpty()) {
-                    message.append(" Errors not logged since $last: $notLogged.")
-                }
-                if (last == null) {
-                    message.append(" Further errors are logged at most once every ${interval.seconds} s.")
+                notLoggedDescription()?.let { message.append(" Earlier $it.") }
+                if (loggedStatuses.isEmpty()) {
+                    message.append(" Further errors with the same status are logged at most once every ")
+                    message.append("${interval.seconds} s.")
                 }
                 logger.warn(message.toString())
                 loggedStatuses.add(key)
                 lastLogged = now
-                notLogged.clear()
+                clearNotLogged()
             } else {
                 notLogged.merge(key, 1L, Long::plus)
+                if (firstNotLogged == null) {
+                    firstNotLogged = now
+                }
+                lastNotLogged = now
             }
         }
     }
@@ -77,11 +82,21 @@ class SctpSendFailureLogger(
     /** Logs the failures that were not logged yet, if any. Call it when the association closes. */
     fun flush() {
         synchronized(lock) {
-            if (notLogged.isNotEmpty()) {
-                logger.warn("SCTP send errors not logged since $lastLogged: $notLogged.")
-                notLogged.clear()
-            }
+            notLoggedDescription()?.let { logger.warn("SCTP send $it.") }
+            clearNotLogged()
         }
+    }
+
+    private fun notLoggedDescription(): String? = if (notLogged.isEmpty()) {
+        null
+    } else {
+        "errors not logged between $firstNotLogged and $lastNotLogged: $notLogged"
+    }
+
+    private fun clearNotLogged() {
+        notLogged.clear()
+        firstNotLogged = null
+        lastNotLogged = null
     }
 
     companion object {

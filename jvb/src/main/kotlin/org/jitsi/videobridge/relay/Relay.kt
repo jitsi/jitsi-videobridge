@@ -1180,6 +1180,7 @@ class Relay @JvmOverloads constructor(
         }
 
         sctpSendFailureLogger.flush()
+        messageTransport.droppedMessagesSummary()?.let { logger.info(it) }
 
         conference.encodingsManager.unsubscribe(this)
 
@@ -1270,9 +1271,9 @@ class Relay @JvmOverloads constructor(
         }
 
         override fun OnError(error: ErrorKind, message: String) {
-            if (error == ErrorKind.kResourceExhaustion) {
-                // Reported for each send that fails because the send queue is full. [sctpSendFailureLogger] logs
-                // these failures.
+            if (transport.isSending) {
+                // An error about a message that we send, for example because the send queue is full. The status that
+                // the send returns reports the same failure, and [sctpSendFailureLogger] logs it.
                 logger.debug { "SCTP error $error: $message" }
             } else {
                 logger.warn("SCTP error $error: $message")

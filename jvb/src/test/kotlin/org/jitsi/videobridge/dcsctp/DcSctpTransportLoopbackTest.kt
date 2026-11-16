@@ -96,7 +96,7 @@ class DcSctpTransportLoopbackTest : ShouldSpec() {
                 received.add(String(message.payload, StandardCharsets.UTF_8))
             }
             override fun OnError(error: ErrorKind, message: String) {
-                errors.add("$error: $message")
+                errors.add((if (transport.isSending) "while sending " else "") + "$error: $message")
             }
             override fun OnAborted(error: ErrorKind, message: String) {
                 errors.add("aborted $error: $message")
@@ -164,6 +164,33 @@ class DcSctpTransportLoopbackTest : ShouldSpec() {
                     // Also on a failed assertion, so no native sockets or timers outlive the test. Stop
                     // both transports before shutting down either delivery executor: close() sends an
                     // ABORT to the peer, which would be rejected by a shut-down executor.
+                    a.transport.stop()
+                    b.transport.stop()
+                    a.incoming.shutdown()
+                    b.incoming.shutdown()
+                }
+            }
+            should("report an error about a rejected message while the send runs") {
+                val a = Side("a")
+                val b = Side("b")
+                a.peer = b
+                b.peer = a
+                try {
+                    a.transport.start(a.callbacks)
+                    b.transport.start(b.callbacks)
+                    a.transport.connect()
+                    a.connected.await(5, TimeUnit.SECONDS) shouldBe true
+                    b.connected.await(5, TimeUnit.SECONDS) shouldBe true
+
+                    val ppid = DataChannelProtocolConstants.WEBRTC_PPID_STRING
+                    a.transport.send(
+                        DcSctpMessage(0, ppid, ByteArray(0)),
+                        DcSctpTransport.DEFAULT_SEND_OPTIONS
+                    ) shouldBe SendStatus.kErrorMessageEmpty
+                    a.transport.isSending shouldBe false
+                    a.errors.toList().map { it.substringBefore(":") } shouldBe
+                        listOf("while sending ${ErrorKind.kProtocolViolation}")
+                } finally {
                     a.transport.stop()
                     b.transport.stop()
                     a.incoming.shutdown()
