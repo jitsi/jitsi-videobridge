@@ -285,6 +285,44 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             }
         }
 
+        "CountsFeedbackForPacketsNotIndicatedAsSent" {
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val packets =
+                        createPacketTemplates(numberOfSsrcs = 1, packetsPerSsrc = 4, firstTransportSequenceNumber = 0)
+
+                    // The packets at index 1 and 2 are tagged, but never sent (for example, dropped after tagging).
+                    val notSent = setOf(1, 2)
+                    packets.forEachIndexed { i, packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        if (i !in notSent) {
+                            test.adapter.processSentPacket(
+                                SentPacketInfo(
+                                    packet.transportSequenceNumber,
+                                    packet.sendTimestamp
+                                )
+                            )
+                        }
+                    }
+                    test.adapter.totalFeedbackBeforeSent shouldBe 0
+
+                    val adaptedFeedback = test.createAndProcessFeedback(packets)
+
+                    adaptedFeedback!!.packetFeedbacks.size shouldBe 2
+                    test.adapter.totalFeedbackBeforeSent shouldBe 2
+                    test.adapter.totalUnmatchedReports shouldBe 2
+                    test.adapter.getStatisitics().totalFeedbackBeforeSent shouldBe 2
+                    test.adapter.getStatisitics().toJson()["total_feedback_before_sent"].asLong() shouldBe 2
+                }
+            }
+        }
+
         "HandlesDroppedPackets" {
             FeedbackType.entries.forEach {
                 withClue(it) {
@@ -330,6 +368,10 @@ class TransportFeedbackAdapterTest : FreeSpec() {
                     val expectedPackets = packets.subList(kSendSideDropBefore, kReceiveSideDropAfter + 1)
 
                     comparePacketFeedbackVectors(expectedPackets, adaptedFeedback!!.packetFeedbacks)
+                    // The packet that was never added to the history is unmatched, but it does not count as
+                    // feedback before the packet was indicated as sent.
+                    test.adapter.totalUnmatchedReports shouldBe 1
+                    test.adapter.totalFeedbackBeforeSent shouldBe 0
                 }
             }
         }

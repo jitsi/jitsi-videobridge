@@ -170,6 +170,13 @@ class TransportFeedbackAdapter(
     var totalUnmatchedReports: Long = 0
         private set
 
+    /** Cumulative count of per-packet feedback entries for packets that are in the send-time history, but were not
+     *  (yet) indicated as sent when the feedback was processed. A packet is counted again if a later feedback reports
+     *  it again. These are also included in [totalUnmatchedReports]. */
+    var totalFeedbackBeforeSent: Long = 0
+        private set
+    private var loggedFeedbackBeforeSent = false
+
     fun processTransportFeedback(feedback: RtcpFbTccPacket, feedbackReceiveTime: Instant): TransportPacketsFeedback? {
         if (feedback.GetPacketStatusCount() == 0) {
             logger.info { "Empty transport feedback packet received" }
@@ -356,10 +363,22 @@ class TransportFeedbackAdapter(
         }
 
         if (packetFeedback.sent.sendTime.isInfinite()) {
-            // TODO(srte): Fix the tests that makes this happen and make this a
-            //  DCHECK.
-            logger.debug {
-                "Received feedback before packet with seqNum $transportSeqNum was indicated as sent"
+            // Jitsi change from WebRTC: WebRTC has a TODO to make this a DCHECK. The bridge reaches this path in
+            // production, for packets that were tagged, but had not reached the point where they are sent when the
+            // feedback was processed (usually because they were dropped after tagging). A feedback packet can cover
+            // thousands of them, so log only the first one for this adapter (endpoint or relay), and count all of
+            // them.
+            ++totalFeedbackBeforeSent
+            if (!loggedFeedbackBeforeSent) {
+                loggedFeedbackBeforeSent = true
+                logger.warn {
+                    "Received feedback before packet with seqNum $transportSeqNum was indicated as sent. Further " +
+                        "occurrences are counted, and logged at debug level."
+                }
+            } else {
+                logger.debug {
+                    "Received feedback before packet with seqNum $transportSeqNum was indicated as sent"
+                }
             }
             return null
         }
@@ -416,6 +435,7 @@ class TransportFeedbackAdapter(
         currentOffset,
         lastTransportFeedbackBaseTime,
         totalUnmatchedReports,
+        totalFeedbackBeforeSent,
     )
 
     class StatisticsSnapshot(
@@ -427,7 +447,8 @@ class TransportFeedbackAdapter(
         val historySize: Int,
         val currentOffset: Instant,
         val lastTransportFeedbackBaseTime: Instant,
-        val totalUnmatchedReports: Long
+        val totalUnmatchedReports: Long,
+        val totalFeedbackBeforeSent: Long
     ) {
         fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             put("in_flight_bytes", inFlight.bytes)
@@ -439,6 +460,7 @@ class TransportFeedbackAdapter(
             put("current_offset", currentOffset.toEpochMilliOrInf().toString())
             put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf().toString())
             put("total_unmatched_reports", totalUnmatchedReports)
+            put("total_feedback_before_sent", totalFeedbackBeforeSent)
         }
     }
 }
