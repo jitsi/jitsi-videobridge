@@ -314,7 +314,8 @@ class TransportFeedbackAdapterTest : FreeSpec() {
 
                     val adaptedFeedback = test.createAndProcessFeedback(packets)
 
-                    adaptedFeedback!!.packetFeedbacks.size shouldBe 2
+                    // The received packets after the unmatched ones keep their receive times.
+                    comparePacketFeedbackVectors(listOf(packets[0], packets[3]), adaptedFeedback!!.packetFeedbacks)
                     test.adapter.totalFeedbackBeforeSent shouldBe 2
                     test.adapter.totalUnmatchedReports shouldBe 2
                     test.adapter.getStatisitics().totalFeedbackBeforeSent shouldBe 2

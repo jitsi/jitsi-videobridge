@@ -210,6 +210,12 @@ class TransportFeedbackAdapter(
         feedback.forEach { report ->
             val seqNum = seqNumUnwrapper.interpret(report.seqNum)
 
+            // Each receive delta is relative to the previous received packet, so add it before the lookup. Otherwise
+            // an unmatched entry shifts the receive times of all the packets after it.
+            if (report is ReceivedPacketReport) {
+                deltaSinceBase += report.deltaDuration
+            }
+
             val packetFeedback = retrievePacketFeedback(seqNum, received = report is ReceivedPacketReport)
             if (packetFeedback == null) {
                 ++failedLookups
@@ -222,7 +228,6 @@ class TransportFeedbackAdapter(
             result.sentPacket = packetFeedback.sent
 
             if (report is ReceivedPacketReport) {
-                deltaSinceBase += report.deltaDuration
                 result.receiveTime = currentOffset + deltaSinceBase
                 history.remove(seqNum)
             } else {
