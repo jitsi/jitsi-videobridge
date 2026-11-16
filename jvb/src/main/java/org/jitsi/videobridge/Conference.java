@@ -652,7 +652,7 @@ public class Conference
             logger.info("Recent speakers changed: " + recentSpeakersIds + ", dominant speaker changed: "
                     + dominantSpeakerChanged + " silence:" + silence);
             broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds, silence));
-            exporter.speakersChanged(getAudioSourceNames(recentSpeakers), silence);
+            exporter.speakersChanged(Exporter.speakerSourceNames(recentSpeakers), silence);
 
             if (dominantSpeakerChanged && !silence)
             {
@@ -692,26 +692,6 @@ public class Conference
                 logger.warn("Failed to feed an agent's audio level to speech activity", e);
             }
         }
-    }
-
-    /**
-     * The names of the endpoints' own (non-synthetic) audio sources, in the endpoints' order. Exported audio is
-     * tagged with these names, so this is how the speaker order is passed to an export peer.
-     */
-    private static List<String> getAudioSourceNames(List<AbstractEndpoint> endpoints)
-    {
-        List<String> names = new ArrayList<>();
-        for (AbstractEndpoint endpoint : endpoints)
-        {
-            for (AudioSourceDesc source : endpoint.getAudioSources())
-            {
-                if (!source.getSynthetic() && source.getSourceName() != null)
-                {
-                    names.add(source.getSourceName());
-                }
-            }
-        }
-        return names;
     }
 
     /**

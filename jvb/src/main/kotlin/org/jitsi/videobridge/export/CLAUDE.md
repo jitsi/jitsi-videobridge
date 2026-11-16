@@ -14,6 +14,9 @@ Notes for the audio export code (`Exporter`, `ExporterWrapper`).
   - Expires are applied before creates. One delta can expire and re-create the same id to replace a connect.
   - An update can change only `exports` and `requests`. An update with unchanged parameters is a no-op.
 - Each `Exporter` is a `PotentialPacketHandler` on the audio send path of the conference. `wants()` maps the SSRC to a signaled source name and checks that name against `exports`. An empty `exports` list exports all audio only when `requests` is also empty. A connect with `requests` (a translator or an agent) exports only the sources in `exports`.
+  - A name in `exports` selects audio from one endpoint only. The endpoint is the sender of the packet (`PacketInfo.endpointId`). The name must start with the ID of that endpoint, then `-` (`Exporter.isNamedFor()`). The bridge does not export the audio of a source that another endpoint signals with the same name.
+  - The order of the speakers for an `AGENT` connect uses the same rule. `Exporter.speakerSourceNames()` leaves out a name that does not start with the ID of its endpoint.
+  - The jitsi-meet client makes the names (`<endpointId>-<type><index>`). Jicofo uses the same form only for a source with no name. The bridge checks only the start of the name, so the endpoint `x` also matches the names of an endpoint `x-y`.
 - `Exporter` opens one WebSocket for each connect. It sends these events:
   - Audio as mediajson `start` and `media` events, only for exported sources. A new `start` follows when the payload type of an SSRC changes. `start` carries `customParameters.endpointId` and `diarize`. `media` carries the audio level and the VAD flag.
   - A `SourcesEvent` with `exports` and `requests`. On connect, the bridge sends it only when `exports` or `requests` is not empty. On update, it always sends it.

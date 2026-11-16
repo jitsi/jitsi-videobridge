@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -32,6 +33,8 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.videobridge.AbstractEndpoint
+import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
@@ -94,7 +97,9 @@ class ExporterTest : ShouldSpec() {
     private fun connect(exporter: Exporter): Session =
         mockk<Session>(relaxed = true).also { exporter.recorderWebSocket.session = it }
 
-    private fun audioPacket(ssrc: Long) = PacketInfo(AudioRtpPacket(ByteArray(1500), 0, 100).apply { this.ssrc = ssrc })
+    /** An audio packet on [ssrc], received from the endpoint [sender]. */
+    private fun audioPacket(ssrc: Long, sender: String? = null) =
+        PacketInfo(AudioRtpPacket(ByteArray(1500), 0, 100).apply { this.ssrc = ssrc }).apply { endpointId = sender }
 
     /** Replace the shared scheduler with a fake, so reconnects are observable as pending jobs and never dial out. */
     private fun fakeScheduler() = FakeScheduledExecutorService().also { TaskPools.SCHEDULED_POOL = it }
@@ -212,34 +217,37 @@ class ExporterTest : ShouldSpec() {
             val s2 = 2222L
             val sources = mapOf(s1 to "ep1-a0", s2 to "ep2-a0")
 
+            /** A packet on [ssrc] from the endpoint that signaled it (by default, the endpoint that [sources] names). */
+            fun packet(ssrc: Long, sender: String? = sources[ssrc]?.substringBefore('-')) = audioPacket(ssrc, sender)
+
             should("export all audio when there are no requests and exports is empty (transcriber/recorder)") {
                 val (exporter, _) = fixture(sources = sources)
                 connect(exporter)
-                exporter.wants(audioPacket(s1)) shouldBe true
-                exporter.wants(audioPacket(s2)) shouldBe true
+                exporter.wants(packet(s1)) shouldBe true
+                exporter.wants(packet(s2)) shouldBe true
             }
             should("export nothing when there are requests but exports is empty (voice agent)") {
                 val (exporter, _) = fixture(requests = listOf("agent-a0"), sources = sources)
                 connect(exporter)
-                exporter.wants(audioPacket(s1)) shouldBe false
-                exporter.wants(audioPacket(s2)) shouldBe false
+                exporter.wants(packet(s1)) shouldBe false
+                exporter.wants(packet(s2)) shouldBe false
             }
             should("export only the listed sources when there are requests and exports") {
                 val (exporter, _) =
                     fixture(exports = listOf("ep1-a0"), requests = listOf("agent-a0"), sources = sources)
                 connect(exporter)
-                exporter.wants(audioPacket(s1)) shouldBe true
-                exporter.wants(audioPacket(s2)) shouldBe false
+                exporter.wants(packet(s1)) shouldBe true
+                exporter.wants(packet(s2)) shouldBe false
             }
             should("start exporting a source once a live update adds it to exports") {
                 val (exporter, _) = fixture(requests = listOf("agent-a0"), sources = sources)
                 val session = connect(exporter)
-                exporter.wants(audioPacket(s1)) shouldBe false
+                exporter.wants(packet(s1)) shouldBe false
 
                 exporter.update(exports = listOf("ep1-a0"), requests = listOf("agent-a0"))
 
-                exporter.wants(audioPacket(s1)) shouldBe true
-                exporter.wants(audioPacket(s2)) shouldBe false
+                exporter.wants(packet(s1)) shouldBe true
+                exporter.wants(packet(s2)) shouldBe false
                 // The peer learns the new lists through the (unchanged) sources event.
                 val sent = slot<String>()
                 verify(exactly = 1) { session.sendText(capture(sent), any()) }
@@ -254,14 +262,48 @@ class ExporterTest : ShouldSpec() {
                 val unknown = 9999L
                 val (all, _) = fixture(sources = sources)
                 connect(all)
-                all.wants(audioPacket(unknown)) shouldBe false
+                all.wants(packet(unknown)) shouldBe false
                 val (listed, _) = fixture(exports = listOf("ep1-a0"), requests = listOf("agent-a0"), sources = sources)
                 connect(listed)
-                listed.wants(audioPacket(unknown)) shouldBe false
+                listed.wants(packet(unknown)) shouldBe false
             }
             should("export nothing while not connected") {
                 val (exporter, _) = fixture(sources = sources)
-                exporter.wants(audioPacket(s1)) shouldBe false
+                exporter.wants(packet(s1)) shouldBe false
+            }
+            should("export all audio, also a source with a name that does not start with the ID of its endpoint") {
+                val s3 = 3333L
+                val (exporter, _) = fixture(sources = sources + (s3 to "ep1-a0"))
+                connect(exporter)
+                exporter.wants(packet(s3, sender = "ep2")) shouldBe true
+            }
+            should("export a listed name only from the endpoint whose ID the name starts with") {
+                // ep2 signals a second source with the name of the source of ep1.
+                val s3 = 3333L
+                val (exporter, _) = fixture(
+                    exports = listOf("ep1-a0"),
+                    requests = listOf("agent-a0"),
+                    sources = sources + (s3 to "ep1-a0")
+                )
+                connect(exporter)
+                exporter.wants(packet(s1)) shouldBe true
+                exporter.wants(packet(s3, sender = "ep2")) shouldBe false
+            }
+            should("not export a listed name that starts with the endpoint ID with no '-' after it") {
+                val s3 = 3333L
+                val (exporter, _) = fixture(
+                    exports = listOf("ep12-a0"),
+                    requests = listOf("agent-a0"),
+                    sources = mapOf(s3 to "ep12-a0")
+                )
+                connect(exporter)
+                exporter.wants(packet(s3, sender = "ep1")) shouldBe false
+            }
+            should("not export a listed name from a packet with no sender") {
+                val (exporter, _) =
+                    fixture(exports = listOf("ep1-a0"), requests = listOf("agent-a0"), sources = sources)
+                connect(exporter)
+                exporter.wants(packet(s1, sender = null)) shouldBe false
             }
         }
 
@@ -337,6 +379,33 @@ class ExporterTest : ShouldSpec() {
                 exporter.speakersChanged(listOf("ep1-a0"), silence = false)
 
                 verify(exactly = 0) { session.sendText(any(), any()) }
+            }
+        }
+        context("speakerSourceNames(): the names that the speaker order carries") {
+            fun endpoint(id: String, vararg sources: AudioSourceDesc) = mockk<AbstractEndpoint> {
+                every { this@mockk.id } returns id
+                every { audioSources } returns sources.toList()
+            }
+
+            should("give the own audio source names of the endpoints, in the order of the endpoints") {
+                val ep1 = endpoint("ep1", AudioSourceDesc(1L, "ep1", "ep1-a0"))
+                val ep2 = endpoint("ep2", AudioSourceDesc(2L, "ep2", "ep2-a0"))
+                Exporter.speakerSourceNames(listOf(ep2, ep1)) shouldBe listOf("ep2-a0", "ep1-a0")
+            }
+            should("leave out synthetic sources and sources with no name") {
+                val ep1 = endpoint(
+                    "ep1",
+                    AudioSourceDesc(1L, "ep1", "ep1-a0"),
+                    AudioSourceDesc(2L, "ep1", "ep1-a0.fr", synthetic = true),
+                    AudioSourceDesc(3L, "ep1", null)
+                )
+                Exporter.speakerSourceNames(listOf(ep1)) shouldBe listOf("ep1-a0")
+            }
+            should("leave out a name that does not start with the ID of its endpoint") {
+                // ep2 signals a source with the name of the source of ep1.
+                val ep1 = endpoint("ep1", AudioSourceDesc(1L, "ep1", "ep1-a0"))
+                val ep2 = endpoint("ep2", AudioSourceDesc(2L, "ep2", "ep1-a0"))
+                Exporter.speakerSourceNames(listOf(ep2, ep1)) shouldBe listOf("ep1-a0")
             }
         }
         context("reconnecting after a websocket close") {
