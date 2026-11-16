@@ -88,6 +88,7 @@ import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
 import org.jitsi.videobridge.dcsctp.DcSctpBaseCallbacks
 import org.jitsi.videobridge.dcsctp.DcSctpHandler
 import org.jitsi.videobridge.dcsctp.DcSctpTransport
+import org.jitsi.videobridge.dcsctp.SctpSendFailureLogger
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.metrics.QueueMetrics
@@ -187,6 +188,8 @@ class Relay @JvmOverloads constructor(
     /** The role we'll play in the SCTP handshake, if negotiated */
     private var sctpRole: Sctp.Role? = null
 
+    private val sctpSendFailureLogger = SctpSendFailureLogger(logger, clock)
+
     private var dataChannelStack = DataChannelStack(
         { data, sid, ppid ->
             val message = DcSctpMessage(sid.toShort(), ppid, data.array())
@@ -194,7 +197,7 @@ class Relay @JvmOverloads constructor(
             return@DataChannelStack if (status == SendStatus.kSuccess) {
                 0
             } else {
-                logger.error("Error sending to SCTP: $status")
+                sctpSendFailureLogger.sendFailed(status)
                 -1
             }
         },
@@ -1176,6 +1179,8 @@ class Relay @JvmOverloads constructor(
             logger.error("Exception while expiring: ", t)
         }
 
+        sctpSendFailureLogger.flush()
+
         conference.encodingsManager.unsubscribe(this)
 
         dtlsTransport.stop()
@@ -1265,7 +1270,13 @@ class Relay @JvmOverloads constructor(
         }
 
         override fun OnError(error: ErrorKind, message: String) {
-            logger.warn("SCTP error $error: $message")
+            if (error == ErrorKind.kResourceExhaustion) {
+                // Reported for each send that fails because the send queue is full. [sctpSendFailureLogger] logs
+                // these failures.
+                logger.debug { "SCTP error $error: $message" }
+            } else {
+                logger.warn("SCTP error $error: $message")
+            }
         }
 
         override fun OnAborted(error: ErrorKind, message: String) {

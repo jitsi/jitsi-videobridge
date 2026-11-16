@@ -76,6 +76,7 @@ import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.dcsctp.DcSctpBaseCallbacks
 import org.jitsi.videobridge.dcsctp.DcSctpHandler
 import org.jitsi.videobridge.dcsctp.DcSctpTransport
+import org.jitsi.videobridge.dcsctp.SctpSendFailureLogger
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ConnectionStats
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
@@ -161,6 +162,8 @@ class Endpoint @JvmOverloads constructor(
     /** The [DcSctpTransport] instance we'll use to manage the SCTP connection */
     private var sctpTransport: DcSctpTransport? = null
 
+    private val sctpSendFailureLogger = SctpSendFailureLogger(logger, clock)
+
     private var dataChannelStack = DataChannelStack(
         { data, sid, ppid ->
             val message = DcSctpMessage(sid.toShort(), ppid, data.array())
@@ -168,7 +171,7 @@ class Endpoint @JvmOverloads constructor(
             return@DataChannelStack if (status == SendStatus.kSuccess) {
                 0
             } else {
-                logger.error("Error sending to SCTP: $status")
+                sctpSendFailureLogger.sendFailed(status)
                 -1
             }
         },
@@ -1286,6 +1289,9 @@ class Endpoint @JvmOverloads constructor(
             logger.error("Exception while expiring: ", t)
         }
 
+        sctpSendFailureLogger.flush()
+        messageTransport.droppedMessagesSummary()?.let { logger.info(it) }
+
         bandwidthProbing.enabled = false
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing)
         connectionStatsSender?.let {
@@ -1412,7 +1418,13 @@ class Endpoint @JvmOverloads constructor(
         }
 
         override fun OnError(error: ErrorKind, message: String) {
-            logger.warn("SCTP error $error: $message")
+            if (error == ErrorKind.kResourceExhaustion) {
+                // Reported for each send that fails because the send queue is full. [sctpSendFailureLogger] logs
+                // these failures.
+                logger.debug { "SCTP error $error: $message" }
+            } else {
+                logger.warn("SCTP error $error: $message")
+            }
         }
 
         override fun OnAborted(error: ErrorKind, message: String) {
