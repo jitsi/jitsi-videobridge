@@ -84,6 +84,15 @@ class PacketCache(
     fun get(ssrc: Long, seqNum: Int): ArrayCache<RtpPacket>.Container? = getCache(ssrc).get(seqNum)
 
     /**
+     * Gets the timestamps and the length of the packet in the cache with the given SSRC and sequence number, if the
+     * cache contains it. This does not copy the packet, and it does not give access to the packet.
+     */
+    fun getPacketInfo(ssrc: Long, seqNum: Int): CachedPacketInfo? = getCache(ssrc).peek(seqNum)?.let {
+        // The cache returns a null container on failure, never a container with a null packet.
+        CachedPacketInfo(it.timeInserted, it.timeAdded, it.item!!.length)
+    }
+
+    /**
      * Gets copies of the latest packets in the cache. Returns packets which add up to no more than
      * [numBytes] bytes.
      */
@@ -115,6 +124,18 @@ class PacketCache(
         val MAX_CACHE_LIFETIME_MILLIS = 15000
     }
 }
+
+/**
+ * The timestamps and the length of a packet in a [PacketCache].
+ */
+class CachedPacketInfo(
+    /** The time the packet was added to the cache. [PacketCache.updateTimestamp] does not change it. */
+    val timeInserted: Long,
+    /** The time the packet was added to the cache, or the last time that [PacketCache.updateTimestamp] set. */
+    val timeAdded: Long,
+    /** The length of the packet in bytes. */
+    val length: Int
+)
 
 /**
  * Implements a cache for RTP packets.
