@@ -397,6 +397,12 @@ class TransportFeedbackAdapter(
                 if (packetFeedback.previouslyReportedLost) {
                     continue
                 }
+                // Jitsi change from WebRTC: skip a packet that is not indicated as sent yet. The bridge can drop a
+                // packet after it is tagged, for example when the send queue is full. That is not a network loss, and
+                // its send time is infinite. The transport-cc path also skips such packets, in retrievePacketFeedback.
+                if (packetFeedback.sent.sendTime.isInfinite()) {
+                    continue
+                }
                 packetFeedback.previouslyReportedLost = true
                 val result = PacketResult()
                 result.sentPacket = packetFeedback.sent

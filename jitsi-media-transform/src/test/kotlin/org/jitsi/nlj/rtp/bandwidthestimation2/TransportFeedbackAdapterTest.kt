@@ -1152,6 +1152,73 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             packetFeedback.reportedLostForTheFirstTime shouldBe false
         }
 
+        "CongestionControlFeedbackDoesNotReportUnsentPacketAsLost" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            val packets = listOf(
+                PacketTemplate(
+                    ssrc = 1,
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    sendTimestamp = Instant.EPOCH + 100.ms
+                ),
+                PacketTemplate(
+                    ssrc = 2,
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 201,
+                    sendTimestamp = Instant.EPOCH + 110.ms
+                ),
+                PacketTemplate(
+                    ssrc = 1,
+                    transportSequenceNumber = 3,
+                    rtpSequenceNumber = 102,
+                    sendTimestamp = Instant.EPOCH + 120.ms
+                ),
+                PacketTemplate(
+                    ssrc = 1,
+                    transportSequenceNumber = 4,
+                    rtpSequenceNumber = 103,
+                    sendTimestamp = Instant.EPOCH + 130.ms
+                ),
+            )
+
+            // The 2nd packet is tagged, but not indicated as sent.
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                if (packet.transportSequenceNumber != 2L) {
+                    test.adapter.processSentPacket(
+                        SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp)
+                    )
+                }
+            }
+
+            // Feedback that does not mention the 2nd packet.
+            packets[0].receiveTimestamp = Instant.EPOCH + 200.ms
+            packets[2].receiveTimestamp = Instant.EPOCH + 220.ms
+            val report1 = test.adapter.processCongestionControlFeedback(
+                buildRtcpCongestionControlFeedbackPacket(listOf(packets[0], packets[2])),
+                timeNow()
+            )
+            report1 shouldNotBe null
+            report1!!.packetFeedbacks.size shouldBe 2
+            findFeedback(report1, transportSequenceNumber = 2) shouldBe null
+
+            // The 2nd packet is sent later, and a later feedback reports it lost and the 4th packet received. This is
+            // the first report of the loss.
+            test.adapter.processSentPacket(SentPacketInfo(2, packets[1].sendTimestamp))
+            packets[3].receiveTimestamp = Instant.EPOCH + 240.ms
+            val packetFeedback = findFeedback(
+                test.adapter.processCongestionControlFeedback(
+                    buildRtcpCongestionControlFeedbackPacket(listOf(packets[1], packets[3])),
+                    timeNow()
+                ),
+                transportSequenceNumber = 2
+            )
+            packetFeedback shouldNotBe null
+            packetFeedback!!.isReceived() shouldBe false
+            packetFeedback.reportedLostForTheFirstTime shouldBe true
+        }
+
         "CongestionControlFeedbackResultReportsRecoveredPacketOnce" {
             val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
 
