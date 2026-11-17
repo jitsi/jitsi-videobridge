@@ -312,14 +312,53 @@ class TransportFeedbackAdapterTest : FreeSpec() {
                     }
                     test.adapter.totalFeedbackBeforeSent shouldBe 0
 
+                    // The receiver did not get the packets that were not sent. It reports them as not received,
+                    // because it received a later packet.
+                    notSent.forEach { i -> packets[i].receiveTimestamp = NEVER }
                     val adaptedFeedback = test.createAndProcessFeedback(packets)
 
-                    // The received packets after the unmatched ones keep their receive times.
                     comparePacketFeedbackVectors(listOf(packets[0], packets[3]), adaptedFeedback!!.packetFeedbacks)
                     test.adapter.totalFeedbackBeforeSent shouldBe 2
                     test.adapter.totalUnmatchedReports shouldBe 2
                     test.adapter.getStatisitics().totalFeedbackBeforeSent shouldBe 2
                     test.adapter.getStatisitics().toJson()["total_feedback_before_sent"].asLong() shouldBe 2
+                }
+            }
+        }
+
+        "KeepsReceiveTimesAfterUnmatchedReceivedPackets" {
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val packets =
+                        createPacketTemplates(numberOfSsrcs = 1, packetsPerSsrc = 4, firstTransportSequenceNumber = 0)
+
+                    // The packets at index 1 and 2 are not in the send-time history, but the feedback reports them
+                    // as received.
+                    val notInHistory = setOf(1, 2)
+                    packets.forEachIndexed { i, packet ->
+                        if (i !in notInHistory) {
+                            test.adapter.addPacket(
+                                createPacketToSend(packet),
+                                packet.transportSequenceNumber,
+                                0.bytes,
+                                timeNow()
+                            )
+                            test.adapter.processSentPacket(
+                                SentPacketInfo(
+                                    packet.transportSequenceNumber,
+                                    packet.sendTimestamp
+                                )
+                            )
+                        }
+                    }
+
+                    val adaptedFeedback = test.createAndProcessFeedback(packets)
+
+                    // The packet after the unmatched ones keeps its receive time.
+                    comparePacketFeedbackVectors(listOf(packets[0], packets[3]), adaptedFeedback!!.packetFeedbacks)
+                    test.adapter.totalUnmatchedReports shouldBe 2
+                    test.adapter.totalFeedbackBeforeSent shouldBe 0
                 }
             }
         }
