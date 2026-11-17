@@ -16,6 +16,7 @@
 package org.jitsi.videobridge
 
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -31,6 +32,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.message.AudioSourcesMap
 import org.jitsi.videobridge.message.BridgeChannelMessage
+import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.SyntheticSourceKind
 import java.util.Random
@@ -120,6 +122,156 @@ class SsrcCacheTest : ShouldSpec() {
             )
         }
 
+        context("The RTX send SSRC of a slot") {
+            should("be given to the endpoint when a video slot is created") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(2, videoEp, midDemux = false, logger)
+
+                cache.activate(listOf(videoEp.source))
+
+                val mapping = videoEp.sentMessages.filterIsInstance<VideoSourcesMap>()
+                    .flatMap { it.mappedSources }.single()
+                videoEp.sendRtxSsrcs shouldBe listOf(mapping.ssrc to mapping.rtx)
+            }
+            should("not be given again when the slot is remapped, or mapped to its first source again") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(1, videoEp, midDemux = false, logger)
+                val otherSource = MediaSourceDesc(arrayOf(RtpEncodingDesc(4002L, 0)), "owner", "other")
+
+                cache.activate(listOf(videoEp.source))
+                // The pool (size 1) is full, so the second source takes over the slot and its send SSRCs. Then the
+                // first source takes it back.
+                videoEp.otherSources[4002L] = otherSource
+                cache.activate(listOf(otherSource))
+                cache.activate(listOf(videoEp.source))
+
+                val mappings = videoEp.sentMessages.filterIsInstance<VideoSourcesMap>().flatMap { it.mappedSources }
+                mappings.map { it.source } shouldBe listOf("name", "other", "name")
+                mappings.map { it.ssrc to it.rtx }.toSet().size shouldBe 1
+                videoEp.sendRtxSsrcs shouldBe listOf(mappings[0].ssrc to mappings[0].rtx)
+            }
+            should("be given for each slot when one call maps more sources than there are slots") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(2, videoEp, midDemux = false, logger)
+                val second = MediaSourceDesc(arrayOf(RtpEncodingDesc(4002L, 0)), "owner", "second")
+                val third = MediaSourceDesc(arrayOf(RtpEncodingDesc(4003L, 0)), "owner", "third")
+                videoEp.otherSources[4002L] = second
+                videoEp.otherSources[4003L] = third
+
+                cache.activate(listOf(videoEp.source, second, third))
+
+                val mappings = videoEp.sentMessages.filterIsInstance<VideoSourcesMap>().flatMap { it.mappedSources }
+                mappings.map { it.source } shouldBe listOf("name", "second", "third")
+                // The third source takes over the slot of the first.
+                mappings[2].ssrc shouldBe mappings[0].ssrc
+                videoEp.sendRtxSsrcs shouldBe mappings.take(2).map { it.ssrc to it.rtx }
+            }
+            should("be given for the new slot of a source mapped after the sources of an endpoint are removed") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(2, videoEp, midDemux = false, logger)
+                val kept = MediaSourceDesc(arrayOf(RtpEncodingDesc(4002L, 0)), "other-owner", "kept")
+                val later = MediaSourceDesc(arrayOf(RtpEncodingDesc(4003L, 0)), "owner", "later")
+                videoEp.otherSources[4002L] = kept
+                videoEp.otherSources[4003L] = later
+
+                cache.activate(listOf(videoEp.source, kept))
+                cache.removeByOwner("owner")
+                // The slot of the removed source is gone, so this source gets a new one, with new send SSRCs.
+                cache.activate(listOf(later))
+
+                val mappings = videoEp.sentMessages.filterIsInstance<VideoSourcesMap>().flatMap { it.mappedSources }
+                mappings.map { it.source } shouldBe listOf("name", "kept", "later")
+                mappings.map { it.ssrc }.toSet().size shouldBe 3
+                videoEp.sendRtxSsrcs shouldBe mappings.map { it.ssrc to it.rtx }
+            }
+            should("be taken back from the endpoint when the slot is removed with the sources of its owner") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(2, videoEp, midDemux = false, logger)
+                val kept = MediaSourceDesc(arrayOf(RtpEncodingDesc(4002L, 0)), "other-owner", "kept")
+                videoEp.otherSources[4002L] = kept
+
+                cache.activate(listOf(videoEp.source, kept))
+                videoEp.removedSendRtxSsrcs.shouldBeEmpty()
+                cache.removeByOwner("owner")
+
+                val mappings = videoEp.sentMessages.filterIsInstance<VideoSourcesMap>().flatMap { it.mappedSources }
+                // Only the slot of the removed owner, not the slot of the other one.
+                videoEp.removedSendRtxSsrcs shouldBe listOf(mappings[0].ssrc to mappings[0].rtx)
+
+                // Removing again reports nothing more.
+                cache.removeByOwner("owner")
+                videoEp.removedSendRtxSsrcs.size shouldBe 1
+            }
+            should("not be given for audio, which is not retransmitted") {
+                val audioEp = Ep()
+                val cache = AudioSsrcCache(2, audioEp, midDemux = false, logger)
+
+                cache.rewriteRtp(PacketGenerator(5001L, random).nextPacket())
+
+                audioEp.sentMessages.filterIsInstance<AudioSourcesMap>().size shouldBe 1
+                audioEp.numSendRtxSsrcs shouldBe 0
+            }
+        }
+        context("The send SSRCs of sources") {
+            should("be those of their slots, and none for a source without a slot") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(2, videoEp, midDemux = false, logger)
+
+                cache.getSendSsrcs(listOf(4001L)) shouldBe emptyList()
+                cache.activate(listOf(videoEp.source))
+
+                val mapping = videoEp.sentMessages.filterIsInstance<VideoSourcesMap>()
+                    .flatMap { it.mappedSources }.single()
+                cache.getSendSsrcs(listOf(4001L, 4002L)) shouldBe listOf(mapping.ssrc)
+            }
+            should("be looked up without counting as a use of the slot") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(2, videoEp, midDemux = false, logger)
+                val second = MediaSourceDesc(arrayOf(RtpEncodingDesc(4002L, 0)), "owner", "second")
+                val third = MediaSourceDesc(arrayOf(RtpEncodingDesc(4003L, 0)), "owner", "third")
+                videoEp.otherSources[4002L] = second
+                videoEp.otherSources[4003L] = third
+
+                cache.activate(listOf(videoEp.source))
+                cache.activate(listOf(second))
+                val firstSendSsrc = cache.getSendSsrcs(listOf(4001L)).single()
+                // The pool (size 2) is full. The first source is still the least recently used, so its slot is the
+                // one remapped.
+                cache.activate(listOf(third))
+
+                cache.getSendSsrcs(listOf(4003L)) shouldBe listOf(firstSendSsrc)
+                cache.getSendSsrcs(listOf(4001L)) shouldBe emptyList()
+            }
+            should("be forgotten when the sources of their owner are removed, and kept for other owners") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(2, videoEp, midDemux = false, logger)
+                val kept = MediaSourceDesc(arrayOf(RtpEncodingDesc(4002L, 0)), "other-owner", "kept")
+                videoEp.otherSources[4002L] = kept
+
+                cache.activate(listOf(videoEp.source, kept))
+                val keptSendSsrcs = cache.getSendSsrcs(listOf(4002L))
+                cache.getSendSsrcs(listOf(4001L, 4002L)).size shouldBe 2
+                cache.removeByOwner("owner")
+
+                cache.getSendSsrcs(listOf(4001L)) shouldBe emptyList()
+                cache.getSendSsrcs(listOf(4002L)) shouldBe keptSendSsrcs
+            }
+            should("be those of the slot again for a source which gets its slot back") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(1, videoEp, midDemux = false, logger)
+                val other = MediaSourceDesc(arrayOf(RtpEncodingDesc(4002L, 0)), "owner", "other")
+                videoEp.otherSources[4002L] = other
+
+                cache.activate(listOf(videoEp.source))
+                val sendSsrcs = cache.getSendSsrcs(listOf(4001L))
+                cache.activate(listOf(other))
+                cache.getSendSsrcs(listOf(4001L, 4002L)) shouldBe sendSsrcs
+                cache.activate(listOf(videoEp.source))
+
+                cache.getSendSsrcs(listOf(4001L, 4002L)) shouldBe sendSsrcs
+                cache.getSendSsrcs(listOf(4002L)) shouldBe emptyList()
+            }
+        }
         context("An AV1 DD packet") {
             fun newVideoCache(errorLogger: Logger): VideoSsrcCache {
                 val videoEp = VideoEp(AV1_SSRC)
@@ -222,19 +374,41 @@ private class ErrorRecordingLogger(
         ErrorRecordingLogger(name, errors)
 }
 
-/** An endpoint with one video source. */
+/** An endpoint with a video source, and further ones in [otherSources]. */
 private class VideoEp(ssrc: Long) : SsrcRewriter {
     val source = MediaSourceDesc(arrayOf(RtpEncodingDesc(ssrc, 0)), "owner", "name")
 
     private var nextSendSsrc = 1L
 
-    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? = if (ssrc == source.primarySSRC) source else null
+    /** Further video sources, by primary SSRC. */
+    val otherSources = mutableMapOf<Long, MediaSourceDesc>()
+
+    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? =
+        if (ssrc == source.primarySSRC) source else otherSources[ssrc]
 
     override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? = null
 
     override fun getNextSendSsrc(): Long = nextSendSsrc++
 
-    override fun sendMessage(msg: BridgeChannelMessage) {}
+    /** Each report of an RTX send SSRC by the cache: the primary send SSRC and the RTX send SSRC. */
+    val sendRtxSsrcs = mutableListOf<Pair<Long, Long>>()
+
+    override fun addSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) {
+        sendRtxSsrcs.add(primarySsrc to rtxSsrc)
+    }
+
+    /** Each report by the cache that a slot is gone: its primary send SSRC and its RTX send SSRC. */
+    val removedSendRtxSsrcs = mutableListOf<Pair<Long, Long>>()
+
+    override fun removeSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) {
+        removedSendRtxSsrcs.add(primarySsrc to rtxSsrc)
+    }
+
+    val sentMessages = mutableListOf<BridgeChannelMessage>()
+
+    override fun sendMessage(msg: BridgeChannelMessage) {
+        sentMessages.add(msg)
+    }
 }
 
 private class Ep(
@@ -257,6 +431,16 @@ private class Ep(
         synchronized(this) {
             return nextSendSsrc++
         }
+    }
+
+    var numSendRtxSsrcs = 0
+
+    override fun addSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) {
+        numSendRtxSsrcs++
+    }
+
+    override fun removeSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) {
+        numSendRtxSsrcs--
     }
 
     override fun sendMessage(msg: BridgeChannelMessage) {

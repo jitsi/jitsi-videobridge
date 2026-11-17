@@ -393,7 +393,7 @@ class Endpoint @JvmOverloads constructor(
     private val bandwidthProbing = BandwidthProbing(
         object : BandwidthProbing.ProbingDataSender {
             override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int =
-                transceiver.sendProbing(mediaSsrcs, numBytes)
+                this@Endpoint.sendProbing(mediaSsrcs, numBytes)
         },
         { bitrateController.getStatusSnapshot() }
     ).apply {
@@ -1045,6 +1045,33 @@ class Endpoint @JvmOverloads constructor(
             }
         }
     }
+
+    /**
+     * With SSRC rewriting, a packet sent to this endpoint carries a send SSRC in place of the SSRC of its source, and
+     * is cached for retransmission with that SSRC. The SSRC associations from signaling only cover the SSRCs of the
+     * sources. So the RTX SSRC of a send SSRC is added here: without it the retransmission sender finds no RTX SSRC
+     * for a rewritten packet, and retransmits it with the SSRC and sequence number it was first sent with. The
+     * association is removed with the slot, in [removeSendRtxSsrc].
+     */
+    override fun addSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) =
+        transceiver.addSsrcAssociation(RemoteSsrcAssociation(primarySsrc, rtxSsrc, SsrcAssociationType.RTX))
+
+    /**
+     * Removes the association that [addSendRtxSsrc] added for a slot that is gone. A new slot gets new send SSRCs,
+     * so without this the associations of an endpoint would grow with each endpoint that joins and leaves.
+     */
+    override fun removeSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) =
+        transceiver.removeRemoteSsrcAssociation(RemoteSsrcAssociation(primarySsrc, rtxSsrc, SsrcAssociationType.RTX))
+
+    /**
+     * Sends up to [numBytes] of probing for the sources with the primary SSRCs [mediaSsrcs], and returns the number
+     * of bytes sent. Probing retransmits packets from the cache of sent packets. With SSRC rewriting the packets are
+     * cached with their send SSRC, so the SSRCs of the sources are translated to their send SSRCs.
+     */
+    internal fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int = transceiver.sendProbing(
+        if (doSsrcRewriting) videoSsrcs.getSendSsrcs(mediaSsrcs) else mediaSsrcs,
+        numBytes
+    )
 
     override fun send(packetInfo: PacketInfo) = transceiver.sendPacket(packetInfo)
 

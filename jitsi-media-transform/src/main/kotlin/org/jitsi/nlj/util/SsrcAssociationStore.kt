@@ -50,6 +50,23 @@ class SsrcAssociationStore {
         }
     }
 
+    /**
+     * Removes an association with the SSRCs and the type of [ssrcAssociation], if there is one. The handlers are not
+     * told: they are only told about associations that are added.
+     */
+    fun removeAssociation(ssrcAssociation: SsrcAssociation) {
+        synchronized(lock) {
+            val removed = ssrcAssociations.removeIf {
+                it.primarySsrc == ssrcAssociation.primarySsrc &&
+                    it.secondarySsrc == ssrcAssociation.secondarySsrc &&
+                    it.type == ssrcAssociation.type
+            }
+            if (removed) {
+                rebuildMaps()
+            }
+        }
+    }
+
     private fun rebuildMaps() {
         ssrcAssociationsByPrimarySsrc = ssrcAssociations.groupBy(SsrcAssociation::primarySsrc)
         ssrcAssociationsBySecondarySsrc = ssrcAssociations.associateBy(SsrcAssociation::secondarySsrc)

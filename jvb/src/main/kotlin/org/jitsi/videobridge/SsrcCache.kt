@@ -206,7 +206,14 @@ class SendSsrc(val ssrc: Long) {
  * Associates primary and secondary send SSRCs.
  * Primary constructor preserves state of the existing send SSRCs.
  */
-class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc, val mid: String? = null) {
+class SendSource(
+    val props: SourceDesc,
+    val send1: SendSsrc,
+    val send2: SendSsrc,
+    val mid: String? = null,
+    /** Whether the slot was created for this source, as opposed to remapped to it from another source. */
+    val firstOfSlot: Boolean = false
+) {
 
     /**
      * If false, do not send on this SSRC until a packet with start=true arrives.
@@ -269,6 +276,16 @@ interface SsrcRewriter {
     fun getNextSendSsrc(): Long
 
     /**
+     * Tells this endpoint the RTX send SSRC of a slot. SSRC rewriting replaces the SSRC of a packet with the primary
+     * send SSRC [primarySsrc], so a retransmission of the packet has to use the RTX send SSRC [rtxSsrc], not the RTX
+     * SSRC of its source.
+     */
+    fun addSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long)
+
+    /** Tells this endpoint that the slot with the send SSRCs [primarySsrc] and [rtxSsrc] is gone. */
+    fun removeSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long)
+
+    /**
      * Sends a specific message to this endpoint over its bridge channel.
      */
     fun sendMessage(msg: BridgeChannelMessage)
@@ -321,6 +338,14 @@ abstract class SsrcCache(
     )
 
     /**
+     * The primary send SSRC of each source in [sendSources], by the primary SSRC of the source. [sendSources] is an
+     * LRU map: a lookup in it marks the slot as recently used, so the slot is remapped later. A lookup here does not
+     * do that. Updated under the [sendSources] lock whenever [sendSources] changes, and read without the lock.
+     * Only the video cache reads it, through [getSendSsrcs], for probing.
+     */
+    private val sendSsrcBySource = ConcurrentHashMap<Long, Long>()
+
+    /**
      * Whether an incoming RTP packet can automatically activate its source (i.e. acquire a send SSRC).
      * If false, sources must be activated using the activate() method.
      */
@@ -340,6 +365,34 @@ abstract class SsrcCache(
      * Notify new SSRC mappings to the client. The list will contain at least one element.
      */
     protected abstract fun notifyMappings(sources: List<SendSource>)
+
+    /**
+     * Called when a slot is created, with its send SSRCs, after the [sendSources] lock is released. The send SSRCs
+     * stay with the slot when it is remapped to another source, so this is not called then.
+     */
+    protected open fun sendSsrcsCreated(send1: SendSsrc, send2: SendSsrc) {}
+
+    /**
+     * Called when a slot is removed, with its send SSRCs, after the [sendSources] lock is released. The send SSRCs
+     * are not used again.
+     */
+    protected open fun sendSsrcsRemoved(send1: SendSsrc, send2: SendSsrc) {}
+
+    /**
+     * Reports the slots which were created for [remappings], then notifies the mappings to the client. Called without
+     * the [sendSources] lock.
+     */
+    private fun slotsMapped(remappings: List<SendSource>) {
+        if (remappings.isEmpty()) {
+            return
+        }
+        remappings.forEach {
+            if (it.firstOfSlot) {
+                sendSsrcsCreated(it.send1, it.send2)
+            }
+        }
+        notifyMappings(remappings)
+    }
 
     /**
      * Assign a group of send SSRCs to use for the specified source.
@@ -366,6 +419,8 @@ abstract class SsrcCache(
                 /* Reuse the eldest slot's send SSRCs *and* its mid: the mid is bound to the slot (i.e. to the send
                    SSRCs), not to the source, so it stays stable across remaps. */
                 sendSource = SendSource(props, eldest.value.send1, eldest.value.send2, eldest.value.mid)
+                /* Adding the new source below removes the eldest one from [sendSources]. */
+                sendSsrcBySource.remove(eldest.key)
                 logger.debug { "Remapping SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
                 /* Request new deltas on next sent packet */
                 receivedSsrcs[props.ssrc1]?.hasDeltas = false
@@ -377,10 +432,11 @@ abstract class SsrcCache(
                 val ssrc1 = ep.getNextSendSsrc()
                 val ssrc2 = ep.getNextSendSsrc()
                 val mid = if (midDemux) "$midPrefix${nextMidIndex++}" else null
-                sendSource = SendSource(props, SendSsrc(ssrc1), SendSsrc(ssrc2), mid)
+                sendSource = SendSource(props, SendSsrc(ssrc1), SendSsrc(ssrc2), mid, firstOfSlot = true)
                 logger.debug { "Added send SSRC: ${props.ssrc1}->$sendSource" }
             }
             sendSources[ssrc] = sendSource
+            sendSsrcBySource[ssrc] = sendSource.send1.ssrc
             /* Bind both the primary and RTX send SSRCs to the slot's mid so the stamper can resolve either. */
             sendSource.mid?.let { mid ->
                 sendSsrcToMid[sendSource.send1.ssrc] = mid
@@ -393,6 +449,12 @@ abstract class SsrcCache(
     }
 
     /**
+     * Returns the send SSRCs which the sources with the primary SSRCs [ssrcs] are rewritten to. A source which has
+     * no slot is left out.
+     */
+    fun getSendSsrcs(ssrcs: Collection<Long>): List<Long> = ssrcs.mapNotNull { sendSsrcBySource[it] }
+
+    /**
      * Returns the mid assigned to the slot whose (send-side) SSRC is [ssrc], or null if [ssrc] is not a slot SSRC of
      * this cache or mid demux is disabled.
      */
@@ -403,11 +465,18 @@ abstract class SsrcCache(
      * signaled.
      */
     fun removeByOwner(owner: String) {
+        val removedSources = mutableListOf<SendSource>()
         synchronized(sendSources) {
-            sendSources.values.removeIf { sendSource ->
-                sendSource.props.owner == owner
+            sendSources.entries.removeIf { (ssrc, sendSource) ->
+                (sendSource.props.owner == owner).also { removed ->
+                    if (removed) {
+                        sendSsrcBySource.remove(ssrc)
+                        removedSources.add(sendSource)
+                    }
+                }
             }
         }
+        removedSources.forEach { sendSsrcsRemoved(it.send1, it.send2) }
     }
 
     /**
@@ -439,9 +508,7 @@ abstract class SsrcCache(
             logger.debug { this.toString() }
         }
 
-        if (remappings.isNotEmpty()) {
-            notifyMappings(remappings)
-        }
+        slotsMapped(remappings)
     }
 
     /**
@@ -495,9 +562,7 @@ abstract class SsrcCache(
                 }
             }
 
-            if (remappings.isNotEmpty()) {
-                notifyMappings(remappings)
-            }
+            slotsMapped(remappings)
         } catch (e: Exception) {
             logger.error("Error rewriting SSRC, packet $packet", e)
             send = false
@@ -646,6 +711,14 @@ class VideoSsrcCache(size: Int, ep: SsrcRewriter, midDemux: Boolean, parentLogge
             ep.sendMessage(VideoSourcesMap(it))
         }
     }
+
+    /**
+     * Packets of a slot are rewritten to the slot's primary send SSRC, and retransmitted with its RTX send SSRC. The
+     * mappings sent to the client give the same RTX SSRC.
+     */
+    override fun sendSsrcsCreated(send1: SendSsrc, send2: SendSsrc) = ep.addSendRtxSsrc(send1.ssrc, send2.ssrc)
+
+    override fun sendSsrcsRemoved(send1: SendSsrc, send2: SendSsrc) = ep.removeSendRtxSsrc(send1.ssrc, send2.ssrc)
 }
 
 /** Codec-specific packet state. */
