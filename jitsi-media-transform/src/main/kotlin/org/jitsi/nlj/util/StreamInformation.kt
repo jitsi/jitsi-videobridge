@@ -93,6 +93,9 @@ interface StreamInformationStore : ReadOnlyStreamInformationStore {
 
     fun addSsrcAssociation(ssrcAssociation: SsrcAssociation)
 
+    /** Removes a remote SSRC association. Local SSRC associations are not removed. */
+    fun removeRemoteSsrcAssociation(ssrcAssociation: RemoteSsrcAssociation)
+
     fun addReceiveSsrc(ssrc: Long, mediaType: MediaType)
     fun removeReceiveSsrc(ssrc: Long)
 }
@@ -218,6 +221,9 @@ class StreamInformationStoreImpl : StreamInformationStore {
             is RemoteSsrcAssociation -> remoteSsrcAssociations.addAssociation(ssrcAssociation)
         }
     }
+
+    override fun removeRemoteSsrcAssociation(ssrcAssociation: RemoteSsrcAssociation) =
+        remoteSsrcAssociations.removeAssociation(ssrcAssociation)
 
     override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) = receiveSsrcStore.addReceiveSsrc(ssrc, mediaType)
 

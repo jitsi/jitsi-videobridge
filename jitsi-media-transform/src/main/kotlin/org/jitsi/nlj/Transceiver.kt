@@ -33,6 +33,7 @@ import org.jitsi.nlj.stats.TransceiverStats
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
+import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.utils.MediaType
@@ -310,6 +311,11 @@ class Transceiver(
             "Adding $location SSRC association: $ssrcAssociation"
         }
         streamInformationStore.addSsrcAssociation(ssrcAssociation)
+    }
+
+    fun removeRemoteSsrcAssociation(ssrcAssociation: RemoteSsrcAssociation) {
+        logger.cdebug { "Removing remote SSRC association: $ssrcAssociation" }
+        streamInformationStore.removeRemoteSsrcAssociation(ssrcAssociation)
     }
 
     fun setSrtpInformation(

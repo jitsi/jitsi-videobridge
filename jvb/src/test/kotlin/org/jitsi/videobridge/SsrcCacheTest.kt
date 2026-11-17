@@ -16,6 +16,7 @@
 package org.jitsi.videobridge
 
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -182,6 +183,24 @@ class SsrcCacheTest : ShouldSpec() {
                 mappings.map { it.source } shouldBe listOf("name", "kept", "later")
                 mappings.map { it.ssrc }.toSet().size shouldBe 3
                 videoEp.sendRtxSsrcs shouldBe mappings.map { it.ssrc to it.rtx }
+            }
+            should("be taken back from the endpoint when the slot is removed with the sources of its owner") {
+                val videoEp = VideoEp(4001L)
+                val cache = VideoSsrcCache(2, videoEp, midDemux = false, logger)
+                val kept = MediaSourceDesc(arrayOf(RtpEncodingDesc(4002L, 0)), "other-owner", "kept")
+                videoEp.otherSources[4002L] = kept
+
+                cache.activate(listOf(videoEp.source, kept))
+                videoEp.removedSendRtxSsrcs.shouldBeEmpty()
+                cache.removeByOwner("owner")
+
+                val mappings = videoEp.sentMessages.filterIsInstance<VideoSourcesMap>().flatMap { it.mappedSources }
+                // Only the slot of the removed owner, not the slot of the other one.
+                videoEp.removedSendRtxSsrcs shouldBe listOf(mappings[0].ssrc to mappings[0].rtx)
+
+                // Removing again reports nothing more.
+                cache.removeByOwner("owner")
+                videoEp.removedSendRtxSsrcs.size shouldBe 1
             }
             should("not be given for audio, which is not retransmitted") {
                 val audioEp = Ep()
@@ -378,6 +397,13 @@ private class VideoEp(ssrc: Long) : SsrcRewriter {
         sendRtxSsrcs.add(primarySsrc to rtxSsrc)
     }
 
+    /** Each report by the cache that a slot is gone: its primary send SSRC and its RTX send SSRC. */
+    val removedSendRtxSsrcs = mutableListOf<Pair<Long, Long>>()
+
+    override fun removeSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) {
+        removedSendRtxSsrcs.add(primarySsrc to rtxSsrc)
+    }
+
     val sentMessages = mutableListOf<BridgeChannelMessage>()
 
     override fun sendMessage(msg: BridgeChannelMessage) {
@@ -411,6 +437,10 @@ private class Ep(
 
     override fun addSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) {
         numSendRtxSsrcs++
+    }
+
+    override fun removeSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long) {
+        numSendRtxSsrcs--
     }
 
     override fun sendMessage(msg: BridgeChannelMessage) {

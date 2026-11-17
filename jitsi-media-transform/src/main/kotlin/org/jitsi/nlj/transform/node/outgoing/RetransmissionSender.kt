@@ -28,6 +28,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.LongAdder
 
 class RetransmissionSender(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
@@ -46,9 +47,9 @@ class RetransmissionSender(
      */
     private val rtxStreamSeqNums: MutableMap<Long, Int> = ConcurrentHashMap()
 
-    private var numRetransmissionsRequested = 0
-    private var numRetransmittedRtxPackets = 0
-    private var numRetransmittedPlainPackets = 0
+    private val numRetransmissionsRequested = LongAdder()
+    private val numRetransmittedRtxPackets = LongAdder()
+    private val numRetransmittedPlainPackets = LongAdder()
 
     init {
         streamInformationStore.onRtpPayloadTypesChanged { currentRtpPayloadTypes ->
@@ -66,7 +67,7 @@ class RetransmissionSender(
      */
     override fun modify(packetInfo: PacketInfo): PacketInfo {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        numRetransmissionsRequested++
+        numRetransmissionsRequested.increment()
         val rtxPt = origPtToRtxPayloadType[rtpPacket.payloadType.toPositiveInt()]
             ?: return retransmitPlain(packetInfo)
         val rtxSsrc = streamInformationStore.getRemoteSecondarySsrc(rtpPacket.ssrc, SsrcAssociationType.RTX)
@@ -91,7 +92,7 @@ class RetransmissionSender(
         rtpPacket.sequenceNumber = rtxSeqNum
 
         packetInfo.resetPayloadVerification()
-        numRetransmittedRtxPackets++
+        numRetransmittedRtxPackets.increment()
 
         return packetInfo
     }
@@ -104,15 +105,15 @@ class RetransmissionSender(
                 "payload type: ${rtpPacket.payloadType}"
         }
 
-        numRetransmittedPlainPackets++
+        numRetransmittedPlainPackets.increment()
         // No work needed
         return packetInfo
     }
 
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
-        addNumber("num_retransmissions_requested", numRetransmissionsRequested)
-        addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
-        addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
+        addNumber("num_retransmissions_requested", numRetransmissionsRequested.sum())
+        addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets.sum())
+        addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets.sum())
         addString(
             "rtx_payload_types(orig -> rtx)",
             this@RetransmissionSender.origPtToRtxPayloadType.toString()
@@ -120,9 +121,9 @@ class RetransmissionSender(
     }
 
     override fun statsJson() = super.statsJson().apply {
-        put("num_retransmissions_requested", numRetransmissionsRequested)
-        put("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
-        put("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
+        put("num_retransmissions_requested", numRetransmissionsRequested.sum())
+        put("num_retransmissions_rtx_sent", numRetransmittedRtxPackets.sum())
+        put("num_retransmissions_plain_sent", numRetransmittedPlainPackets.sum())
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

@@ -282,6 +282,9 @@ interface SsrcRewriter {
      */
     fun addSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long)
 
+    /** Tells this endpoint that the slot with the send SSRCs [primarySsrc] and [rtxSsrc] is gone. */
+    fun removeSendRtxSsrc(primarySsrc: Long, rtxSsrc: Long)
+
     /**
      * Sends a specific message to this endpoint over its bridge channel.
      */
@@ -338,6 +341,7 @@ abstract class SsrcCache(
      * The primary send SSRC of each source in [sendSources], by the primary SSRC of the source. [sendSources] is an
      * LRU map: a lookup in it marks the slot as recently used, so the slot is remapped later. A lookup here does not
      * do that. Updated under the [sendSources] lock whenever [sendSources] changes, and read without the lock.
+     * Only the video cache reads it, through [getSendSsrcs], for probing.
      */
     private val sendSsrcBySource = ConcurrentHashMap<Long, Long>()
 
@@ -367,6 +371,12 @@ abstract class SsrcCache(
      * stay with the slot when it is remapped to another source, so this is not called then.
      */
     protected open fun sendSsrcsCreated(send1: SendSsrc, send2: SendSsrc) {}
+
+    /**
+     * Called when a slot is removed, with its send SSRCs, after the [sendSources] lock is released. The send SSRCs
+     * are not used again.
+     */
+    protected open fun sendSsrcsRemoved(send1: SendSsrc, send2: SendSsrc) {}
 
     /**
      * Reports the slots which were created for [remappings], then notifies the mappings to the client. Called without
@@ -455,15 +465,18 @@ abstract class SsrcCache(
      * signaled.
      */
     fun removeByOwner(owner: String) {
+        val removedSources = mutableListOf<SendSource>()
         synchronized(sendSources) {
             sendSources.entries.removeIf { (ssrc, sendSource) ->
                 (sendSource.props.owner == owner).also { removed ->
                     if (removed) {
                         sendSsrcBySource.remove(ssrc)
+                        removedSources.add(sendSource)
                     }
                 }
             }
         }
+        removedSources.forEach { sendSsrcsRemoved(it.send1, it.send2) }
     }
 
     /**
@@ -704,6 +717,8 @@ class VideoSsrcCache(size: Int, ep: SsrcRewriter, midDemux: Boolean, parentLogge
      * mappings sent to the client give the same RTX SSRC.
      */
     override fun sendSsrcsCreated(send1: SendSsrc, send2: SendSsrc) = ep.addSendRtxSsrc(send1.ssrc, send2.ssrc)
+
+    override fun sendSsrcsRemoved(send1: SendSsrc, send2: SendSsrc) = ep.removeSendRtxSsrc(send1.ssrc, send2.ssrc)
 }
 
 /** Codec-specific packet state. */
