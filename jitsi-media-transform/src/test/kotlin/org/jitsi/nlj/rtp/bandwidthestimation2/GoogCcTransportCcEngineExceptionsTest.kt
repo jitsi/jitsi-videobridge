@@ -19,6 +19,7 @@ import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -134,14 +135,42 @@ class GoogCcTransportCcEngineExceptionsTest : ShouldSpec() {
 
                     // The second listener was called.
                     laterListenerCalls shouldBeGreaterThan 0
-                    // The periodic task was scheduled.
+                    // The periodic task does not run for an engine that failed to start.
                     val callsBefore = clock.calls
                     runTasks()
-                    clock.calls shouldBeGreaterThan callsBefore
+                    clock.calls shouldBe callsBefore
                     // The probe clusters from the update were created, so probes are sent.
                     sendPacket(0)
                     runTasks()
                     probes shouldBeGreaterThan 0
+                    engine.stop()
+                }
+            }
+        }
+        context("Each task") {
+            should("have its own rate limit for log messages") {
+                var failing = true
+                val sendProbing = { size: DataSize, _: Any? ->
+                    if (failing) {
+                        throw Failure()
+                    }
+                    size.bytes.toInt()
+                }
+                with(Fixture(sendProbing)) {
+                    engine.start()
+
+                    // The periodic task fails many times and uses up its rate limit.
+                    clock.failing = true
+                    runTasks()
+                    numErrorsLogged(1)
+                    clock.failing = false
+
+                    // A failure of the probe task right after that is still logged.
+                    sendPacket(0)
+                    runTasks()
+                    numErrorsLogged(2)
+
+                    failing = false
                     engine.stop()
                 }
             }

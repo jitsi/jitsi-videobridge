@@ -242,48 +242,66 @@ class GoogCcTransportCcEngine(
 
     @Synchronized
     override fun start() {
-        val processInterval = factory.getProcessInterval().toMillis()
+        val startTime = clock.instant()
+        // processUpdate throws if a listener throws. Apply both updates before that exception is rethrown.
+        var failure: Throwable? = null
+        listOf(
+            networkController.onNetworkAvailability(NetworkAvailability(atTime = startTime, networkAvailable = true)),
+            networkController.onProcessInterval(ProcessInterval(atTime = startTime))
+        ).forEach { update ->
+            try {
+                processUpdate(update) // Does this make sense to do during init?
+            } catch (t: Throwable) {
+                val first = failure
+                if (first == null) {
+                    failure = t
+                } else {
+                    first.addSuppressed(t)
+                }
+            }
+        }
+        // The periodic task is scheduled last, so that it does not run for an engine that failed to start.
+        failure?.let { throw it }
 
-        // Schedule the task first. processUpdate below throws if a listener throws.
+        val processInterval = factory.getProcessInterval().toMillis()
         processTask = scheduledExecutor.scheduleAtFixedRate({
-            loggingExceptions("processing an interval") {
+            processExceptionLog.loggingExceptions {
                 synchronized(this@GoogCcTransportCcEngine) {
                     val now = clock.instant()
                     processUpdate(networkController.onProcessInterval(ProcessInterval(atTime = now)))
                 }
             }
         }, processInterval, processInterval, TimeUnit.MILLISECONDS)
-
-        val startTime = clock.instant()
-        var update =
-            networkController.onNetworkAvailability(NetworkAvailability(atTime = startTime, networkAvailable = true))
-        processUpdate(update) // Does this make sense to do during init?
-
-        update = networkController.onProcessInterval(ProcessInterval(atTime = startTime))
-        processUpdate(update)
     }
 
-    /** Rate limit for the log messages of [loggingExceptions]. */
-    private val exceptionLogLimit = RateLimit()
-
-    /** The number of exceptions that [loggingExceptions] has not logged since its last log message. */
-    private var numExceptionsNotLogged = 0
-
     /**
-     * Runs [block] and logs any exception it throws. Use this for tasks given to [scheduledExecutor]. The executor
-     * stores an exception from a task in the task's Future, and nothing reads that Future, so the exception would
-     * never be logged. The executor also stops running a periodic task after the task throws. The log messages are
-     * rate limited, because a task can fail every time it runs.
+     * Logs the exceptions of one of the tasks given to [scheduledExecutor]. The executor stores an exception from a
+     * task in the task's Future, and nothing reads that Future, so the exception would never be logged. The executor
+     * also stops running a periodic task after the task throws. The log messages are rate limited, because a task
+     * can fail every time it runs. Each task has its own limit and count, so that a task that fails often does not
+     * hide the failures of another.
      */
-    private inline fun loggingExceptions(what: String, block: () -> Unit) {
-        try {
-            block()
-        } catch (t: Throwable) {
-            val notLogged = synchronized(exceptionLogLimit) {
-                if (exceptionLogLimit.accept()) {
-                    numExceptionsNotLogged.also { numExceptionsNotLogged = 0 }
+    private inner class ExceptionLog(private val what: String) {
+        private val rateLimit = RateLimit()
+
+        /** The number of exceptions that were not logged since the last log message. */
+        private var numNotLogged = 0
+
+        /** Runs [block] and logs any exception it throws. */
+        inline fun loggingExceptions(block: () -> Unit) {
+            try {
+                block()
+            } catch (t: Throwable) {
+                log(t)
+            }
+        }
+
+        fun log(t: Throwable) {
+            val notLogged = synchronized(this) {
+                if (rateLimit.accept()) {
+                    numNotLogged.also { numNotLogged = 0 }
                 } else {
-                    numExceptionsNotLogged++
+                    numNotLogged++
                     null
                 }
             }
@@ -295,6 +313,9 @@ class GoogCcTransportCcEngine(
             }
         }
     }
+
+    private val processExceptionLog = ExceptionLog("processing an interval")
+    private val probeExceptionLog = ExceptionLog("sending a probe")
 
     @Synchronized
     override fun stop() {
@@ -314,7 +335,12 @@ class GoogCcTransportCcEngine(
                 try {
                     listener.bandwidthEstimationChanged(targetRate.targetRate)
                 } catch (t: Throwable) {
-                    listenerFailure?.addSuppressed(t) ?: run { listenerFailure = t }
+                    val first = listenerFailure
+                    if (first == null) {
+                        listenerFailure = t
+                    } else {
+                        first.addSuppressed(t)
+                    }
                 }
             }
         }
@@ -368,7 +394,7 @@ class GoogCcTransportCcEngine(
             }
 
             probeTask = scheduledExecutor.schedule({
-                loggingExceptions("sending a probe") { sendProbe() }
+                probeExceptionLog.loggingExceptions { sendProbe() }
             }, delay, TimeUnit.MILLISECONDS)
         }
     }
