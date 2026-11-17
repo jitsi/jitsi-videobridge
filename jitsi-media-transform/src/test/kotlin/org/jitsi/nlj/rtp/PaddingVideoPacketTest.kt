@@ -28,6 +28,12 @@ import org.jitsi.rtp.rtp.RtpPacket
 class PaddingVideoPacketTest : ShouldSpec() {
 
     init {
+        // The contexts below replace the allocator of the buffer pool, which the other specs share.
+        val savedGetBuffer = BufferPool.getBuffer
+        afterSpec {
+            BufferPool.getBuffer = savedGetBuffer
+        }
+
         context("Creating a padding packet") {
             context("from a buffer that previously held other data") {
                 BufferPool.getBuffer = {
