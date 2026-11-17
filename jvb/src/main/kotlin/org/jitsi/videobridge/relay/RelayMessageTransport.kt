@@ -84,7 +84,7 @@ class RelayMessageTransport(
     private val numOutgoingMessagesDropped = AtomicInteger(0)
 
     /**
-     * The number of sent message by type.
+     * The number of sent messages by type. Does not include the messages that the data channel did not accept.
      */
     private val sentMessagesCounts: MutableMap<String, AtomicLong> = ConcurrentHashMap()
 
@@ -201,24 +201,27 @@ class RelayMessageTransport(
      * @param message the message to send.
      */
     override fun sendMessage(dst: Any?, message: BridgeChannelMessage) {
-        super.sendMessage(dst, message) // Log message
-        if (dst is ColibriWebSocket) {
-            sendMessage(dst, message)
-        } else if (dst is DataChannel) {
-            sendMessage(dst, message)
-        } else {
-            throw IllegalArgumentException("unknown transport:$dst")
-        }
+        send(dst, message)
     }
 
     /**
-     * Sends a string via a particular [DataChannel].
-     * @param dst the data channel to send through.
+     * Sends a message via a particular transport channel.
+     * @param dst the transport channel.
      * @param message the message to send.
+     * @return true if the transport channel accepted the message.
      */
-    private fun sendMessage(dst: DataChannel, message: BridgeChannelMessage) {
-        dst.sendString(message.toJson())
-        VideobridgeMetrics.dataChannelMessagesSent.inc()
+    private fun send(dst: Any?, message: BridgeChannelMessage): Boolean {
+        super.sendMessage(dst, message) // Log message
+        return when (dst) {
+            is ColibriWebSocket -> {
+                sendMessage(dst, message)
+                true
+            }
+
+            is DataChannel -> sendThroughDataChannel(dst, message)
+
+            else -> throw IllegalArgumentException("unknown transport:$dst")
+        }
     }
 
     /**
@@ -247,9 +250,8 @@ class RelayMessageTransport(
         if (dst == null) {
             logger.debug("No available transport channel, can't send a message")
             numOutgoingMessagesDropped.incrementAndGet()
-        } else {
+        } else if (send(dst, msg)) {
             sentMessagesCounts.computeIfAbsent(msg.javaClass.simpleName) { AtomicLong() }.incrementAndGet()
-            sendMessage(dst, msg)
         }
     }
 

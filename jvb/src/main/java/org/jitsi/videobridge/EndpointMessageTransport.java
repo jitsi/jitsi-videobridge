@@ -74,7 +74,7 @@ public class EndpointMessageTransport
     private final AtomicInteger numOutgoingMessagesDropped = new AtomicInteger(0);
 
     /**
-     * The number of sent message by type.
+     * The number of sent messages by type. Does not include the messages that the data channel did not accept.
      */
     private final Map<String, AtomicLong> sentMessagesCounts = new ConcurrentHashMap<>();
 
@@ -194,15 +194,27 @@ public class EndpointMessageTransport
      */
     protected void sendMessage(Object dst, BridgeChannelMessage message)
     {
+        send(dst, message);
+    }
+
+    /**
+     * Sends a message via a particular transport channel.
+     * @param dst the transport channel.
+     * @param message the message to send.
+     * @return {@code true} if the transport channel accepted the message.
+     */
+    private boolean send(Object dst, BridgeChannelMessage message)
+    {
         super.sendMessage(dst, message); // Log message
 
         if (dst instanceof ColibriWebSocket)
         {
             sendMessage((ColibriWebSocket) dst, message);
+            return true;
         }
         else if (dst instanceof DataChannel)
         {
-            sendMessage((DataChannel)dst, message);
+            return sendMessage((DataChannel)dst, message);
         }
         else
         {
@@ -214,11 +226,11 @@ public class EndpointMessageTransport
      * Sends a string via a particular {@link DataChannel}.
      * @param dst the data channel to send through.
      * @param message the message to send.
+     * @return {@code true} if the data channel accepted the message.
      */
-    private void sendMessage(DataChannel dst, BridgeChannelMessage message)
+    private boolean sendMessage(DataChannel dst, BridgeChannelMessage message)
     {
-        dst.sendString(message.toJson());
-        VideobridgeMetrics.dataChannelMessagesSent.inc();
+        return sendThroughDataChannel(dst, message);
     }
 
     /**
@@ -257,12 +269,11 @@ public class EndpointMessageTransport
             getLogger().debug("No available transport channel, can't send a message");
             numOutgoingMessagesDropped.incrementAndGet();
         }
-        else
+        else if (send(dst, msg))
         {
             sentMessagesCounts.computeIfAbsent(
                     msg.getClass().getSimpleName(),
                     (k) -> new AtomicLong()).incrementAndGet();
-            sendMessage(dst, msg);
         }
     }
 

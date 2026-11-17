@@ -15,15 +15,21 @@
  */
 package org.jitsi.videobridge
 
+import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.datachannel.DataChannel
+import org.jitsi.videobridge.message.ConnectionStats
 import org.jitsi.videobridge.message.EndpointMessage
+import org.jitsi.videobridge.message.ForwardedSourcesMessage
 
 class EndpointMessageTransportTest : ShouldSpec() {
+    override fun isolationMode() = IsolationMode.InstancePerLeaf
+
     init {
         context("The transcriber ID") {
             should("be the value clients match on") {
@@ -69,6 +75,35 @@ class EndpointMessageTransportTest : ShouldSpec() {
                 transport.endpointMessage(EndpointMessage("abcdef02"))
 
                 verify(exactly = 0) { target.sendMessage(any()) }
+            }
+        }
+        context("Messages that the data channel does not accept") {
+            val (_, transport) = setup("abcdef01")
+            // The transport keeps only a weak reference to the data channel.
+            val dataChannel = mockk<DataChannel>(relaxed = true) {
+                every { isReady } returns true
+                every { sendString(any()) } returns true
+            }
+            transport.setDataChannel(dataChannel)
+
+            should("not be reported when the data channel accepts every message") {
+                transport.sendMessage(ConnectionStats(1000))
+                verify(exactly = 1) { dataChannel.sendString(match { it.contains(ConnectionStats.TYPE) }) }
+                transport.droppedMessagesSummary() shouldBe null
+            }
+            should("be counted by type, and not as sent") {
+                transport.sendMessage(ConnectionStats(1000))
+                every { dataChannel.sendString(any()) } returns false
+                repeat(3) { transport.sendMessage(ConnectionStats(1000)) }
+                transport.sendMessage(ForwardedSourcesMessage(emptyList()))
+
+                transport.droppedMessagesSummary() shouldBe
+                    "The data channel did not accept 4 messages, by type: {ConnectionStats=3, ForwardedSourcesMessage=1}"
+                val debugState = transport.debugState
+                debugState["data_channel_dropped_counts"]["ConnectionStats"].asLong() shouldBe 3
+                debugState["data_channel_dropped_counts"]["ForwardedSourcesMessage"].asLong() shouldBe 1
+                debugState["sent_counts"]["ConnectionStats"].asLong() shouldBe 1
+                debugState["sent_counts"].has("ForwardedSourcesMessage") shouldBe false
             }
         }
     }

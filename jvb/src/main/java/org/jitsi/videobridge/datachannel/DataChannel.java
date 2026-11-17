@@ -142,14 +142,17 @@ public class DataChannel
     /**
      * Sends a string through this data channel.
      * @param message the string to send.
+     * @return {@code true} if the transport accepted (queued) the message, {@code false} otherwise (for example,
+     * because its send queue is full, or because there is no SCTP transport).
      */
-    public void sendString(String message)
+    public boolean sendString(String message)
     {
         if (logger.isDebugEnabled())
         {
             logger.debug("Sending string data channel message: '" + message + "'");
         }
         DataChannelStringMessage stringMessage = new DataChannelStringMessage(message);
-        dataChannelDataSender.send(stringMessage.getBuffer(), sid, DataChannelProtocolConstants.WEBRTC_PPID_STRING);
+        return dataChannelDataSender.send(
+                stringMessage.getBuffer(), sid, DataChannelProtocolConstants.WEBRTC_PPID_STRING) == 0;
     }
 }

@@ -20,14 +20,19 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.utils.queue.PacketQueue
+import org.jitsi.videobridge.datachannel.DataChannel
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.jitsi.videobridge.message.MessageHandler
 import org.jitsi.videobridge.metrics.QueueMetrics
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.TaskPools
 import java.io.IOException
 import java.time.Clock
+import java.util.TreeMap
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageHandler() {
 
@@ -83,6 +88,39 @@ abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageH
     protected open fun sendMessage(dst: Any?, message: BridgeChannelMessage) =
         logger.debug { "SENT: " + message.toJson() }
 
+    /**
+     * The number of messages by type that the data channel did not accept (for example, because the SCTP send queue
+     * is full).
+     */
+    private val dataChannelDroppedMessagesCounts: MutableMap<String, AtomicLong> = ConcurrentHashMap()
+
+    /**
+     * Sends [message] through [dataChannel]. Counts a message that the data channel did not accept in
+     * [dataChannelDroppedMessagesCounts], and not in the metric of sent messages.
+     * @return true if the data channel accepted the message.
+     */
+    protected fun sendThroughDataChannel(dataChannel: DataChannel, message: BridgeChannelMessage): Boolean {
+        if (dataChannel.sendString(message.toJson())) {
+            VideobridgeMetrics.dataChannelMessagesSent.inc()
+            return true
+        }
+        dataChannelDroppedMessagesCounts.computeIfAbsent(message.javaClass.simpleName) { AtomicLong() }
+            .incrementAndGet()
+        return false
+    }
+
+    /**
+     * Describes the messages that the data channel did not accept, by type.
+     * @return the description, or null if the data channel accepted every message.
+     */
+    fun droppedMessagesSummary(): String? {
+        if (dataChannelDroppedMessagesCounts.isEmpty()) {
+            return null
+        }
+        val byType = dataChannelDroppedMessagesCounts.mapValuesTo(TreeMap()) { it.value.get() }
+        return "The data channel did not accept ${byType.values.sum()} messages, by type: $byType"
+    }
+
     open fun close() {}
 
     open val debugState: ObjectNode
@@ -90,6 +128,9 @@ abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageH
             val counts = JsonNodeFactory.instance.objectNode()
             getReceivedCounts().forEach { (k, v) -> counts.put(k, v) }
             set<ObjectNode>("received_counts", counts)
+            val droppedCounts = JsonNodeFactory.instance.objectNode()
+            dataChannelDroppedMessagesCounts.forEach { (k, v) -> droppedCounts.put(k, v.get()) }
+            set<ObjectNode>("data_channel_dropped_counts", droppedCounts)
         }
 
     /**
