@@ -42,8 +42,9 @@ interface ExporterEventHandler {
     fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long)
 
     /**
-     * Called when the connection to a peer with `requests` opens, also when it opens again after a loss. A peer that
-     * produces synthetic sources numbers their media from the start again on a new connection.
+     * Called when the connection to a peer that produces synthetic sources opens (a connect with `requests` that is
+     * not a transcriber), also when it opens again after a loss. Such a peer numbers the media of its sources from the
+     * start again on a new connection.
      *
      * @param sourceNames the `requests` of the connect; names that are not a synthetic source are ignored.
      */
