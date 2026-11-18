@@ -80,9 +80,9 @@ internal class Exporter(
     @Volatile private var requests: List<String> = emptyList()
 ) : PotentialPacketHandler {
     /**
-     * Whether [requests] name synthetic sources that the peer produces. This is decided from the type alone: it is
-     * true for a non-empty [requests] on any connect except a transcriber (in practice a translator or a voice agent).
-     * A transcriber connect uses [requests] for the text-translation target languages, so it never produces sources.
+     * Whether [requests] name synthetic sources that the peer produces. It is true when [requests] is not empty and
+     * the connect is not a transcriber (in practice a translator or a voice agent). A transcriber connect uses
+     * [requests] for the text-translation target languages, so it never produces sources.
      */
     private fun requestsSyntheticSources(requests: List<String> = this.requests) =
         requests.isNotEmpty() && type != Connect.Types.TRANSCRIBER
@@ -290,8 +290,8 @@ internal class Exporter(
         sourceName in exports
 
     /**
-     * Apply an update to the connect with this exporter's URL. Only the exported/requested source names may change
-     * on a running exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
+     * Apply an update to the connect with this exporter's URL. Only [exports] and [requests] may change on a running
+     * exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
      */
     fun update(exports: List<String>, requests: List<String>) {
         if (terminalClose != null || reconnectExhausted) {
@@ -335,7 +335,7 @@ internal class Exporter(
         session.sendText(SpeakersEvent(exported, speakers.silence).toJson(), Callback.NOOP)
     }
 
-    /** Send the current exported/requested source names to the peer. No-op if not currently connected. */
+    /** Send the current [exports] and [requests] to the peer. No-op if not currently connected. */
     private fun sendSources() {
         val session = recorderWebSocket.session ?: return
         logger.info("Sending sources: exports=$exports requests=$requests")

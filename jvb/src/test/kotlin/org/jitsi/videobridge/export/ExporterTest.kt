@@ -249,6 +249,17 @@ class ExporterTest : ShouldSpec() {
                 exporter.wants(audioPacket(s1)) shouldBe true
                 exporter.wants(audioPacket(s2)) shouldBe true
             }
+            should("export only the listed sources to a transcriber with exports and text-translation languages") {
+                val (exporter, _) = fixture(
+                    exports = listOf("ep1-a0"),
+                    requests = listOf("hi"),
+                    sources = sources,
+                    type = Connect.Types.TRANSCRIBER
+                )
+                connect(exporter)
+                exporter.wants(audioPacket(s1)) shouldBe true
+                exporter.wants(audioPacket(s2)) shouldBe false
+            }
             should("export nothing when there are requests but exports is empty (voice agent)") {
                 val (exporter, _) =
                     fixture(requests = listOf("agent-a0"), sources = sources, type = Connect.Types.AGENT)
@@ -263,15 +274,29 @@ class ExporterTest : ShouldSpec() {
                 exporter.wants(audioPacket(s1)) shouldBe false
                 exporter.wants(audioPacket(s2)) shouldBe false
             }
-            should("export only the listed sources when there are requests and exports") {
+            should("export nothing when there are requests but exports is empty (any type but transcriber)") {
+                // Only a transcriber's requests are not source names. Every other type, also a recorder, is treated
+                // as a producer of the requested sources.
                 val (exporter, _) =
-                    fixture(exports = listOf("ep1-a0"), requests = listOf("agent-a0"), sources = sources)
+                    fixture(requests = listOf("ep1-a0.fr"), sources = sources, type = Connect.Types.RECORDER)
+                connect(exporter)
+                exporter.wants(audioPacket(s1)) shouldBe false
+                exporter.wants(audioPacket(s2)) shouldBe false
+            }
+            should("export only the listed sources when there are requests and exports") {
+                val (exporter, _) = fixture(
+                    exports = listOf("ep1-a0"),
+                    requests = listOf("agent-a0"),
+                    sources = sources,
+                    type = Connect.Types.AGENT
+                )
                 connect(exporter)
                 exporter.wants(audioPacket(s1)) shouldBe true
                 exporter.wants(audioPacket(s2)) shouldBe false
             }
             should("start exporting a source once a live update adds it to exports") {
-                val (exporter, _) = fixture(requests = listOf("agent-a0"), sources = sources)
+                val (exporter, _) =
+                    fixture(requests = listOf("agent-a0"), sources = sources, type = Connect.Types.AGENT)
                 val session = connect(exporter)
                 exporter.wants(audioPacket(s1)) shouldBe false
 
@@ -294,7 +319,12 @@ class ExporterTest : ShouldSpec() {
                 val (all, _) = fixture(sources = sources)
                 connect(all)
                 all.wants(audioPacket(unknown)) shouldBe false
-                val (listed, _) = fixture(exports = listOf("ep1-a0"), requests = listOf("agent-a0"), sources = sources)
+                val (listed, _) = fixture(
+                    exports = listOf("ep1-a0"),
+                    requests = listOf("agent-a0"),
+                    sources = sources,
+                    type = Connect.Types.AGENT
+                )
                 connect(listed)
                 listed.wants(audioPacket(unknown)) shouldBe false
             }

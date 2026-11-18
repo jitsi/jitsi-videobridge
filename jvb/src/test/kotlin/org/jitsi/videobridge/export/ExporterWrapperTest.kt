@@ -22,8 +22,11 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.eclipse.jetty.websocket.api.Session
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
 import org.jitsi.videobridge.colibri2.IqProcessingException
@@ -235,12 +238,13 @@ class ExporterWrapperTest : ShouldSpec() {
         context("Updating exports/requests in place") {
             should("apply changed exports and requests to the running exporter") {
                 val f = Fixture()
+                val type = Connect.Types.TRANSLATOR
                 f.wrapper.applyConnects(
-                    listOf(connect("a", create = true, exports = listOf("s1"), requests = listOf("s1.en")))
+                    listOf(connect("a", type = type, create = true, exports = listOf("s1"), requests = listOf("s1.en")))
                 )
 
                 f.wrapper.applyConnects(
-                    listOf(connect("a", exports = listOf("s1", "s2"), requests = listOf("s1.en", "s2.fr")))
+                    listOf(connect("a", type = type, exports = listOf("s1", "s2"), requests = listOf("s1.en", "s2.fr")))
                 )
 
                 verify(exactly = 1) { f["a"].update(listOf("s1", "s2"), listOf("s1.en", "s2.fr")) }
@@ -263,6 +267,28 @@ class ExporterWrapperTest : ShouldSpec() {
                 f.wrapper.applyConnects(listOf(connect("a", exports = listOf("s2", "s1"))))
 
                 verify(exactly = 0) { f["a"].update(any(), any()) }
+            }
+        }
+
+        context("The exporter that a connect configures") {
+            should("export all audio for a transcriber connect with text-translation languages and no exports") {
+                val sources = mapOf(1111L to "ep1-a0", 2222L to "ep2-a0")
+                val handler = object : ExporterEventHandler by eventHandler {
+                    override fun getAudioSourceName(ssrc: Long): String? = sources[ssrc]
+                }
+                // The real exporter, built without start() so no socket opens; a mock session marks it connected.
+                lateinit var wrapper: ExporterWrapper
+                wrapper = ExporterWrapper(logger, handler) { wrapper.newExporter(it) }
+                wrapper.applyConnects(
+                    listOf(connect("a", type = Connect.Types.TRANSCRIBER, create = true, requests = listOf("hi")))
+                )
+                val exporter = wrapper.getPacketHandlers().single() as Exporter
+                exporter.recorderWebSocket.session = mockk<Session>(relaxed = true)
+
+                sources.keys.forEach { ssrc ->
+                    val packet = PacketInfo(AudioRtpPacket(ByteArray(1500), 0, 100).apply { this.ssrc = ssrc })
+                    exporter.wants(packet) shouldBe true
+                }
             }
         }
 
