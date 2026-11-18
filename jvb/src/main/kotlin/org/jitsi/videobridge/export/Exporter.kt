@@ -73,9 +73,20 @@ internal class Exporter(
     private val type: Connect.Types = Connect.Types.RECORDER,
     /** Source names to export (send out), communicated to the peer via a [SourcesEvent]. */
     @Volatile private var exports: List<String> = emptyList(),
-    /** Source names requested (to receive back), communicated to the peer via a [SourcesEvent]. */
+    /**
+     * Source names requested (to receive back), communicated to the peer via a [SourcesEvent]. On a transcriber
+     * connect these are text-translation target languages instead, see [requestsSyntheticSources].
+     */
     @Volatile private var requests: List<String> = emptyList()
 ) : PotentialPacketHandler {
+    /**
+     * Whether [requests] name synthetic sources that the peer produces. It is true when [requests] is not empty and
+     * the connect is not a transcriber (in practice a translator or a voice agent). A transcriber connect uses
+     * [requests] for the text-translation target languages, so it never produces sources.
+     */
+    private fun requestsSyntheticSources(requests: List<String> = this.requests) =
+        requests.isNotEmpty() && type != Connect.Types.TRANSCRIBER
+
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
@@ -199,8 +210,12 @@ internal class Exporter(
             cancelReconnect()
             startPing()
             // The peer numbers the media it produces from the start again on a new connection.
-            requests.takeIf { it.isNotEmpty() }?.let { eventHandler.handleProducerConnected(it) }
-            // Declare our exported/requested sources to the peer, if any, now that the connection is up.
+            val requested = requests
+            if (requestsSyntheticSources(requested)) {
+                eventHandler.handleProducerConnected(requested)
+            }
+            // Declare our exports and requests to the peer, if any, now that the connection is up. For a transcriber
+            // the requests are the text-translation languages, so they are sent too.
             if (exports.isNotEmpty() || requests.isNotEmpty()) {
                 sendSources()
             }
@@ -256,12 +271,12 @@ internal class Exporter(
     fun isConnected() = recorderWebSocket.isConnected
 
     /**
-     * Whether to forward this packet to this exporter: it must be audio from a source we export. A connect that
-     * produces synthetic audio (non-empty [requests]: a voice agent or translator) exports only the sources named in
-     * [exports], so an empty list means "export nothing" until participants are explicitly listed. A connect with no
-     * [requests] (transcriber, recorder) keeps the rule that an empty [exports] list means "export all audio". Either
-     * way the SSRC must resolve to a signaled source: audio from an unknown (e.g. not-yet-signaled) SSRC isn't routed
-     * to receivers, so it isn't exported either.
+     * Whether to forward this packet to this exporter: it must be audio from a source we export. When [requests] name
+     * synthetic sources ([requestsSyntheticSources]: a voice agent or translator), the connect exports only the
+     * sources named in [exports], so an empty list means "export nothing" until participants are explicitly listed.
+     * Otherwise (no [requests], or a transcriber whose [requests] are text-translation languages) an empty [exports]
+     * list means "export all audio". Either way the SSRC must resolve to a signaled source: audio from an unknown
+     * (e.g. not-yet-signaled) SSRC isn't routed to receivers, so it isn't exported either.
      */
     override fun wants(packet: PacketInfo): Boolean {
         if (!isConnected()) return false
@@ -271,11 +286,12 @@ internal class Exporter(
     }
 
     /** Whether audio from the source with this name is exported to the peer (see [wants]). */
-    private fun exportsSource(sourceName: String) = (exports.isEmpty() && requests.isEmpty()) || sourceName in exports
+    private fun exportsSource(sourceName: String) = (exports.isEmpty() && !requestsSyntheticSources()) ||
+        sourceName in exports
 
     /**
-     * Apply an update to the connect with this exporter's URL. Only the exported/requested source names may change
-     * on a running exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
+     * Apply an update to the connect with this exporter's URL. Only [exports] and [requests] may change on a running
+     * exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
      */
     fun update(exports: List<String>, requests: List<String>) {
         if (terminalClose != null || reconnectExhausted) {
@@ -319,7 +335,7 @@ internal class Exporter(
         session.sendText(SpeakersEvent(exported, speakers.silence).toJson(), Callback.NOOP)
     }
 
-    /** Send the current exported/requested source names to the peer. No-op if not currently connected. */
+    /** Send the current [exports] and [requests] to the peer. No-op if not currently connected. */
     private fun sendSources() {
         val session = recorderWebSocket.session ?: return
         logger.info("Sending sources: exports=$exports requests=$requests")
