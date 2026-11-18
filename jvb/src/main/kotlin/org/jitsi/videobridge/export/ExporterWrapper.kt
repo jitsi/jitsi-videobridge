@@ -52,7 +52,7 @@ class ExporterWrapper internal constructor(
      * that nothing would ever stop. */
     private var stopped = false
 
-    private val exporterFactory: (Connect) -> Exporter = exporterFactory ?: ::createExporter
+    private val exporterFactory: (Connect) -> Exporter = exporterFactory ?: { newExporter(it).apply { start() } }
 
     /**
      * One running [Exporter] per requested connect, keyed by the connect's id. Mutated only under the object lock
@@ -93,7 +93,7 @@ class ExporterWrapper internal constructor(
      *  - `expire=true`: stop and remove the exporter with that id (a no-op with a warning if it isn't running),
      *  - `create=true`: start a new exporter; rejected if an exporter with that id is already running,
      *  - neither: update the already-running exporter with that id; rejected if none is running (i.e. a connect for a
-     *    new id must set `create`). Only the exported/requested source names can change live; any other change is
+     *    new id must set `create`). Only the exports and the requests can change live; any other change is
      *    rejected.
      *
      * Expires are applied before creates, so a single delta may both expire and re-create the same id (replacing a
@@ -209,7 +209,11 @@ class ExporterWrapper internal constructor(
         }
     }
 
-    private fun createExporter(connect: Connect): Exporter {
+    /**
+     * Build the [Exporter] for [connect], without starting it. Internal (rather than private) so [ExporterWrapperTest]
+     * can check what a connect configures without opening a socket.
+     */
+    internal fun newExporter(connect: Connect): Exporter {
         logger.info("Starting with url=${connect.url}")
         val httpHeaders = connect.getHttpHeaders().associate { header ->
             header.name to header.value
@@ -222,7 +226,8 @@ class ExporterWrapper internal constructor(
         val pingIntervalMs = ping?.interval ?: 10000
         val pingTimeoutMs = ping?.timeout ?: 3000
 
-        // The source names to export (send out) and request (receive back). Not yet acted upon.
+        // The source names to export (send out), and the requests: the source names to receive back, or on a
+        // transcriber connect the text-translation target languages. The type decides which (see Exporter).
         val exports = connect.getExports()
         val requests = connect.getRequests()
 
@@ -237,9 +242,7 @@ class ExporterWrapper internal constructor(
             connect.type,
             exports,
             requests
-        ).apply {
-            start()
-        }
+        )
     }
 
     fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
@@ -256,7 +259,7 @@ class ExporterWrapper internal constructor(
     /**
      * The parameters of a [Connect] other than its id (which is its identity). Used to detect whether a re-signaled
      * connect for an already-running id has changed and therefore needs to be passed to the exporter as an update.
-     * Source-name lists are normalized (sorted) so reordering alone isn't treated as a change.
+     * The exports and requests lists are normalized (sorted) so reordering alone isn't treated as a change.
      */
     private data class ConnectParams(
         val url: URI,
