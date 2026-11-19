@@ -23,8 +23,9 @@ import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
-import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.PacketCache
+import org.jitsi.nlj.util.times
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 import org.jitsi.rtp.rtp.RtpPacket
@@ -43,6 +44,15 @@ import java.time.Instant
  * (by default max(3 s, 9 RTT), see `jmt.nack` in reference.conf). A receiver that comes back after a network outage
  * can NACK all the packets that it lost. Packets that old are no longer useful to the receiver, and a burst of them
  * fills the send queue.
+ *
+ * It does not retransmit a packet less than min(0.9 * RTT, RTT - 5 ms) after the previous transmission of the packet.
+ * When the RTT is unknown, it does not wait before the first retransmission. For a packet that it already
+ * retransmitted, the interval is at least [minResendInterval].
+ *
+ * It also limits the bitrate of its retransmissions with a token bucket ([maxRetransmissionBitrate],
+ * [retransmissionBurst]). There is one [NackHandler], and thus one budget, for each RTP sender: one for each
+ * endpoint, and on a relay one for each local endpoint that sends over the relay. Packets over the limit are not
+ * retransmitted, and are not marked as retransmitted, so a later NACK can request them again.
  */
 class NackHandler(
     private val packetCache: PacketCache,
@@ -50,16 +60,21 @@ class NackHandler(
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC(),
     private val maxPacketAge: Duration = maxPacketAgeConfig,
-    private val maxPacketAgeRtts: Double = maxPacketAgeRttsConfig
+    private val maxPacketAgeRtts: Double = maxPacketAgeRttsConfig,
+    private val maxRetransmissionBitrate: Bandwidth = maxRetransmissionBitrateConfig,
+    private val retransmissionBurst: Duration = retransmissionBurstConfig,
+    private val minResendInterval: Duration = minResendIntervalConfig
 ) : NodeStatsProducer, RtcpListener, EndpointConnectionStats.EndpointConnectionStatsListener {
     private var numNacksReceived = 0
     private var numNackedPackets = 0
     private var numRetransmittedPackets = 0
     private var numPacketsNotResentDueToDelay = 0
     private var numPacketsNotResentDueToAge = 0
+    private var numPacketsNotResentDueToRateLimit = 0
     private var numCacheMisses = 0
     private val logger = createChildLogger(parentLogger)
     private var currRtt: Double = -1.0
+    private val budget = RetransmissionBudget(maxRetransmissionBitrate, retransmissionBurst, clock.millis())
 
     override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
         if (packet is RtcpFbNackPacket) {
@@ -76,35 +91,53 @@ class NackHandler(
             Math.max(maxPacketAge.toMillis().toDouble(), maxPacketAgeRtts * currRtt)
         }
 
+        // The minimum delay between the first transmission of a packet and its first retransmission is
+        // min(0.9 * RTT, RTT - 5 ms), or none when the RTT is unknown. The first NACK for a packet arrives about one
+        // RTT after we sent the packet.
+        val minFirstDelayMs = if (currRtt == -1.0) 0.0 else Math.min(currRtt * .9, currRtt - 5)
+        // The minimum delay between two retransmissions of a packet is also at least [minResendInterval]. Without
+        // this lower bound, the delay is zero when the RTT is unknown or less than 5 ms.
+        val minRepeatDelayMs = Math.max(minResendInterval.toMillis().toDouble(), minFirstDelayMs)
+
         numNacksReceived++
         val nackedPackets = mutableListOf<RtpPacket>()
         val ssrc = nackPacket.mediaSourceSsrc
         numNackedPackets += nackPacket.missingSeqNums.size
         nackPacket.missingSeqNums.forEach { missingSeqNum ->
-            packetCache.get(ssrc, missingSeqNum)?.let { container ->
-                // The time of the first transmission. The cache updates [timeAdded] when we retransmit the packet.
-                val age = now - container.timeInserted
-                // The time since the last transmission (the first one, or the last retransmission).
-                val delay = now - container.timeAdded
-                val shouldResendPacket =
-                    (currRtt == -1.0) ||
-                        (delay >= Math.min(currRtt * .9, currRtt - 5))
-                if (age > maxAgeMs) {
-                    BufferPool.returnBuffer(container.item!!.buffer)
-                    numPacketsNotResentDueToAge++
-                } else if (shouldResendPacket) {
-                    // The cache returns a null container on failure, never a container with a null packet. Maybe we
-                    // can refactor to make it explicit.
-                    nackedPackets.add(container.item!!)
-                    packetCache.updateTimestamp(ssrc, missingSeqNum, now)
-                    numRetransmittedPackets++
-                } else {
-                    BufferPool.returnBuffer(container.item!!.buffer)
-                    numPacketsNotResentDueToDelay++
-                }
-            } ?: run {
+            // Read the timestamps without a copy of the packet. A NACK can request hundreds of packets that we do not
+            // retransmit, and a copy of each one is expensive.
+            val cached = packetCache.getPacketInfo(ssrc, missingSeqNum)
+            if (cached == null) {
                 logger.cdebug { "Nack'd packet $ssrc $missingSeqNum wasn't in cache, unable to retransmit" }
                 numCacheMisses++
+                return@forEach
+            }
+            // The time of the first transmission. The cache updates [timeAdded] when we retransmit the packet.
+            val age = now - cached.timeInserted
+            // The time since the last transmission (the first one, or the last retransmission).
+            val delay = now - cached.timeAdded
+            // The two timestamps are different only after a retransmission. (They stay equal after a retransmission in
+            // the same millisecond as the first transmission, which then counts as the first transmission.)
+            val alreadyRetransmitted = cached.timeAdded != cached.timeInserted
+            val minDelayMs = if (alreadyRetransmitted) minRepeatDelayMs else minFirstDelayMs
+            when {
+                age > maxAgeMs -> numPacketsNotResentDueToAge++
+
+                delay < minDelayMs -> numPacketsNotResentDueToDelay++
+
+                !budget.tryConsume(cached.length, now) -> numPacketsNotResentDueToRateLimit++
+
+                else -> {
+                    // The cache can drop the packet between the two calls.
+                    val packet = packetCache.get(ssrc, missingSeqNum)?.item
+                    if (packet == null) {
+                        numCacheMisses++
+                    } else {
+                        nackedPackets.add(packet)
+                        packetCache.updateTimestamp(ssrc, missingSeqNum, now)
+                        numRetransmittedPackets++
+                    }
+                }
             }
         }
         nackedPackets.forEach {
@@ -124,6 +157,7 @@ class NackHandler(
         addNumber("num_retransmitted_packets", numRetransmittedPackets)
         addNumber("num_packets_not_retransmitted", numPacketsNotResentDueToDelay)
         addNumber("num_packets_not_retransmitted_too_old", numPacketsNotResentDueToAge)
+        addNumber("num_packets_not_retransmitted_rate_limited", numPacketsNotResentDueToRateLimit)
         addNumber("num_cache_misses", numCacheMisses)
     }
 
@@ -137,5 +171,54 @@ class NackHandler(
         private val maxPacketAgeRttsConfig: Double by config {
             "jmt.nack.max-packet-age-rtts".from(JitsiConfig.newConfig)
         }
+
+        private val maxRetransmissionBitrateConfig: Bandwidth by config {
+            "jmt.nack.max-retransmission-bitrate".from(JitsiConfig.newConfig)
+                .convertFrom<String> { Bandwidth.fromString(it) }
+        }
+
+        private val retransmissionBurstConfig: Duration by config {
+            "jmt.nack.retransmission-burst".from(JitsiConfig.newConfig)
+        }
+
+        private val minResendIntervalConfig: Duration by config {
+            "jmt.nack.min-resend-interval".from(JitsiConfig.newConfig)
+        }
+    }
+}
+
+/**
+ * A token bucket for the retransmissions of one [NackHandler]. The bucket holds [bitrate] * [burst] bytes, and is
+ * full at [startMs]. It adds tokens at [bitrate], up to its capacity. Not thread safe: [NackHandler] calls it from the
+ * pipeline that receives the RTCP.
+ */
+private class RetransmissionBudget(bitrate: Bandwidth, burst: Duration, startMs: Long) {
+    init {
+        // A bucket with no tokens refuses each packet, so 0 can not mean "no limit".
+        require(bitrate > Bandwidth.ZERO) { "The maximum retransmission bitrate must be more than 0, but is $bitrate" }
+    }
+
+    private val bytesPerMs = bitrate.bytesPerSec / 1000
+
+    /** At least [MIN_CAPACITY_BYTES], so that a short [burst] does not refuse each packet that is longer than it. */
+    private val capacity = Math.max((bitrate * burst).bytes, MIN_CAPACITY_BYTES)
+    private var tokens = capacity
+    private var lastUpdateMs = startMs
+
+    fun tryConsume(bytes: Int, nowMs: Long): Boolean {
+        if (nowMs > lastUpdateMs) {
+            tokens = Math.min(capacity, tokens + (nowMs - lastUpdateMs) * bytesPerMs)
+            lastUpdateMs = nowMs
+        }
+        if (tokens < bytes) {
+            return false
+        }
+        tokens -= bytes
+        return true
+    }
+
+    companion object {
+        /** The size of the largest packet that we expect to retransmit. */
+        private const val MIN_CAPACITY_BYTES = 1500.0
     }
 }
