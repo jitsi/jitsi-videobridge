@@ -1160,6 +1160,11 @@ private data class IceProcessingStateTransition(
 
 private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean = remoteUfrag != null && remotePassword != null
 
+/**
+ * This is the only use of Guava in jvb. When the minimum Java version is 22 or later, use
+ * [java.net.InetAddress.ofLiteral] instead (it throws [IllegalArgumentException] for a string that is not an IP literal,
+ * and it does not do a DNS lookup), and remove the Guava dependency from jvb/pom.xml.
+ */
 private fun CandidatePacketExtension.ipNeedsResolution(): Boolean = !InetAddresses.isInetAddress(ip)
 
 private fun TransportAddress.isPrivateAddress(): Boolean = address.isSiteLocalAddress ||
