@@ -89,10 +89,11 @@ object VideobridgePeriodicMetrics {
         "Total transport-cc feedback reports that could not be matched to the send-time history. " +
             "A sustained flood of these is the marker of a feedback-starvation saturation lock."
     )
-    val tccFeedbackBeforeSent = metricsContainer.registerLongGauge(
-        "tcc_feedback_before_sent",
-        "Total transport-cc feedback entries for packets that were tagged, but not (yet) indicated as sent when " +
-            "the feedback was processed. These are also included in tcc_unmatched_feedback."
+    val ccFeedbackBeforeSent = metricsContainer.registerLongGauge(
+        "cc_feedback_before_sent",
+        "Sum, over the current local endpoints, of the congestion control feedback entries (transport-cc or " +
+            "RFC 8888) for packets that were tagged, but not (yet) indicated as sent when the feedback was " +
+            "processed. These are also included in tcc_unmatched_feedback."
     )
     val endpointsWithHighOutgoingLoss = metricsContainer.registerLongGauge(
         "endpoints_with_high_outgoing_loss",
@@ -205,7 +206,7 @@ object VideobridgePeriodicMetrics {
         var numOversending = 0L
         var endpointsWithHighOutgoingLoss = 0L
         var tccUnmatchedFeedback = 0L
-        var tccFeedbackBeforeSent = 0L
+        var ccFeedbackBeforeSent = 0L
         var numLocalActiveEndpoints = 0L
         var endpointsWithSuspendedSources = 0L
 
@@ -262,7 +263,7 @@ object VideobridgePeriodicMetrics {
                 val (endpointConnectionStats, rtpReceiverStats, _, outgoingStats, tccEngineStats) =
                     endpoint.transceiver.getTransceiverStats()
                 tccUnmatchedFeedback += tccEngineStats.unmatchedFeedback
-                tccFeedbackBeforeSent += tccEngineStats.feedbackBeforeSent
+                ccFeedbackBeforeSent += tccEngineStats.feedbackBeforeSent
                 val incomingStats = rtpReceiverStats.incomingStats
                 val incomingPacketStreamStats = rtpReceiverStats.packetStreamStats
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrateBps()
@@ -342,7 +343,7 @@ object VideobridgePeriodicMetrics {
         VideobridgePeriodicMetrics.endpoints.set(endpoints)
         VideobridgePeriodicMetrics.endpointsWithHighOutgoingLoss.set(endpointsWithHighOutgoingLoss)
         VideobridgePeriodicMetrics.tccUnmatchedFeedback.set(tccUnmatchedFeedback)
-        VideobridgePeriodicMetrics.tccFeedbackBeforeSent.set(tccFeedbackBeforeSent)
+        VideobridgePeriodicMetrics.ccFeedbackBeforeSent.set(ccFeedbackBeforeSent)
         VideobridgePeriodicMetrics.endpointsWithSpuriousRemb.set(endpointsWithSpuriousRemb().toLong())
         VideobridgePeriodicMetrics.activeEndpoints.set(numLocalActiveEndpoints)
         VideobridgePeriodicMetrics.incomingBitrate.set(bitrateDownloadBps.toLong())
