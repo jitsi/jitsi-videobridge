@@ -47,6 +47,7 @@
   </profiles>
 
   <dependencies>
+    <!-- Only used in IceTransport.ipNeedsResolution(). Remove when the minimum Java version is 22. -->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
