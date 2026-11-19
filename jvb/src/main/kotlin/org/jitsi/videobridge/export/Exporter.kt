@@ -41,6 +41,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.relay.RelayConfig
@@ -277,17 +278,32 @@ internal class Exporter(
      * Otherwise (no [requests], or a transcriber whose [requests] are text-translation languages) an empty [exports]
      * list means "export all audio". Either way the SSRC must resolve to a signaled source: audio from an unknown
      * (e.g. not-yet-signaled) SSRC isn't routed to receivers, so it isn't exported either.
+     *
+     * A name in [exports] selects audio only from the endpoint that sent the packet, and only when the name starts with
+     * the ID of that endpoint (see [isNamedFor]). So the audio of a source that another endpoint signals with the
+     * same name is not exported, and neither is a listed name in a different form.
      */
     override fun wants(packet: PacketInfo): Boolean {
         if (!isConnected()) return false
         val audioPacket = packet.packet as? AudioRtpPacket ?: return false
         val sourceName = eventHandler.getAudioSourceName(audioPacket.ssrc) ?: return false
-        return exportsSource(sourceName)
+        if (exportsAll()) return true
+        if (sourceName !in exports) return false
+        val endpointId = packet.endpointId ?: return false
+        return isNamedFor(sourceName, endpointId)
     }
 
-    /** Whether audio from the source with this name is exported to the peer (see [wants]). */
-    private fun exportsSource(sourceName: String) = (exports.isEmpty() && !requestsSyntheticSources()) ||
-        sourceName in exports
+    /**
+     * Whether this connect exports all audio: it has no [exports], and its [requests] do not name synthetic sources
+     * (see [wants]).
+     */
+    private fun exportsAll() = exports.isEmpty() && !requestsSyntheticSources()
+
+    /**
+     * Whether this connect selects the source with this name: it exports all audio, or [exports] has the name. This
+     * checks only the name. The caller must make sure that the name belongs to its endpoint (see [speakerSourceNames]).
+     */
+    private fun exportsSource(sourceName: String) = exportsAll() || sourceName in exports
 
     /**
      * Apply an update to the connect with this exporter's URL. Only [exports] and [requests] may change on a running
@@ -623,6 +639,30 @@ internal class Exporter(
 
         /** Terminal close code (opus-transcriber-proxy AGENT_PROTOCOL.md): endpoint dial failed; do not redial. */
         const val CLOSE_ENDPOINT_UNREACHABLE = 4002
+
+        /**
+         * Whether [sourceName] has the form of a name of a source of the endpoint [endpointId]: the endpoint ID,
+         * then '-'. The jitsi-meet client names its sources `<endpointId>-<type><index>`, and jicofo uses the same form
+         * for a source that has no name. The bridge does not check that the rest of the name has this form, so the
+         * endpoint `x` also matches the names of an endpoint `x-y`.
+         */
+        @JvmStatic
+        fun isNamedFor(sourceName: String, endpointId: String): Boolean = sourceName.length > endpointId.length &&
+            sourceName.startsWith(endpointId) &&
+            sourceName[endpointId.length] == '-'
+
+        /**
+         * The names of the own (not synthetic) audio sources of [endpoints], in the order of the endpoints. Exported
+         * audio is tagged with these names, so this is how the order of the speakers goes to an export peer. A name
+         * that does not start with the ID of its endpoint (see [isNamedFor]) is left out, because [wants] does not
+         * export its audio.
+         */
+        @JvmStatic
+        fun speakerSourceNames(endpoints: List<AbstractEndpoint>): List<String> = endpoints.flatMap { endpoint ->
+            endpoint.audioSources.mapNotNull { source ->
+                source.sourceName?.takeIf { !source.synthetic && isNamedFor(it, endpoint.id) }
+            }
+        }
 
         private val webSocketClient = WebSocketClient().apply {
             idleTimeout = WebsocketServiceConfig.config.idleTimeout
