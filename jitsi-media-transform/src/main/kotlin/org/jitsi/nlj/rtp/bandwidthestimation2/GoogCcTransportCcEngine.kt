@@ -441,6 +441,7 @@ class GoogCcTransportCcEngine(
         val networkControllerState: GoogCcNetworkController.StatisticsSnapshot
     ) : TransportCcEngine.StatisticsSnapshot() {
         override val unmatchedFeedback: Long get() = transportAdapterState.totalUnmatchedReports
+        override val feedbackBeforeSent: Long get() = transportAdapterState.totalFeedbackBeforeSent
 
         override fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             put("name", GoogCcTransportCcEngine::class.java.simpleName)

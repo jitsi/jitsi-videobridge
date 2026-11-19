@@ -75,6 +75,10 @@ abstract class TransportCcEngine : RtcpListener {
          *  its loss and delay signals (unmatched reports are dropped entirely) and is the
          *  earliest observable marker of a feedback-starvation saturation lock. */
         open val unmatchedFeedback: Long get() = 0
+
+        /** Cumulative count of per-packet feedback entries for packets that were tagged, but not (yet) indicated
+         *  as sent when the feedback was processed. These are also included in [unmatchedFeedback]. */
+        open val feedbackBeforeSent: Long get() = 0
     }
 
     interface BandwidthListener {
