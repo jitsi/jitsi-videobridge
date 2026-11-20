@@ -162,6 +162,15 @@ class RtpPacketTest : ShouldSpec() {
                 rtpPacket.getHeaderExtension(1) shouldBe null
                 rtpPacket.getHeaderExtension(12) shouldNotBe null
             }
+            should("wrap a sequence number that is set above 16 bits") {
+                rtpPacket.sequenceNumber = 0x10005
+                rtpPacket.sequenceNumber shouldBe 5
+                RtpHeader.getSequenceNumber(rtpPacket.buffer, rtpPacket.offset) shouldBe 5
+
+                rtpPacket.sequenceNumber = 0x1FFFF
+                rtpPacket.sequenceNumber shouldBe 0xFFFF
+                RtpHeader.getSequenceNumber(rtpPacket.buffer, rtpPacket.offset) shouldBe 0xFFFF
+            }
         }
         context("An RTP packet with header extensions with padding between them") {
             val rtpPacket = rtpPacketWithExtensionsWithPaddingBetween

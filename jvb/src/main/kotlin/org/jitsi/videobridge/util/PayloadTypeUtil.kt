@@ -17,6 +17,7 @@ package org.jitsi.videobridge.util
 
 import org.jitsi.nlj.format.AudioRedPayloadType
 import org.jitsi.nlj.format.Av1PayloadType
+import org.jitsi.nlj.format.CCFB
 import org.jitsi.nlj.format.H264PayloadType
 import org.jitsi.nlj.format.OpusPayloadType
 import org.jitsi.nlj.format.OtherAudioPayloadType
@@ -37,6 +38,7 @@ import org.jitsi.nlj.format.TelephoneEventPayloadType
 import org.jitsi.nlj.format.VideoRedPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.format.Vp9PayloadType
+import org.jitsi.nlj.format.supportsCcfb
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.MediaType.AUDIO
 import org.jitsi.utils.MediaType.VIDEO
@@ -88,6 +90,10 @@ class PayloadTypeUtil {
                 }
             }.toSet()
 
+            // RFC 8888 feedback covers every payload type of a session, so it is recorded for all of them. The
+            // other kinds of feedback are only recorded for the payload types they have been used for so far.
+            val ccfbOnly = if (rtcpFeedbackSet.supportsCcfb()) setOf(CCFB) else emptySet()
+
             val id = ext.id.toByte()
             val encoding = createFrom(ext.name)
             val clockRate = ext.clockrate
@@ -102,21 +108,21 @@ class PayloadTypeUtil {
 
                 H264 -> H264PayloadType(id, parameters, rtcpFeedbackSet)
 
-                RTX -> RtxPayloadType(id, parameters)
+                RTX -> RtxPayloadType(id, parameters, ccfbOnly)
 
-                OPUS -> OpusPayloadType(id, clockRate, channels, parameters)
+                OPUS -> OpusPayloadType(id, clockRate, channels, parameters, ccfbOnly)
 
-                TELEPHONE_EVENT -> TelephoneEventPayloadType(id, clockRate, channels, parameters)
+                TELEPHONE_EVENT -> TelephoneEventPayloadType(id, clockRate, channels, parameters, ccfbOnly)
 
                 RED -> when (mediaType) {
-                    AUDIO -> AudioRedPayloadType(id, clockRate, channels, parameters)
+                    AUDIO -> AudioRedPayloadType(id, clockRate, channels, parameters, ccfbOnly)
                     VIDEO -> VideoRedPayloadType(id, clockRate, parameters, rtcpFeedbackSet)
                     else -> null
                 }
 
                 OTHER -> when (mediaType) {
-                    AUDIO -> OtherAudioPayloadType(id, ext.name, clockRate, channels, parameters)
-                    VIDEO -> OtherVideoPayloadType(id, ext.name, clockRate, parameters)
+                    AUDIO -> OtherAudioPayloadType(id, ext.name, clockRate, channels, parameters, ccfbOnly)
+                    VIDEO -> OtherVideoPayloadType(id, ext.name, clockRate, parameters, ccfbOnly)
                     else -> null
                 }
             }

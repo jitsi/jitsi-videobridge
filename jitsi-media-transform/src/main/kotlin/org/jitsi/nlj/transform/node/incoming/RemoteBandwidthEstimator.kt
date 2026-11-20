@@ -83,7 +83,8 @@ class RemoteBandwidthEstimator(
             logger.debug { "Setting abs-send-time extension ID to $astExtId" }
         }
         streamInformationStore.onRtpPayloadTypesChanged {
-            enabled = streamInformationStore.supportsRemb && !streamInformationStore.supportsTcc
+            enabled = streamInformationStore.supportsRemb &&
+                !streamInformationStore.supportsTcc && !streamInformationStore.supportsCcfb
         }
     }
 

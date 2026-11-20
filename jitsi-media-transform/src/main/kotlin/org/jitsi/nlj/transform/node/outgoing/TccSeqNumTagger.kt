@@ -38,32 +38,46 @@ class TccSeqNumTagger(
     private val nextTccSeqNum = AtomicLong(1)
     private var tccExtensionId: Int? = null
 
+    /**
+     * Whether RFC 8888 feedback is in use. It identifies packets by their SSRC and RTP sequence number, so no
+     * sequence number is sent with them, but they are still registered with the [TransportCcEngine].
+     */
+    private var ccfb = false
+
     init {
         streamInformationStore.onRtpExtensionMapping(TRANSPORT_CC) {
             tccExtensionId = it
+        }
+        streamInformationStore.onRtpPayloadTypesChanged {
+            ccfb = streamInformationStore.supportsCcfb
         }
     }
 
     private val weakTcc = WeakReference(transportCcEngine)
 
     override fun modify(packetInfo: PacketInfo): PacketInfo {
-        tccExtensionId?.let { tccExtId ->
-            when (val rtpPacket = packetInfo.packetAs<RtpPacket>()) {
-                is VideoRtpPacket -> {
+        val ccfb = this.ccfb
+        val tccExtId = tccExtensionId
+        if (tccExtId == null && !ccfb) {
+            return packetInfo
+        }
+        when (val rtpPacket = packetInfo.packetAs<RtpPacket>()) {
+            is VideoRtpPacket -> {
+                val curSeq = nextTccSeqNum.getAndIncrement()
+
+                if (tccExtId != null && !ccfb) {
                     val ext = rtpPacket.getHeaderExtension(tccExtId)
                         ?: rtpPacket.addHeaderExtension(tccExtId, TccHeaderExtension.DATA_SIZE_BYTES)
 
-                    val curSeq = nextTccSeqNum.getAndIncrement()
-
                     TccHeaderExtension.setSequenceNumber(ext, curSeq.toInt())
-
-                    weakTcc.get()?.mediaPacketTagged(packetInfo, curSeq)
-
-                    packetInfo.onSent { pkt -> weakTcc.get()?.mediaPacketSent(pkt, curSeq) }
                 }
 
-                else -> Unit
+                weakTcc.get()?.mediaPacketTagged(packetInfo, curSeq)
+
+                packetInfo.onSent { pkt -> weakTcc.get()?.mediaPacketSent(pkt, curSeq) }
             }
+
+            else -> Unit
         }
 
         return packetInfo
@@ -71,6 +85,7 @@ class TccSeqNumTagger(
 
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
         addString("tcc_ext_id", tccExtensionId.toString())
+        addBoolean("ccfb", ccfb)
     }
 
     override fun stop() {

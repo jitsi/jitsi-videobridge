@@ -54,6 +54,7 @@ class VlaReaderNodeTest : ShouldSpec() {
         override val supportsPli = true
         override val supportsRemb = true
         override val supportsTcc = true
+        override val supportsCcfb = false
         override fun onRtpExtensionMapping(rtpExtensionType: RtpExtensionType, handler: RtpExtensionHandler) {
             if (rtpExtensionType == RtpExtensionType.VLA) handler(vlaExtId)
         }

@@ -35,7 +35,7 @@ class AbsSendTime(
     }
 
     override fun modify(packetInfo: PacketInfo): PacketInfo {
-        if (streamInformationStore.supportsTcc) return packetInfo
+        if (streamInformationStore.supportsTcc || streamInformationStore.supportsCcfb) return packetInfo
 
         extensionId?.let { absSendTimeExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()

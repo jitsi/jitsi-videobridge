@@ -20,6 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.utils.logging2.createLogger
 import java.time.Clock
 import java.time.Duration
@@ -130,6 +131,12 @@ open class PacketInfo @JvmOverloads constructor(
             }
         }
 
+    /**
+     * The ECN field of the IP header this packet was received with, where the transport can report it. This describes
+     * the hop the packet arrived on, and says nothing about how the packet should be marked if it is forwarded.
+     */
+    var receivedEcn: EcnMarking = EcnMarking.kNotEct
+
     /** Whether the packet originally had cryptex RTP header extensions. */
     var originalHadCryptex: Boolean = false
 
@@ -215,6 +222,7 @@ open class PacketInfo @JvmOverloads constructor(
     fun clone(): PacketInfo {
         val clone = PacketInfo(packet.clone(), originalLength, timeline?.clone())
         clone.receivedTime = receivedTime
+        clone.receivedEcn = receivedEcn
         clone.originalHadCryptex = originalHadCryptex
         clone.shouldDiscard = shouldDiscard
         clone.endpointId = endpointId
