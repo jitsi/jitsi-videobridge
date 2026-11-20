@@ -157,7 +157,7 @@ class DtlsUtils {
             remoteFingerprints: Map<String, List<String>>
         ) {
             if (certificateInfo.certificateList.isEmpty()) {
-                throw DtlsException("No remote fingerprints.")
+                throw DtlsException("The remote certificate chain is empty.")
             }
             for (currCertificate in certificateInfo.certificateList) {
                 val x509Cert = Certificate.getInstance(currCertificate.encoded)
