@@ -20,9 +20,12 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.dataSentAt
 import org.jitsi.nlj.util.div
 import org.jitsi.nlj.util.min
+import org.jitsi.nlj.util.timeToSend
 import org.jitsi.nlj.util.times
+import org.jitsi.nlj.util.wholeBytes
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
@@ -99,7 +102,8 @@ class BitrateProber(
             requestedAt = clusterConfig.atTime,
             paceInfo = PacedPacketInfo(
                 probeClusterMinProbes = clusterConfig.targetProbeCount,
-                probeClusterMinBytes = (clusterConfig.targetDataRate * clusterConfig.targetDuration).bytes.toInt(),
+                probeClusterMinBytes =
+                dataSentAt(clusterConfig.targetDataRate, clusterConfig.targetDuration).wholeBytes().toInt(),
                 probeClusterId = clusterConfig.id
             ),
             minProbeDelta = clusterConfig.minProbeDelta
@@ -164,7 +168,7 @@ class BitrateProber(
             return DataSize.ZERO
         }
         val sendRate = clusters.first().paceInfo.sendBitrate
-        return sendRate * clusters.first().minProbeDelta
+        return dataSentAt(sendRate, clusters.first().minProbeDelta)
     }
 
     // Called to report to the prober that a probe has been sent. In case of
@@ -219,7 +223,7 @@ class BitrateProber(
     )
 
     private fun calculateNextProbeTime(cluster: ProbeCluster): Instant {
-        check(cluster.paceInfo.sendBitrate >= 0.bps)
+        check(cluster.paceInfo.sendBitrate > 0.bps)
         check(cluster.startedAt.isFinite())
 
         // Compute the time delta from the cluster start to ensure probe bitrate stays
@@ -227,7 +231,7 @@ class BitrateProber(
         val sentBytes = cluster.sentBytes.bytes
         val sendBitrate = cluster.paceInfo.sendBitrate
 
-        val delta = sentBytes / sendBitrate
+        val delta = timeToSend(sentBytes, sendBitrate)
         return cluster.startedAt + delta
     }
 

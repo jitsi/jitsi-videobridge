@@ -32,7 +32,14 @@ import java.util.concurrent.atomic.LongAdder
 
 class RetransmissionSender(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
+    parentLogger: Logger,
+    /**
+     * Whether an RTX packet gets its sequence number later, from [assignRtxSequenceNumber], and not when it passes
+     * through this node. A pacer can change the order of the RTX packets of a stream, because a retransmission has
+     * a higher priority than padding. The packets have to be numbered in the order in which they are sent, so with
+     * a pacer they are numbered after it.
+     */
+    private val deferSequenceNumbers: Boolean = false
 ) : ModifierNode("Retransmission sender") {
     private val logger = createChildLogger(parentLogger)
 
@@ -76,21 +83,38 @@ class RetransmissionSender(
         return retransmitRtx(packetInfo, rtxPt.pt.toPositiveInt(), rtxSsrc)
     }
 
+    /**
+     * The next sequence number of the RTX stream with the SSRC [rtxSsrc]. It starts at 1 and wraps at 16 bits.
+     */
+    private fun nextRtxSequenceNumber(rtxSsrc: Long): Int =
+        rtxStreamSeqNums.merge(rtxSsrc, 1) { seqNum, increment -> (seqNum + increment) and 0xFFFF }!!
+
+    /**
+     * Gives an RTX packet its sequence number, if sequence numbers are deferred. Other packets are not changed. This
+     * has to be called in the order in which the packets are sent.
+     */
+    fun assignRtxSequenceNumber(packetInfo: PacketInfo) {
+        if (deferSequenceNumbers && packetInfo.originalSsrc != null) {
+            val rtpPacket = packetInfo.packetAs<RtpPacket>()
+            rtpPacket.sequenceNumber = nextRtxSequenceNumber(rtpPacket.ssrc)
+            packetInfo.resetPayloadVerification()
+        }
+    }
+
     private fun retransmitRtx(packetInfo: PacketInfo, rtxPt: Int, rtxSsrc: Long): PacketInfo {
-        // Get a default value of 1 to start if it isn't present in the map.  If it is present
-        // in the map, get the value and increment it by 1, wrapping at 16 bits.
-        val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1) { seqNum, increment -> (seqNum + increment) and 0xFFFF }!!
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         logger.cdebug {
-            "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum " +
-                "$rtxSeqNum with original ssrc ${rtpPacket.ssrc}, original sequence number " +
+            "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt " +
+                "with original ssrc ${rtpPacket.ssrc}, original sequence number " +
                 "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}"
         }
         RtxPacket.addOriginalSequenceNumber(rtpPacket)
         packetInfo.originalSsrc = rtpPacket.ssrc
         rtpPacket.ssrc = rtxSsrc
         rtpPacket.payloadType = rtxPt
-        rtpPacket.sequenceNumber = rtxSeqNum
+        if (!deferSequenceNumbers) {
+            rtpPacket.sequenceNumber = nextRtxSequenceNumber(rtxSsrc)
+        }
 
         packetInfo.resetPayloadVerification()
         numRetransmittedRtxPackets.increment()
