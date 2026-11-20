@@ -46,6 +46,15 @@ abstract class RtpSender :
     abstract fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener)
     abstract fun removeBandwidthListener(listener: TransportCcEngine.BandwidthListener)
     abstract fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot
+
+    /**
+     * Tells the sender whether the transport can send a packet with the ECT(1) marking (RFC 9331). If it can, the
+     * sender may set [PacketInfo.sendAsEct1] on the packets it sends.
+     */
+    abstract fun setTransportSupportsEct1(supported: Boolean)
+
+    /** Tells the sender that the packets it sends now take a different network path than before. */
+    abstract fun onNetworkRouteChanged()
     abstract fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null)
 
     /** Requests a keyframe meant for every receiver of the source with [sourceSsrc], or the first video source. */

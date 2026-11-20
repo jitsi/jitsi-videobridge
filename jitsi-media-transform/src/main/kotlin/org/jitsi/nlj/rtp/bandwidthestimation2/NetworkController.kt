@@ -15,10 +15,12 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 
 /* Base type for network controller,
  * based on WebRTC api/transport/network_control.h in
@@ -96,10 +98,20 @@ interface NetworkControllerInterface {
 
     // Omitted: onNetworkStateUpdate: Not used
 
+    /** Jitsi local: a snapshot of the state of the controller, for debugging. */
+    fun getStatistics(now: Instant): NetworkControllerStatistics
+
     /** Returns true if the network controller supports adaptation to ECN.
      * https://www.rfc-editor.org/rfc/rfc9331.html
      */
     fun supportsEcnAdaptation(): Boolean = false
+}
+
+/** Jitsi local: a snapshot of the state of a network controller, for debugging. */
+interface NetworkControllerStatistics {
+    fun toJson(): ObjectNode
+
+    fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint)
 }
 
 /** NetworkControllerFactoryInterface is an interface for creating a network

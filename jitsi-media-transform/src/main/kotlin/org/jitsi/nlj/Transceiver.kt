@@ -408,6 +408,12 @@ class Transceiver(
         rtpSender.tearDown()
     }
 
+    /** See [RtpSender.setTransportSupportsEct1]. */
+    fun setTransportSupportsEct1(supported: Boolean) = rtpSender.setTransportSupportsEct1(supported)
+
+    /** See [RtpSender.onNetworkRouteChanged]. */
+    fun onNetworkRouteChanged() = rtpSender.onNetworkRouteChanged()
+
     fun setFeature(feature: Features, enabled: Boolean) {
         rtpReceiver.setFeature(feature, enabled)
         rtpSender.setFeature(feature, enabled)

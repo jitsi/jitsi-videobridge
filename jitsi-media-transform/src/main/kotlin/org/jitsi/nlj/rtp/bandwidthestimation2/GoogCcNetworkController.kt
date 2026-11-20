@@ -572,8 +572,8 @@ class GoogCcNetworkController(
         val pushbackTarget: Bandwidth,
         /* Additions to the fields from goog_cc_printer */
         val inAlr: Boolean
-    ) {
-        fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+    ) : NetworkControllerStatistics {
+        override fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             put("time", time.toEpochMilli())
             put("rtt", rtt.toDouble())
             put("target", target.bps)
@@ -594,7 +594,7 @@ class GoogCcNetworkController(
             put("in_alr", inAlr)
         }
 
-        fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
+        override fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
             point.apply {
                 addField("rtt", rtt.toDouble())
                 addField("target", target.bps)
@@ -619,7 +619,7 @@ class GoogCcNetworkController(
 
     private fun trend() = delayBasedBwe.delayDetector as TrendlineEstimator
 
-    fun getStatistics(now: Instant): StatisticsSnapshot {
+    override fun getStatistics(now: Instant): StatisticsSnapshot {
         val stateUpdate = getNetworkState(now)
         val target = stateUpdate.targetRate!!
         val pacing = stateUpdate.pacerConfig

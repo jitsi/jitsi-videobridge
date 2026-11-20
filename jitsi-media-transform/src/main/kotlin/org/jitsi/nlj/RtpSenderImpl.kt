@@ -131,7 +131,15 @@ class RtpSenderImpl(
                         dataSize.bytes.toInt(),
                         probingData
                     )
-                })
+                }).also { engine ->
+                    streamInformationStore.onRtpPayloadTypesChanged { payloadTypes ->
+                        // The payload types are cleared before they are signaled again. That says nothing about
+                        // the feedback format, and changing it replaces the network controller.
+                        if (payloadTypes.isNotEmpty()) {
+                            engine.setRfc8888FeedbackNegotiated(streamInformationStore.supportsCcfb)
+                        }
+                    }
+                }
         }.also { it.start() }
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
@@ -334,6 +342,14 @@ class RtpSenderImpl(
     override fun getPacketStreamStats() = packetStreamStats.snapshot()
 
     override fun getTransportCcEngineStats() = transportCcEngine.getStatistics()
+
+    override fun setTransportSupportsEct1(supported: Boolean) {
+        (transportCcEngine as? GoogCcTransportCcEngine)?.setTransportSupportsEct1(supported)
+    }
+
+    override fun onNetworkRouteChanged() {
+        (transportCcEngine as? GoogCcTransportCcEngine)?.onNetworkRouteChanged()
+    }
 
     override fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener) =
         transportCcEngine.addBandwidthListener(listener)

@@ -22,6 +22,8 @@ import org.jitsi.metaconfig.config
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo.Companion.kNotAProbe
+import org.jitsi.nlj.rtp.scream.ScreamNetworkController
+import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -45,10 +47,11 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Transport CC engine invoking GoogCc NetworkController.  Contains some code based loosely on
+ * Transport CC engine invoking a NetworkController: GoogCc, or Scream.  Contains some code based loosely on
  * WebRTC call/rtp_transport_controller_send.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138)
+ * WebRTC tag branch-heads/8078 (Chromium 156)
  *
+ * @param screamMode when Scream is used in place of GoogCc.
  */
 class GoogCcTransportCcEngine(
     val diagnosticContext: DiagnosticContext,
@@ -56,23 +59,114 @@ class GoogCcTransportCcEngine(
     private val scheduledExecutor: ScheduledExecutorService,
     private val sendProbing: (DataSize, Any?) -> Int,
     val clock: Clock = Clock.systemUTC(),
+    private val screamMode: ScreamMode = BandwidthEstimatorConfig.screamMode,
 ) : TransportCcEngine() {
     private val logger = createChildLogger(parentLogger)
 
     private val feedbackAdapter = TransportFeedbackAdapter(logger)
-    private val networkController = factory.create(
-        NetworkControllerConfig(
-            logger,
-            diagnosticContext,
-            clock = clock,
-            constraints = TargetRateConstraints(
-                atTime = clock.instant(),
-                startingRate = BandwidthEstimatorConfig.initBw,
-                maxDataRate = BandwidthEstimatorConfig.maxBw,
-                minDataRate = BandwidthEstimatorConfig.minBw
+    private val ect1Policy = Ect1Policy(logger)
+
+    /** Whether RFC 8888 feedback is used, see [setRfc8888FeedbackNegotiated]. */
+    private var rfc8888FeedbackNegotiated = false
+
+    /** Whether packets can be sent with the ECT(1) marking, see [setTransportSupportsEct1]. */
+    private var transportSupportsEct1 = false
+
+    private var started = false
+
+    /** The last target rate a controller reported. */
+    private var lastTargetRate: Bandwidth? = null
+
+    private var networkController = createController(BandwidthEstimatorConfig.initBw)
+
+    private fun createController(startingRate: Bandwidth): NetworkControllerInterface {
+        val factory = GoogCcNetworkControllerFactory(
+            GoogCcFactoryConfig(rfc8888FeedbackNegotiated = rfc8888FeedbackNegotiated, screamMode = screamMode)
+        )
+        val controller = factory.create(
+            NetworkControllerConfig(
+                logger,
+                diagnosticContext,
+                clock = clock,
+                constraints = TargetRateConstraints(
+                    atTime = clock.instant(),
+                    startingRate = startingRate,
+                    maxDataRate = BandwidthEstimatorConfig.maxBw,
+                    minDataRate = BandwidthEstimatorConfig.minBw
+                )
             )
         )
-    )
+        ect1Policy.setCongestionControllerSupportsEcn(controller.supportsEcnAdaptation())
+        return controller
+    }
+
+    /**
+     * Sets whether RFC 8888 congestion control feedback has been negotiated with the remote endpoint, as opposed to
+     * transport-cc feedback. Only RFC 8888 feedback reports the ECN marking of the packets which were received.
+     *
+     * In WebRTC the network controller is created once the feedback format is known. Here it exists before the
+     * endpoint is signaled, so it is replaced when the format calls for the other kind of controller. The new
+     * controller starts from the last target rate of the old one.
+     */
+    @Synchronized
+    fun setRfc8888FeedbackNegotiated(negotiated: Boolean) {
+        if (negotiated == rfc8888FeedbackNegotiated) {
+            return
+        }
+        rfc8888FeedbackNegotiated = negotiated
+        logger.info("Assume ${if (negotiated) "RFC 8888" else "TWCC"} feedback.")
+        ect1Policy.setFeedbackSupportsEcn(negotiated)
+
+        if (screamMode.usesScream(negotiated) != (networkController is ScreamNetworkController)) {
+            networkController = createController(
+                (lastTargetRate ?: BandwidthEstimatorConfig.initBw)
+                    .coerceIn(BandwidthEstimatorConfig.minBw, BandwidthEstimatorConfig.maxBw)
+            )
+            logger.info("Now using ${networkController.javaClass.simpleName}")
+            if (started) {
+                startController()
+            }
+        }
+    }
+
+    /**
+     * Sets whether the transport can send packets with the ECT(1) marking. When it can, and the feedback and the
+     * network controller support it, packets are flagged to be sent with it, see [Ect1Policy].
+     */
+    @Synchronized
+    fun setTransportSupportsEct1(supported: Boolean) {
+        transportSupportsEct1 = supported
+    }
+
+    /**
+     * Tells the engine that packets now take a different network path, for example after the remote endpoint
+     * changed address.
+     */
+    @Synchronized
+    fun onNetworkRouteChanged() {
+        // WebRTC tells the controller of every route change if the controller adapts to ECN, so that it knows that
+        // the round trip time may have changed. It tells other controllers only of a change which is significant
+        // enough to restart the estimate, which cannot be judged here.
+        if (rfc8888FeedbackNegotiated && networkController.supportsEcnAdaptation()) {
+            val now = clock.instant()
+            val update = networkController.onNetworkRouteChange(
+                NetworkRouteChange(
+                    atTime = now,
+                    constraints = TargetRateConstraints(
+                        atTime = now,
+                        maxDataRate = BandwidthEstimatorConfig.maxBw,
+                        minDataRate = BandwidthEstimatorConfig.minBw
+                    ),
+                    restartBwe = false
+                )
+            )
+            processUpdate(update)
+        }
+
+        // The new path may preserve the ECT(1) marking even if the old one did not.
+        ect1Policy.onNetworkRouteChanged()
+    }
+
     private val bitrateProber = BitrateProber(logger)
     private var probeTask: ScheduledFuture<*>? = null
 
@@ -183,6 +277,7 @@ class GoogCcTransportCcEngine(
         }
         val update = networkController.onTransportPacketsFeedback(feedback)
         processUpdate(update)
+        ect1Policy.onPacketsFeedback(feedback.hasPacketWithBleachedEct1(), feedback.hasPacketWithEcn())
 
         feedback.packetFeedbacks.forEach { fb ->
             lossListeners.forEach { l ->
@@ -200,12 +295,14 @@ class GoogCcTransportCcEngine(
         val now = clock.instant()
         val length = packetInfo.packet.length.bytes
         val pacedPacketInfo = packetInfo.probingInfo as? PacedPacketInfo
+        packetInfo.sendAsEct1 = transportSupportsEct1 && ect1Policy.shouldSendEct1()
         feedbackAdapter.addPacket(
             packetInfo,
             tccSeqNum,
             DataSize.ZERO, // TODO: network overhead
             creationTime = now
         )
+        ect1Policy.onPacketSent(now, packetInfo.sendAsEct1)
         if (pacedPacketInfo == null) {
             bitrateProber.onIncomingPacket(length)
         }
@@ -238,7 +335,9 @@ class GoogCcTransportCcEngine(
         val now = clock.instant()
         return StatisticsSnapshot(
             feedbackAdapter.getStatisitics(),
-            (networkController as GoogCcNetworkController).getStatistics(now)
+            networkController.getStatistics(now),
+            rfc8888FeedbackNegotiated,
+            transportSupportsEct1 && ect1Policy.shouldSendEct1()
         )
     }
 
@@ -252,8 +351,8 @@ class GoogCcTransportCcEngine(
         listeners.remove(listener)
     }
 
-    @Synchronized
-    override fun start() {
+    /** Tells the current network controller that the network is available. */
+    private fun startController() {
         val startTime = clock.instant()
         // processUpdate throws if a listener throws. Apply both updates before that exception is rethrown.
         var failure: Throwable? = null
@@ -272,10 +371,16 @@ class GoogCcTransportCcEngine(
                 }
             }
         }
-        // The periodic task is scheduled last, so that it does not run for an engine that failed to start.
         failure?.let { throw it }
+    }
 
-        val processInterval = factory.getProcessInterval().toMillis()
+    @Synchronized
+    override fun start() {
+        started = true
+        startController()
+
+        // The periodic task is scheduled last, so that it does not run for an engine that failed to start.
+        val processInterval = GoogCcNetworkControllerFactory().getProcessInterval().toMillis()
         processTask = scheduledExecutor.scheduleAtFixedRate({
             processExceptionLog.loggingExceptions {
                 synchronized(this@GoogCcTransportCcEngine) {
@@ -343,6 +448,7 @@ class GoogCcTransportCcEngine(
         var listenerFailure: Throwable? = null
         update.targetRate?.let { targetRate ->
             logger.debug { "GoogleCcEstimator setting TargetRate to $targetRate" }
+            lastTargetRate = targetRate.targetRate
             listeners.forEach { listener ->
                 try {
                     listener.bandwidthEstimationChanged(targetRate.targetRate)
@@ -378,8 +484,11 @@ class GoogCcTransportCcEngine(
 
         if (timeSeriesLogger.isTraceEnabled && update.isNotEmpty()) {
             val now = update.atTime ?: clock.instant()
-            val stats = (networkController as GoogCcNetworkController).getStatistics(now)
-            val statsPoint = diagnosticContext.makeTimeSeriesPoint("goog_cc_stats", now)
+            val stats = networkController.getStatistics(now)
+            val statsPoint = diagnosticContext.makeTimeSeriesPoint(
+                if (stats is GoogCcNetworkController.StatisticsSnapshot) "goog_cc_stats" else "scream_stats",
+                now
+            )
             stats.addToTimeSeriesPoint(statsPoint)
             timeSeriesLogger.trace(statsPoint)
 
@@ -432,8 +541,6 @@ class GoogCcTransportCcEngine(
     }
 
     companion object {
-        private val factory = GoogCcNetworkControllerFactory()
-
         private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(GoogCcTransportCcEngine::class.java)
 
         /* Default config settings to use when this version of the Google transport CC estimator engine is used. */
@@ -450,12 +557,16 @@ class GoogCcTransportCcEngine(
 
     class StatisticsSnapshot(
         val transportAdapterState: TransportFeedbackAdapter.StatisticsSnapshot,
-        val networkControllerState: GoogCcNetworkController.StatisticsSnapshot
+        val networkControllerState: NetworkControllerStatistics,
+        val rfc8888FeedbackNegotiated: Boolean,
+        val sendEct1: Boolean
     ) : TransportCcEngine.StatisticsSnapshot() {
         override val unmatchedFeedback: Long get() = transportAdapterState.totalUnmatchedReports
 
         override fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             put("name", GoogCcTransportCcEngine::class.java.simpleName)
+            put("rfc_8888_feedback_negotiated", rfc8888FeedbackNegotiated)
+            put("send_ect1", sendEct1)
             set<ObjectNode>("transport_adapter", transportAdapterState.toJson())
             set<ObjectNode>("network_controller", networkControllerState.toJson())
         }
