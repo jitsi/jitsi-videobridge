@@ -30,11 +30,13 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.TimeUtils
+import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.max
+import org.jitsi.utils.min
+import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration
 import java.time.Instant
@@ -42,9 +44,40 @@ import java.util.*
 
 private val kSendTimeHistoryWindow = 60.secs
 
+/**
+ * Converts the difference between two compact NTP timestamps, which are unsigned 32-bit values in units of
+ * 1/65536 seconds, to a [Duration]. The difference is taken modulo 2^32, and a value above 2^31 is negative.
+ * The result is rounded to the nearest microsecond.
+ *
+ * Based on CompactNtpIntervalToTimeDelta in WebRTC modules/rtp_rtcp/source/ntp_time_util.cc.
+ */
+private fun compactNtpIntervalToDuration(compactNtpInterval: Long): Duration {
+    var value = compactNtpInterval and 0xFFFF_FFFFL
+    if (value > 0x8000_0000L) {
+        value -= 1L shl 32
+    }
+    // To convert to Duration need to divide by 2^16 to get seconds,
+    // then multiply by 1'000'000 to get microseconds. To avoid float operations,
+    // multiplication and division are swapped.
+    val us = Math.floorDiv(value * 1_000_000 + (1L shl 15), 1L shl 16)
+    return Duration.ofNanos(us * 1000)
+}
+
+private class MinMax(value: Long) {
+    var minimum = value
+        private set
+    var maximum = value
+        private set
+
+    fun update(value: Long) {
+        minimum = kotlin.math.min(minimum, value)
+        maximum = kotlin.math.max(maximum, value)
+    }
+}
+
 /** Transport feedback adapter,
  * based loosely on WebRTC modules/congestion_controller/rtp/transport_feedback_adapter.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128)
+ * WebRTC tag branch-heads/8078 (Chromium 156)
  * modified to use Jitsi types for objects outside the congestion controller,
  * and not using Network Routes.
  */
@@ -54,11 +87,11 @@ private data class PacketFeedback(
     val sent: SentPacket,
     val ssrc: Long = 0,
     val rtpSequenceNumber: Int = 0,
-    val isRetransmission: Boolean = false
-) {
-    // Jitsi extension: whether the packet was previously reported lost
-    var reportedLost: Boolean = false
-}
+    val isRetransmission: Boolean = false,
+    val sentWithEct1: Boolean = false,
+    var previouslyReportedLost: Boolean = false,
+    var ambiguousReceiveTime: Boolean = false
+)
 
 private class InFlightBytesTracker {
     fun addInFlightPacketBytes(packet: PacketFeedback) {
@@ -105,7 +138,8 @@ class TransportFeedbackAdapter(
             ),
             ssrc = rtpPacket.ssrc,
             rtpSequenceNumber = rtpPacket.sequenceNumber,
-            isRetransmission = packet.packetOrigin == PacketOrigin.Retransmission
+            isRetransmission = packet.packetOrigin == PacketOrigin.Retransmission,
+            sentWithEct1 = packet.sendAsEct1
         )
         while (history.isNotEmpty() &&
             Duration.between(history.firstEntry().value.creationTime, creationTime) > kSendTimeHistoryWindow
@@ -121,9 +155,25 @@ class TransportFeedbackAdapter(
             history.remove(history.firstEntry().key)
         }
         // Note that it can happen that the same SSRC and sequence number is sent
-        // again. e.g, audio retransmission.
-        rtpToTransportSequenceNumber[SsrcAndRtpSequenceNumber(feedback.ssrc, feedback.rtpSequenceNumber)] =
+        // again, e.g., audio retransmission. Delay metrics from such packets are
+        // ambiguous, since it is not specified which of the two packets was
+        // received.
+        val previous = rtpToTransportSequenceNumber.putIfAbsent(
+            SsrcAndRtpSequenceNumber(feedback.ssrc, feedback.rtpSequenceNumber),
             feedback.sent.sequenceNumber
+        )
+        if (previous != null) {
+            feedback.ambiguousReceiveTime = true
+            history[previous]?.ambiguousReceiveTime = true
+        } else if (feedback.isRetransmission &&
+            (packet.originalSsrc == null || packet.originalSsrc == rtpPacket.ssrc)
+        ) {
+            // A retransmission without RTX (same SSRC and sequence number) whose
+            // original packet is no longer in `rtp_to_transport_sequence_number_`
+            // (e.g., the original packet was already acknowledged and removed from
+            // history).
+            feedback.ambiguousReceiveTime = true
+        }
         history[feedback.sent.sequenceNumber] = feedback
     }
 
@@ -209,24 +259,24 @@ class TransportFeedbackAdapter(
                 return@forEach
             }
 
-            val previouslyReportedLost = packetFeedback.reportedLost
-
             val result = PacketResult()
             result.sentPacket = packetFeedback.sent
 
             if (report is ReceivedPacketReport) {
                 deltaSinceBase += report.deltaDuration
                 result.receiveTime = currentOffset + deltaSinceBase
-                history.remove(seqNum)
-            } else {
-                packetFeedback.reportedLost = true
             }
+            // Jitsi local: WebRTC sets these only for congestion control feedback. The loss listeners use them.
+            result.reportedRecoveredForTheFirstTime =
+                report is ReceivedPacketReport && packetFeedback.previouslyReportedLost
+            result.reportedLostForTheFirstTime =
+                report !is ReceivedPacketReport && !packetFeedback.previouslyReportedLost
             result.rtpPacketInfo = PacketResult.RtpPacketInfo(
                 packetFeedback.ssrc,
                 packetFeedback.rtpSequenceNumber,
                 packetFeedback.isRetransmission
             )
-            result.previouslyReportedLost = previouslyReportedLost
+            result.ambiguousReceiveTime = packetFeedback.ambiguousReceiveTime
             packetResultVector.add(result)
         }
 
@@ -253,13 +303,11 @@ class TransportFeedbackAdapter(
             currentOffset = feedbackReceiveTime
         }
         val feedbackDelta = lastFeedbackCompactNtpTime?.let {
-            Duration.ofMillis(
-                TimeUtils.ntpShortToMs(feedback.reportTimestampCompactNtp) -
-                    TimeUtils.ntpShortToMs(it)
-            )
+            compactNtpIntervalToDuration(feedback.reportTimestampCompactNtp - it)
         } ?: Duration.ZERO
         lastFeedbackCompactNtpTime = feedback.reportTimestampCompactNtp
-        if (feedbackDelta < Duration.ZERO) {
+
+        if (feedbackDelta < (-5).secs) {
             logger.warn("Unexpected feedback ntp time delta $feedbackDelta")
             currentOffset = feedbackReceiveTime
         } else {
@@ -267,8 +315,10 @@ class TransportFeedbackAdapter(
         }
 
         var failedLookups = 0
+        var unexpectedArrivalTimeOffset = false
         var supportsEcn = true
         val packetResultVector = mutableListOf<PacketResult>()
+        var sequenceNumberInReport: MinMax? = null
         feedback.packets.forEach { packetInfo ->
             val packetFeedback = retrievePacketFeedback(
                 SsrcAndRtpSequenceNumber(ssrc = packetInfo.ssrc, packetInfo.sequenceNumber),
@@ -278,13 +328,58 @@ class TransportFeedbackAdapter(
                 ++failedLookups
                 return@forEach
             }
+            sequenceNumberInReport?.update(packetFeedback.sent.sequenceNumber)
+                ?: run { sequenceNumberInReport = MinMax(packetFeedback.sent.sequenceNumber) }
             val result = PacketResult()
             result.sentPacket = packetFeedback.sent
             if (packetInfo is ReceivedPacketInfo) {
-                result.receiveTime = currentOffset - packetInfo.arrivalTimeOffset
+                // Arrival time offset (ATO) is expected to be bounded by:
+                // 1. The interval between this feedback and the last received feedback
+                //    (using the receiver's NTP report timestamps). Under RFC 8888,
+                //    received packets must be reported. Since previously acknowledged
+                //    packets are erased from `history_`, any packet newly acknowledged
+                //    here must have arrived after the previous received feedback was
+                //    generated.
+                // 2. The round-trip elapsed time between packet send and feedback
+                // receive.
+                //    A packet cannot arrive before it was sent, so the time the receiver
+                //    held the packet (ATO) cannot exceed the total round-trip duration.
+                val timeBetweenTwoLastFeedback = if (feedbackDelta > Duration.ZERO) {
+                    feedbackDelta + 1.ms
+                } else {
+                    MAX_DURATION
+                }
+                val feedbackSendTimeDelta =
+                    max(Duration.between(packetFeedback.sent.sendTime, feedbackReceiveTime), Duration.ZERO)
+                val maxExpectedAto = min(timeBetweenTwoLastFeedback, feedbackSendTimeDelta)
+                var arrivalTimeOffset = packetInfo.arrivalTimeOffset
+                if (arrivalTimeOffset > maxExpectedAto) {
+                    if (!unexpectedArrivalTimeOffset) {
+                        logger.warn {
+                            "Arrival time offset ${packetInfo.arrivalTimeOffset} " +
+                                "exceeds max expected ATO $maxExpectedAto " +
+                                "(feedback_send_time_delta: $feedbackSendTimeDelta, " +
+                                "time_between_two_last_feedback: $timeBetweenTwoLastFeedback)"
+                        }
+                    }
+                    unexpectedArrivalTimeOffset = true
+                    arrivalTimeOffset = maxExpectedAto
+                }
+                result.receiveTime = currentOffset - arrivalTimeOffset
                 result.ecn = packetInfo.ecn
+                // Note that this deliberately does not look at how the packet was sent,
+                // in order to keep the deprecated `transport_supports_ecn` bit for bit
+                // compatible. Use `HasPacketWithBleachedEct1()` instead.
                 supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
+                result.arrivalTimeOffset = arrivalTimeOffset
             }
+            result.ambiguousReceiveTime = packetFeedback.ambiguousReceiveTime
+            result.sentWithEct1 = packetFeedback.sentWithEct1
+            result.reportedRecoveredForTheFirstTime =
+                packetInfo is ReceivedPacketInfo && packetFeedback.previouslyReportedLost
+            result.reportedLostForTheFirstTime =
+                packetInfo !is ReceivedPacketInfo && !packetFeedback.previouslyReportedLost
+
             result.rtpPacketInfo = PacketResult.RtpPacketInfo(
                 ssrc = packetFeedback.ssrc,
                 rtpSequenceNumber = packetFeedback.rtpSequenceNumber,
@@ -293,11 +388,40 @@ class TransportFeedbackAdapter(
             packetResultVector.add(result)
         }
 
+        // Report packets as lost that are in the same transport sequence number range
+        // as reported packets, but that are not mentioned in the report.
+        // Code below relies on the fact that received packets are already erased from
+        // the `history_`.
+        sequenceNumberInReport?.let { range ->
+            for (packetFeedback in history.subMap(range.minimum, true, range.maximum, true).values) {
+                if (packetFeedback.previouslyReportedLost) {
+                    continue
+                }
+                // Jitsi change from WebRTC: skip a packet that is not indicated as sent yet. The bridge can drop a
+                // packet after it is tagged, for example when the send queue is full. That is not a network loss, and
+                // its send time is infinite. The transport-cc path also skips such packets, in retrievePacketFeedback.
+                if (packetFeedback.sent.sendTime.isInfinite()) {
+                    continue
+                }
+                packetFeedback.previouslyReportedLost = true
+                val result = PacketResult()
+                result.sentPacket = packetFeedback.sent
+                result.sentWithEct1 = packetFeedback.sentWithEct1
+                result.reportedLostForTheFirstTime = true
+                result.rtpPacketInfo = PacketResult.RtpPacketInfo(
+                    ssrc = packetFeedback.ssrc,
+                    rtpSequenceNumber = packetFeedback.rtpSequenceNumber,
+                    isRetransmission = packetFeedback.isRetransmission,
+                )
+                packetResultVector.add(result)
+            }
+        }
+
         totalUnmatchedReports += failedLookups
         if (failedLookups > 0) {
-            logger.warn {
-                "Failed to lookup send time for $failedLookups packets. " +
-                    "Packets reordered or send time history too small?"
+            logger.info {
+                "Failed to lookup send time for $failedLookups packet${if (failedLookups > 1) "s" else ""}. " +
+                    "Packets reordered or send time history too small, or packet reported received more than once."
             }
         }
 
@@ -331,6 +455,7 @@ class TransportFeedbackAdapter(
         }
         msg.packetFeedbacks = packetResults
         msg.dataInFlight = inFlight.getOutstandingData()
+        @Suppress("DEPRECATION")
         msg.transportSupportsEcn = supportsEcn
 
         return msg
@@ -371,9 +496,15 @@ class TransportFeedbackAdapter(
                 SsrcAndRtpSequenceNumber(packetFeedback.ssrc, packetFeedback.rtpSequenceNumber)
             )
             history.remove(transportSeqNum)
+            return packetFeedback
         }
-
-        return packetFeedback
+        // Update `previously_reported_lost` after taking copy of the
+        // `packet_feedback'. Thus the new value would be returned next time caller
+        // retrieves the feedback. This way caller can distinguish when packet was
+        // reported lost for the first time and thus account such loss only once.
+        val copy = packetFeedback.copy()
+        packetFeedback.previouslyReportedLost = true
+        return copy
     }
 
     private fun retrievePacketFeedback(key: SsrcAndRtpSequenceNumber, received: Boolean): PacketFeedback? {

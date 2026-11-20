@@ -15,25 +15,22 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-/**
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.DataSize
+import org.jitsi.utils.toRoundedMillis
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import kotlin.math.roundToLong
+
+/*
  * An Application-limited region detector.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/alr_detector.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */
-
-data class AlrDetectorConfig(
-    // Sent traffic ratio as a function of network capacity used to determine
-    // application-limited region. ALR region start when bandwidth usage drops
-    // below kAlrStartUsageRatio and ends when it raises above
-    // kAlrEndUsageRatio. NOTE: This is intentionally conservative at the moment
-    // until BW adjustments of application limited region is fine tuned.
-    val bandwidthUsageRatio: Double = 0.65,
-    val startBudgetLevelRatio: Double = 0.80,
-    val stopBudgetLevelRatio: Double = 0.50
-)
 
 /** Application limited region detector is a class that utilizes signals of
 elapsed time and bytes sent to estimate whether network traffic is
@@ -43,30 +40,33 @@ AlrDetector provides a signal that can be utilized to adjust
 estimate bandwidth.
 Note: This class is not thread-safe.
 */
-class AlrDetector {
-    fun onBytesSent(bytesSent: Long, sendTimeMs: Long) {
-        if (lastSendTimeMs == null) {
-            lastSendTimeMs = sendTimeMs
+class AlrDetector(
+    private val clock: Clock
+) {
+    fun onBytesSent(bytesSent: DataSize, sendTime: Instant) {
+        val lastSendTime = this.lastSendTime
+        if (lastSendTime == null) {
+            this.lastSendTime = sendTime
             // Since the duration for sending the bytes is unknwon, return without
             // updating alr state.
             return
         }
-        val deltaTimeMs = sendTimeMs - lastSendTimeMs!!
-        lastSendTimeMs = sendTimeMs
+        val deltaTime = Duration.between(lastSendTime, sendTime)
+        this.lastSendTime = sendTime
 
-        alrBudget.useBudget(bytesSent)
-        alrBudget.increaseBudget(deltaTimeMs)
+        alrBudget.useBudget(bytesSent.bytes.roundToLong())
+        alrBudget.increaseBudget(deltaTime.toRoundedMillis())
         var stateChanged = false
         if (alrBudget.budgetRatio() > conf.startBudgetLevelRatio &&
-            alrStartedTimeMs == null
+            alrStartedTime == null
         ) {
-            alrStartedTimeMs = System.currentTimeMillis()
+            alrStartedTime = clock.instant()
             stateChanged = true
-        } else if (alrBudget.budgetRatio() < conf.startBudgetLevelRatio &&
-            alrStartedTimeMs != null
+        } else if (alrBudget.budgetRatio() < conf.stopBudgetLevelRatio &&
+            alrStartedTime != null
         ) {
             stateChanged = true
-            alrStartedTimeMs = null
+            alrStartedTime = null
         }
         if (stateChanged) {
             // TODO?  Log event
@@ -74,25 +74,36 @@ class AlrDetector {
     }
 
     // Set current estimated bandwidth.
-    fun setEstimatedBitrate(bitrateBps: Int) {
-        val targetRateKbps = bitrateBps.toDouble() * conf.bandwidthUsageRatio / 1000
-        alrBudget.setTargetRateKbps(targetRateKbps.toInt())
+    fun setEstimatedBitrate(bitrate: Bandwidth) {
+        require(bitrate > Bandwidth.ZERO)
+        alrBudget.setTargetRateKbps((bitrate * conf.bandwidthUsageRatio).toRoundedKbps().toInt())
     }
 
-    // Returns time in milliseconds when the current application-limited region
-    // started or empty result if the sender is currently not application-limited.
-    fun getApplicationLimitedRegionStartTime(): Long? = alrStartedTimeMs
+    // Returns time when the current application-limited region started or empty
+    // result if the sender is currently not application-limited.
+    fun getApplicationLimitedRegionStartTime(): Instant? = alrStartedTime
+
+    private data class AlrDetectorConfig(
+        // Sent traffic ratio as a function of network capacity used to determine
+        // application-limited region. ALR region start when bandwidth usage drops
+        // below kAlrStartUsageRatio and ends when it raises above
+        // kAlrEndUsageRatio. NOTE: This is intentionally conservative at the moment
+        // until BW adjustments of application limited region is fine tuned.
+        val bandwidthUsageRatio: Double = 0.65,
+        val startBudgetLevelRatio: Double = 0.80,
+        val stopBudgetLevelRatio: Double = 0.50
+    )
 
     private val conf = kDefaultProbingScreenshareBweSettings
 
-    private var lastSendTimeMs: Long? = null
+    private var lastSendTime: Instant? = null
 
     private val alrBudget = IntervalBudget(0, true)
-    private var alrStartedTimeMs: Long? = null
+    private var alrStartedTime: Instant? = null
 
     companion object {
         /* From rtc_base/experiments/alr_experiment.cc */
-        val kDefaultProbingScreenshareBweSettings = AlrDetectorConfig(
+        private val kDefaultProbingScreenshareBweSettings = AlrDetectorConfig(
             bandwidthUsageRatio = 0.80,
             startBudgetLevelRatio = 0.40,
             stopBudgetLevelRatio = -0.60

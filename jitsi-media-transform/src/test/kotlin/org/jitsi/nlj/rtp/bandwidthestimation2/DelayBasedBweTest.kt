@@ -31,7 +31,7 @@ import org.jitsi.utils.ms
 /**
  * Unit tests for Delay-Based BWE,
  * based on WebRTC modules/congestion_controller/goog_cc/delay_based_bwe_unittest.cc in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  */
 class DelayBasedBweTest : FreeSpec() {
@@ -134,16 +134,6 @@ class DelayBasedBweTest : FreeSpec() {
             test.bitrateObserver.updated shouldBe true
             test.bitrateObserver.latestBitrate shouldBeInRange
                 ((kTargetUtilizationFraction * 4000000).toLong() plusOrMinus 10000)
-        }
-
-        "GetExpectedBwePeriodMs" {
-            val test = OneDelayBasedBweTest(logger, diagnosticContext)
-            val defaultInterval = test.bitrateEstimator.getExpectedBwePeriod()
-            defaultInterval.toMillis() shouldBeGreaterThan 0
-            test.capacityDropTestHelper(1, true, 533, 0)
-            val interval = test.bitrateEstimator.getExpectedBwePeriod()
-            interval.toMillis() shouldBeGreaterThan 0
-            interval shouldNotBeEqual defaultInterval
         }
 
         "InitialBehavior" {

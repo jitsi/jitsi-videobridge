@@ -18,6 +18,7 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -35,7 +36,7 @@ import java.time.Instant
 
 /** Tests of GoogCcNetworkController,
  * based on WebRTC modules/congestion_controller/goog_cc/goog_cc_network_control_unittest.cc in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Only tests that don't require the full network simulation environment are included.
  */
@@ -43,6 +44,9 @@ import java.time.Instant
 private const val kInitialBitrateKbps = 60
 private val kInitialBitrate = kInitialBitrateKbps.kbps
 private const val kDefaultPacingRate = 2.5
+
+// This is a float in WebRTC, so it is not exactly 1.1.
+private val kDefaultPacingRateSendSideBwe = 1.1f.toDouble()
 
 private fun createRouteChange(
     time: Instant,
@@ -167,7 +171,71 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             update.probeClusterConfigs[1].targetDataRate shouldBe kInitialBitrate * 5
         }
 
-        "ReactsToChangedNetworkConditions" {
+        "ChangeDefaultPacingFactorAfterFirstFeedback" {
+            val fixture = NetworkControllerTextFixture()
+            val controller = fixture.createController()
+
+            var update =
+                controller.onNetworkAvailability(
+                    NetworkAvailability(
+                        atTime = Instant.ofEpochMilli(123456),
+                        networkAvailable = true
+                    )
+                )
+            update = controller.onProcessInterval(ProcessInterval(atTime = Instant.ofEpochMilli(123456)))
+            update.pacerConfig!!.dataRate() shouldBe kInitialBitrate * kDefaultPacingRate
+
+            val feedback = TransportPacketsFeedback()
+            feedback.feedbackTime = Instant.ofEpochMilli(123457)
+            feedback.packetFeedbacks.add(
+                createPacketResult(feedback.feedbackTime, feedback.feedbackTime, 100, PacedPacketInfo())
+            )
+            update = controller.onTransportPacketsFeedback(feedback)
+            update.pacerConfig shouldNotBe null
+            update.pacerConfig!!.dataRate() shouldBeGreaterThanOrEqualTo
+                kInitialBitrate * kDefaultPacingRateSendSideBwe
+            update.pacerConfig!!.dataRate() shouldBeLessThan
+                (kInitialBitrate + 5.kbps) * kDefaultPacingRateSendSideBwe
+        }
+
+        "RespectsConfiguredPacingFactor" {
+            val fixture = NetworkControllerTextFixture()
+            val controller = fixture.createController()
+
+            var update =
+                controller.onNetworkAvailability(
+                    NetworkAvailability(
+                        atTime = Instant.ofEpochMilli(123456),
+                        networkAvailable = true
+                    )
+                )
+            update = controller.onProcessInterval(ProcessInterval(atTime = Instant.ofEpochMilli(123456)))
+            update.pacerConfig!!.dataRate() shouldBe kInitialBitrate * kDefaultPacingRate
+
+            var lastPacerConfig: PacerConfig? = null
+            val streamsConfig = StreamsConfig(pacingFactor = 10.0)
+
+            update = controller.onStreamsConfig(streamsConfig)
+            if (update.pacerConfig != null) {
+                lastPacerConfig = update.pacerConfig
+            }
+
+            val feedback = TransportPacketsFeedback()
+            feedback.feedbackTime = Instant.ofEpochMilli(123457)
+            feedback.packetFeedbacks.add(
+                createPacketResult(feedback.feedbackTime, feedback.feedbackTime, 100, PacedPacketInfo())
+            )
+            update = controller.onTransportPacketsFeedback(feedback)
+            if (update.pacerConfig != null) {
+                lastPacerConfig = update.pacerConfig
+            }
+
+            lastPacerConfig shouldNotBe null
+            lastPacerConfig!!.dataRate() shouldBeGreaterThanOrEqualTo kInitialBitrate * 10
+            lastPacerConfig.dataRate() shouldBeLessThan (kInitialBitrate + 5.kbps) * 10
+        }
+
+        "ReactsToChangedNetworkConditionsFromRemote" {
             val fixture = NetworkControllerTextFixture()
             val controller = fixture.createController()
             var currentTime = Instant.ofEpochMilli(123)
@@ -210,8 +278,8 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             val kDefaultMinBitrate = 5.kbps
             update = controller.onNetworkRouteChange(createRouteChange(currentTime))
             update.targetRate!!.targetRate shouldBe kDefaultMinBitrate
-            update.pacerConfig!!.dataRate().bps.toDouble() shouldBe
-                kDefaultMinBitrate.bps * kDefaultPacingRate plusOrMinus 10.0
+            // WebRTC's DataSize is a whole number of bytes: 5 kbps * 2.5 * 40 ms is 62.5 bytes, which rounds to 63.
+            update.pacerConfig!!.dataWindow shouldBe 63.bytes
             update.probeClusterConfigs.size shouldBe 2
         }
 
@@ -221,7 +289,7 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             var currentTime = Instant.ofEpochMilli(123)
             var update =
                 controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
-            currentTime += 1.secs
+            currentTime += 3.secs
 
             update = controller.onNetworkRouteChange(
                 createRouteChange(currentTime, 2 * kInitialBitrate, Bandwidth.ZERO, 20 * kInitialBitrate)
@@ -286,6 +354,69 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             val targetBitrateAfterDelay =
                 packetTransmissionAndFeedbackBlock(controller, kRunTimeMs, 50, currentTime)
             targetBitrateAfterDelay!! shouldBeLessThan targetBitrateBeforeDelay!!
+        }
+
+        "TriggersTargetRateUpdateWhenBandwidthLimitedChanges" {
+            val fixture = NetworkControllerTextFixture()
+            val controller = fixture.createController()
+            var currentTime = Instant.ofEpochMilli(123456)
+
+            var update =
+                controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
+            update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
+            update.targetRate shouldNotBe null
+            update.targetRate!!.isBandwidthLimited shouldBe true
+
+            // Send packet to initialize ALR detector
+            val sentPacket = SentPacket()
+            sentPacket.sendTime = currentTime
+            sentPacket.size = 1000.bytes
+            update = controller.onSentPacket(sentPacket)
+
+            // Wait 10 seconds without sending any packets (this will make budget ratio
+            // accumulate and enter ALR)
+            currentTime += 10.secs
+            // Send a tiny packet to trigger AlrDetector state change evaluation
+            sentPacket.sendTime = currentTime
+            sentPacket.size = 1.bytes
+            update = controller.onSentPacket(sentPacket)
+
+            var alrDetected = false
+            if (update.targetRate != null && !update.targetRate!!.isBandwidthLimited) {
+                alrDetected = true
+            } else {
+                // Process interval should trigger target rate update if not already
+                // triggered by OnSentPacket
+                update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
+                if (update.targetRate != null && !update.targetRate!!.isBandwidthLimited) {
+                    alrDetected = true
+                }
+            }
+            alrDetected shouldBe true
+
+            // Now send a large burst of packets to leave ALR.
+            // Target rate is kInitialBitrate (60kbps). Budget ratio needs to drop below
+            // 0.5. We send 50 packets of 1000 bytes.
+            var bandwidthLimitedDetected = false
+            for (i in 0 until 50) {
+                currentTime += 1.ms
+                sentPacket.sendTime = currentTime
+                sentPacket.size = 1000.bytes
+                update = controller.onSentPacket(sentPacket)
+                if (update.targetRate != null && update.targetRate!!.isBandwidthLimited) {
+                    bandwidthLimitedDetected = true
+                }
+            }
+
+            if (!bandwidthLimitedDetected) {
+                // Process interval should trigger target rate update if not already
+                // triggered by OnSentPacket
+                update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
+                if (update.targetRate != null && update.targetRate!!.isBandwidthLimited) {
+                    bandwidthLimitedDetected = true
+                }
+            }
+            bandwidthLimitedDetected shouldBe true
         }
     }
 }

@@ -21,7 +21,7 @@ import org.jitsi.nlj.util.DataSize
 
 /** Congestion window pushback controller,
  * based on WebRTC modules/congestion_controller/goog_cc/congestion_window_pushback_controller.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */

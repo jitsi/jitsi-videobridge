@@ -45,7 +45,7 @@ import kotlin.math.pow
 
 /** Loss-based bandwidth estimation,
  * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe_v2.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings are settable through the API, but not currently as config options.
  */
@@ -229,7 +229,14 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             newtonsMethodUpdate(candidate)
 
             val candidateObjective = getObjective(candidate)
-            if (candidateObjective > objectiveMax) {
+            if (candidateObjective > objectiveMax ||
+                (
+                    candidateObjective == objectiveMax &&
+                        candidate.lossLimitedBandwidth > bestCandidate.lossLimitedBandwidth
+                    )
+            ) {
+                // Select the candidate with the highest objective or the one with the
+                // same objective but higher bandwidth if they are tied.
                 objectiveMax = candidateObjective
                 bestCandidate = candidate
             }
@@ -368,7 +375,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 config.holdDurationFactor > 0
             ) {
                 logger.info {
-                    "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: ${lastHoldInfo.duration}"
+                    "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: ${lastHoldInfo.duration}" +
+                        ", avg loss rate: $averageReportedLossRatio"
                 }
                 lastHoldInfo = HoldInfo(
                     timestamp = lastSendTimeMostRecentObservation + lastHoldInfo.duration,
