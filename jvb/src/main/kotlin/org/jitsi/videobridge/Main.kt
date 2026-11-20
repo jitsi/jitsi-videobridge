@@ -94,9 +94,12 @@ fun main() {
     org.jitsi.videobridge.xmpp.Smack.initialize()
     PacketQueue.setEnableStatisticsDefault(true)
 
-    // Trigger an exception early in case the DTLS cipher suites are misconfigured
+    // Trigger an exception early in case the DTLS cipher suites or fingerprint hash functions are misconfigured.
+    // The hash functions are otherwise first read when the first endpoint's certificate is generated and verified.
     try {
         DtlsConfig.config.cipherSuites
+        DtlsConfig.config.localFingerprintHashFunction
+        DtlsConfig.config.acceptedFingerprintHashFunctions
     } catch (ce: ConfigException) {
         logger.error("Dtls configuration error: $ce")
         // According to https://freedesktop.org/software/systemd/man/systemd.exec…html#Process%20Exit%20Code
