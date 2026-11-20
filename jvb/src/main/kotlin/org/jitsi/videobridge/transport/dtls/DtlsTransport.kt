@@ -18,9 +18,13 @@ package org.jitsi.videobridge.transport.dtls
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.bouncycastle.tls.NamedGroup
+import org.bouncycastle.tls.TlsFatalAlert
+import org.bouncycastle.tls.TlsFatalAlertReceived
 import org.bouncycastle.tls.TlsTimeoutException
 import org.ice4j.util.Buffer
 import org.jitsi.nlj.dtls.DtlsClient
+import org.jitsi.nlj.dtls.DtlsConfig
 import org.jitsi.nlj.dtls.DtlsServer
 import org.jitsi.nlj.dtls.DtlsStack
 import org.jitsi.nlj.srtp.TlsRole
@@ -60,6 +64,13 @@ class DtlsTransport(parentLogger: Logger, id: String) {
     var eventHandler: EventHandler? = null
     private var dtlsHandshakeComplete = false
 
+    /**
+     * Whether the DTLS connection failed with a fatal alert after the handshake, in which case no further DTLS data
+     * (SCTP) can be exchanged over it even though SRTP, with the keys already exported, keeps flowing.
+     */
+    @Volatile
+    private var dtlsFailed = false
+
     val isConnected: Boolean
         get() = dtlsHandshakeComplete
 
@@ -77,7 +88,14 @@ class DtlsTransport(parentLogger: Logger, id: String) {
                 dtlsDataReceived(buffer.buffer, buffer.offset, buffer.length)
                 true
             } catch (e: Exception) {
-                logger.warn("Failed to handle DTLS data", e)
+                if (e is TlsFatalAlert || e is TlsFatalAlertReceived) {
+                    if (!dtlsFailed) {
+                        dtlsFailed = true
+                        logger.error("The DTLS connection failed, no more DTLS data can be exchanged over it", e)
+                    }
+                } else {
+                    logger.warn("Failed to handle DTLS data", e)
+                }
                 false
             } finally {
                 // The DTLS stack copies the data, and the buffer came from the pool (see IceTransport).
@@ -150,7 +168,12 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         } catch (t: TlsTimeoutException) {
             // The remote side did not complete the handshake in time (e.g. it went away). This is not a failure of the
             // bridge.
-            logger.warn("DTLS handshake timed out.")
+            logger.warn(
+                "DTLS handshake timed out (role=${dtlsStack.role?.javaClass?.simpleName}, " +
+                    "versions=${DtlsConfig.config.supportedVersions.joinToString()}, " +
+                    "post-quantum=${DtlsConfig.config.offerPostQuantumKeyExchange}, mtu=${DtlsConfig.config.mtu}, " +
+                    "packets received=${stats.numPacketsReceived})."
+            )
         } catch (t: Throwable) {
             // TODO: we're not doing anything here, should we? or change the log?
             logger.error("Error during DTLS negotiation, closing this transport manager", t)
@@ -242,7 +265,10 @@ class DtlsTransport(parentLogger: Logger, id: String) {
     fun getDebugState(): ObjectNode = stats.toJson().apply {
         put("running", running.get())
         put("role", dtlsStack.role?.javaClass?.simpleName ?: "null")
+        put("negotiated_protocol_version", dtlsStack.negotiatedProtocolVersion?.toString() ?: "null")
+        put("negotiated_group", dtlsStack.negotiatedGroup?.let { NamedGroup.getText(it) } ?: "null")
         put("is_connected", isConnected)
+        put("failed", dtlsFailed)
     }
 
     private data class Stats(

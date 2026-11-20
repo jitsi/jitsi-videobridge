@@ -24,9 +24,11 @@ import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
+import org.bouncycastle.operator.NoSignatureContentSigner
 import org.bouncycastle.operator.bc.BcDefaultDigestProvider
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.bouncycastle.tls.AlertDescription
+import org.bouncycastle.tls.AlertLevel
 import org.bouncycastle.tls.TlsContext
 import org.bouncycastle.tls.TlsUtils
 import org.bouncycastle.tls.crypto.TlsSecret
@@ -92,9 +94,9 @@ class DtlsUtils {
         }
 
         /**
-         * Generate an x509 certificate valid from 1 day ago until 7 days from now.
-         *
-         * TODO: make the algorithm dynamic (passed in) to support older dtls versions/clients
+         * Generate an x509 certificate valid from 1 day ago until 7 days from now, either self-signed or unsigned
+         * (RFC 9925) depending on the configuration. The signature algorithm is fixed to SHA256withECDSA, the only
+         * SignatureAndHashAlgorithm that [TlsServerImpl] and [TlsClientImpl] offer.
          */
         private fun generateCertificate(subject: X500Name, keyPair: KeyPair): Certificate {
             val now = System.currentTimeMillis()
@@ -110,7 +112,12 @@ class DtlsUtils {
                 subject,
                 keyPair.public
             )
-            val signer = JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.private)
+            val signer = if (DtlsConfig.config.useAlgUnsigned) {
+                // RFC 9925: an "unsigned" certificate, with the id-alg-unsigned algorithm and an empty signature.
+                NoSignatureContentSigner()
+            } else {
+                JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.private)
+            }
 
             return certBuilder.build(signer).toASN1Structure()
         }
@@ -291,26 +298,20 @@ class DtlsUtils {
 
 @Suppress("NOTHING_TO_INLINE") // Avoid adding to the trace in the log file
 inline fun Logger.notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) {
-    when (alertDescription) {
-        AlertDescription.close_notify -> cdebug { "close_notify raised, connection closing" }
+    val detail = (message?.let { ": $it" } ?: "") + (cause?.let { " (caused by $it)" } ?: "")
+    when {
+        alertDescription == AlertDescription.close_notify -> cdebug { "close_notify raised, connection closing" }
 
-        else -> {
-            val stack = with(StringBuffer()) {
-                val e = Exception()
-                for (el in e.stackTrace) {
-                    appendLine(el.toString())
-                }
-                toString()
-            }
-            cinfo {
-                "Alert raised: level=$alertLevel, description=$alertDescription, message=$message " +
-                    "cause=$cause $stack"
-            }
+        alertLevel == AlertLevel.fatal -> cerror {
+            "Fatal alert raised: ${AlertDescription.getName(alertDescription)}$detail"
+        }
+
+        else -> cinfo {
+            "Alert raised: level=$alertLevel, description=${AlertDescription.getName(alertDescription)}$detail"
         }
     }
 }
 
-@Suppress("NOTHING_TO_INLINE") // Avoid adding to the trace in the log file
 inline fun Logger.notifyAlertReceived(alertLevel: Short, alertDescription: Short) {
     when (alertDescription) {
         AlertDescription.close_notify -> cinfo { "close_notify received, connection closing" }
