@@ -19,18 +19,24 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.mockk.every
+import io.mockk.mockk
 import org.jitsi.config.withNewConfig
+import org.jitsi.metaconfig.ConfigException
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.CachedPacketInfo
 import org.jitsi.nlj.util.PacketCache
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
 import java.time.Duration
+import java.time.Instant
 import org.jitsi.rtp.util.BufferPool as RtpBufferPool
 
 /**
@@ -63,9 +69,10 @@ class NackHandlerTest : ShouldSpec() {
         rtt: Double? = 100.0,
         maxRetransmissionBitrate: Bandwidth = Bandwidth(100_000_000_000L),
         retransmissionBurst: Duration = 1.secs,
-        minResendInterval: Duration = 20.ms
+        minResendInterval: Duration = 20.ms,
+        cache: PacketCache = packetCache
     ) = NackHandler(
-        packetCache,
+        cache,
         object : PacketHandler {
             override fun processPacket(packetInfo: PacketInfo) {
                 retransmitted.add(packetInfo)
@@ -115,6 +122,9 @@ class NackHandlerTest : ShouldSpec() {
     /**
      * Run [block], and return the number of packets that it copied out of the cache. A copy of a packet gets a buffer
      * of at least the length of the packet from the buffer pool. The buffer of a NACK is smaller.
+     *
+     * This replaces the buffer pool function of the process, so it counts the buffers that all threads get. The count
+     * is correct only while no other thread gets a buffer. The specs of this module run one after the other.
      */
     private fun countPacketCopies(block: () -> Unit): Int {
         val getArray = RtpBufferPool.getArray
@@ -132,6 +142,13 @@ class NackHandlerTest : ShouldSpec() {
     }
 
     private fun numRateLimited() = nackHandler.getNodeStats().getNumber("num_packets_not_retransmitted_rate_limited")
+
+    /** The number of packets that were refused because of the RTT-based interval. */
+    private fun numNotRetransmitted() = nackHandler.getNodeStats().getNumber("num_packets_not_retransmitted")
+
+    /** The number of packets that were refused only because of the minimum resend interval. */
+    private fun numMinResendInterval() =
+        nackHandler.getNodeStats().getNumber("num_packets_not_retransmitted_min_resend_interval")
 
     private fun numCacheMisses() = nackHandler.getNodeStats().getNumber("num_cache_misses")
 
@@ -255,8 +272,25 @@ class NackHandlerTest : ShouldSpec() {
             context("A repeated NACK 5 ms later") {
                 clock.elapse(5.ms)
                 nackSsrc(1)
+                should("not retransmit the packets again, and count them for the minimum resend interval") {
+                    retransmitted.size shouldBe 0
+                    numMinResendInterval() shouldBe packetsPerSsrc
+                    numNotRetransmitted() shouldBe 0
+                    numRateLimited() shouldBe 0
+                }
+            }
+            context("A repeated NACK 19 ms later") {
+                clock.elapse(19.ms)
+                nackSsrc(1)
                 should("not retransmit the packets again") {
                     retransmitted.size shouldBe 0
+                }
+            }
+            context("A repeated NACK 20 ms later") {
+                clock.elapse(20.ms)
+                nackSsrc(1)
+                should("retransmit the packets again") {
+                    retransmitted.size shouldBe packetsPerSsrc
                 }
             }
             context("A repeated NACK 25 ms later") {
@@ -276,8 +310,10 @@ class NackHandlerTest : ShouldSpec() {
             retransmitted.clear()
             clock.elapse(50.ms)
             nackSsrc(1)
-            should("not retransmit the packets again") {
+            should("not retransmit the packets again, and count them for the RTT-based interval") {
                 retransmitted.size shouldBe 0
+                numNotRetransmitted() shouldBe packetsPerSsrc
+                numMinResendInterval() shouldBe 0
             }
         }
         context("A NACK for packets that are not all in the cache") {
@@ -348,6 +384,8 @@ class NackHandlerTest : ShouldSpec() {
             nackSsrc(1)
             should("not retransmit them (the RTT-based interval applies to the first retransmission)") {
                 retransmitted.size shouldBe 0
+                numNotRetransmitted() shouldBe packetsPerSsrc
+                numMinResendInterval() shouldBe 0
             }
         }
         context("Packets that are not retransmitted are not copied out of the cache") {
@@ -442,7 +480,7 @@ class NackHandlerTest : ShouldSpec() {
                 retransmitted.size shouldBe 500
             }
         }
-        context("A packet that is not retransmitted does not use the budget") {
+        context("A packet that is refused by the interval or the age check does not use the budget") {
             context("When it was retransmitted less than the minimum resend interval ago") {
                 nackHandler = createNackHandler(
                     rtt = null,
@@ -484,14 +522,167 @@ class NackHandlerTest : ShouldSpec() {
                 }
             }
             context("When the burst is smaller than one packet") {
-                // 100 kbps for 50 ms is 625 bytes, and a packet is 1000 bytes.
+                // 100 kbps for 50 ms is 625 bytes. The budget then holds 1500 bytes.
                 nackHandler =
                     createNackHandler(maxRetransmissionBitrate = Bandwidth(100_000), retransmissionBurst = 50.ms)
-                fillCache()
-                clock.elapse(100.ms)
+                context("A packet of 1500 bytes") {
+                    packetCache.insert(videoPacket(1, 0, 1500))
+                    clock.elapse(100.ms)
+                    nackSsrc(1, 0..0)
+                    should("be retransmitted") {
+                        retransmitted.size shouldBe 1
+                    }
+                }
+                context("A packet of 1501 bytes") {
+                    packetCache.insert(videoPacket(1, 0, 1501))
+                    clock.elapse(100.ms)
+                    nackSsrc(1, 0..0)
+                    should("not be retransmitted") {
+                        retransmitted.size shouldBe 0
+                        numRateLimited() shouldBe 1
+                    }
+                }
+            }
+            should("be refused when the burst is negative") {
+                shouldThrow<IllegalArgumentException> {
+                    createNackHandler(retransmissionBurst = (-1).secs)
+                }
+            }
+        }
+        context("A negative minimum resend interval") {
+            should("be refused") {
+                shouldThrow<IllegalArgumentException> {
+                    createNackHandler(minResendInterval = (-5).ms)
+                }
+            }
+        }
+        context("A NACK in the same millisecond as the first transmission of the packets") {
+            nackHandler = createNackHandler(rtt = null)
+            fillCache()
+            nackSsrc(1)
+            retransmitted.size shouldBe packetsPerSsrc
+            retransmitted.clear()
+            context("A repeated NACK in the same millisecond") {
                 nackSsrc(1)
-                should("hold at least one packet") {
-                    retransmitted.size shouldBe 1
+                should("not retransmit the packets again") {
+                    retransmitted.size shouldBe 0
+                }
+            }
+            context("A repeated NACK 5 ms later") {
+                clock.elapse(5.ms)
+                nackSsrc(1)
+                should("not retransmit the packets again") {
+                    retransmitted.size shouldBe 0
+                }
+            }
+        }
+        context("When the clock goes back") {
+            nackHandler = createNackHandler(
+                rtt = null,
+                maxRetransmissionBitrate = Bandwidth(8_000_000),
+                retransmissionBurst = 1.secs
+            )
+            clock.elapse(60.secs)
+            fillCache()
+            clock.elapse(100.ms)
+            // This uses all of the budget.
+            nackEverything()
+            retransmitted.size shouldBe 1000
+            retransmitted.clear()
+            clock.setTime(Instant.ofEpochMilli(clock.millis() - 10_000))
+            insertPackets(11)
+            // The budget is empty. This NACK is the first use of the budget at the new time.
+            nackSsrc(11)
+            retransmitted.size shouldBe 0
+            clock.elapse(500.ms)
+            nackSsrc(11)
+            should("add to the budget from the new time") {
+                retransmitted.size shouldBe packetsPerSsrc
+            }
+        }
+        context("A packet that leaves the cache after the budget check") {
+            // This cache has the timestamps and the length of each packet, but it has no packet to copy.
+            val cachedPacketInfo = mockk<CachedPacketInfo>(relaxed = true) {
+                every { length } returns PACKET_LENGTH
+            }
+            val cache = mockk<PacketCache> {
+                every { getPacketInfo(any(), any()) } returns cachedPacketInfo
+                every { get(any(), any()) } returns null
+            }
+            nackHandler = createNackHandler(
+                rtt = null,
+                maxRetransmissionBitrate = Bandwidth(8_000_000),
+                retransmissionBurst = 1.secs,
+                cache = cache
+            )
+            clock.elapse(100.ms)
+            // The budget is 1000 packets.
+            nackSsrc(1)
+            nackSsrc(2)
+            nackSsrc(3)
+            should("not use the budget") {
+                retransmitted.size shouldBe 0
+                numRateLimited() shouldBe 0
+                numCacheMisses() shouldBe 3 * packetsPerSsrc
+            }
+        }
+        context("With the default configuration") {
+            nackHandler = createNackHandlerFromConfig()
+            fillCache()
+            clock.elapse(100.ms)
+            context("A NACK for more packets than the budget") {
+                nackEverything()
+                should("retransmit the 625 packets that 5 mbps for 1 second allows") {
+                    retransmitted.size shouldBe 625
+                }
+            }
+            context("A repeated NACK") {
+                nackSsrc(1, 0 until 100)
+                retransmitted.size shouldBe 100
+                retransmitted.clear()
+                context("19 ms later") {
+                    clock.elapse(19.ms)
+                    nackSsrc(1, 0 until 100)
+                    should("not retransmit the packets again") {
+                        retransmitted.size shouldBe 0
+                    }
+                }
+                context("20 ms later") {
+                    clock.elapse(20.ms)
+                    nackSsrc(1, 0 until 100)
+                    should("retransmit the packets again") {
+                        retransmitted.size shouldBe 100
+                    }
+                }
+            }
+        }
+        context("An invalid value in the configuration is refused, and the error names the key") {
+            should("for a bitrate of 0") {
+                withNewConfig("jmt.nack.max-retransmission-bitrate = 0 mbps") {
+                    shouldThrow<ConfigException> {
+                        createNackHandlerFromConfig()
+                    }.message shouldContain "jmt.nack.max-retransmission-bitrate"
+                }
+            }
+            should("for a bitrate that has no valid format") {
+                withNewConfig("jmt.nack.max-retransmission-bitrate = \"2.5 mbps\"") {
+                    shouldThrow<ConfigException> {
+                        createNackHandlerFromConfig()
+                    }.message shouldContain "jmt.nack.max-retransmission-bitrate"
+                }
+            }
+            should("for a negative burst") {
+                withNewConfig("jmt.nack.retransmission-burst = -1 second") {
+                    shouldThrow<ConfigException> {
+                        createNackHandlerFromConfig()
+                    }.message shouldContain "jmt.nack.retransmission-burst"
+                }
+            }
+            should("for a negative minimum resend interval") {
+                withNewConfig("jmt.nack.min-resend-interval = -5 ms") {
+                    shouldThrow<ConfigException> {
+                        createNackHandlerFromConfig()
+                    }.message shouldContain "jmt.nack.min-resend-interval"
                 }
             }
         }
@@ -556,12 +747,15 @@ class NackHandlerTest : ShouldSpec() {
         clock
     )
 
-    private fun videoPacket(ssrc: Long, seq: Int): VideoRtpPacket {
-        val length = PACKET_LENGTH
-        return VideoRtpPacket(ByteArray(length).also { it[0] = 0x80.toByte() }, 0, length).apply {
-            this.ssrc = ssrc
-            this.sequenceNumber = seq
-        }
+    private fun videoPacket(ssrc: Long, seq: Int, length: Int = PACKET_LENGTH): VideoRtpPacket = VideoRtpPacket(
+        ByteArray(length).also {
+            it[0] = 0x80.toByte()
+        },
+        0,
+        length
+    ).apply {
+        this.ssrc = ssrc
+        this.sequenceNumber = seq
     }
 
     companion object {

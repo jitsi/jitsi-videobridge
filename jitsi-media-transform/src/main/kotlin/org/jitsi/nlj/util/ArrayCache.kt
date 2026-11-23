@@ -109,6 +109,7 @@ open class ArrayCache<T>(
         cache[position].index = index
         cache[position].timeAdded = timeAdded
         cache[position].timeInserted = timeAdded
+        cache[position].timeAddedUpdated = false
         return true
     }
 
@@ -203,6 +204,7 @@ open class ArrayCache<T>(
         val position = position(diff)
         if (cache[position].index == index) {
             cache[position].timeAdded = timeAdded
+            cache[position].timeAddedUpdated = true
         }
     }
 
@@ -254,6 +256,7 @@ open class ArrayCache<T>(
                 item = null
                 timeAdded = -1
                 timeInserted = -1
+                timeAddedUpdated = false
             }
         }
         head = -1
@@ -275,9 +278,16 @@ open class ArrayCache<T>(
         /** The time the item was added, or the last time that [updateTimeAdded] set for it. */
         var timeAdded: Long = -1,
         /** The time the item was added. [updateTimeAdded] does not change it. */
-        var timeInserted: Long = -1
+        var timeInserted: Long = -1,
+        /** Whether [updateTimeAdded] set [timeAdded] after the item was added. */
+        var timeAddedUpdated: Boolean = false
     ) {
-        fun clone(shouldCloneItem: Boolean): Container =
-            Container(item?.let { if (shouldCloneItem) cloneItem(it) else it }, index, timeAdded, timeInserted)
+        fun clone(shouldCloneItem: Boolean): Container = Container(
+            item?.let { if (shouldCloneItem) cloneItem(it) else it },
+            index,
+            timeAdded,
+            timeInserted,
+            timeAddedUpdated
+        )
     }
 }

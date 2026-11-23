@@ -89,7 +89,7 @@ class PacketCache(
      */
     fun getPacketInfo(ssrc: Long, seqNum: Int): CachedPacketInfo? = getCache(ssrc).peek(seqNum)?.let {
         // The cache returns a null container on failure, never a container with a null packet.
-        CachedPacketInfo(it.timeInserted, it.timeAdded, it.item!!.length)
+        CachedPacketInfo(it.timeInserted, it.timeAdded, it.timeAddedUpdated, it.item!!.length)
     }
 
     /**
@@ -133,6 +133,8 @@ class CachedPacketInfo(
     val timeInserted: Long,
     /** The time the packet was added to the cache, or the last time that [PacketCache.updateTimestamp] set. */
     val timeAdded: Long,
+    /** Whether [PacketCache.updateTimestamp] set [timeAdded] after the packet was added to the cache. */
+    val timestampUpdated: Boolean,
     /** The length of the packet in bytes. */
     val length: Int
 )
