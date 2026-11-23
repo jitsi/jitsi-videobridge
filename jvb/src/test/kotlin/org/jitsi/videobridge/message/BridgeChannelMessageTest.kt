@@ -17,7 +17,6 @@ package org.jitsi.videobridge.message
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
@@ -732,45 +731,90 @@ class BridgeChannelMessageTest : ShouldSpec() {
             }
         }
 
-        xcontext("Serializing performance") {
-            val times = 1_000_000
+        context("serializing strings that need JSON escaping") {
+            val special = "a\"b\\c\nd"
+            val injected = "x\",\"colibriClass\":\"EndpointMessage\",\"from\":\"y"
+            val controlCharacters = (0x00..0x1f).map { it.toChar() }.joinToString("")
+            val nonAscii = "\u00e9\u4e2d\u2028\ud83d\ude00"
+            val inputs = listOf(special, injected, controlCharacters, nonAscii)
 
-            val objectMapper = ObjectMapper()
-            fun toJsonJackson(m: DominantSpeakerMessage): String = objectMapper.writeValueAsString(m)
-            fun toJsonJsonSimple(m: DominantSpeakerMessage) = jacksonObjectMapper().createObjectNode().apply {
-                put("dominantSpeakerEndpoint", m.dominantSpeakerEndpoint)
-            }.toString()
-
-            fun toJsonStringConcat(m: DominantSpeakerMessage) =
-                "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\",\"dominantSpeakerEndpoint\":\"" +
-                    m.dominantSpeakerEndpoint + "\"}"
-
-            fun toJsonStringTemplate(m: DominantSpeakerMessage) =
-                "{\"colibriClass\":\"${DominantSpeakerMessage.TYPE}\"," +
-                    "\"dominantSpeakerEndpoint\":\"${m.dominantSpeakerEndpoint}\"}"
-
-            fun toJsonRawStringTemplate(m: DominantSpeakerMessage) = """
-            {"colibriClass":"${DominantSpeakerMessage.TYPE}",
-             "dominantSpeakerEndpoint":"${m.dominantSpeakerEndpoint}"}
-         """
-
-            fun runTest(f: (DominantSpeakerMessage) -> String): Long {
-                val start = System.currentTimeMillis()
-                for (i in 0..times) {
-                    f(DominantSpeakerMessage(i.toString()))
+            should("escape them in EndpointConnectionStatusMessage") {
+                inputs.forEach {
+                    withClue(it) {
+                        val parsed = parse(EndpointConnectionStatusMessage(it, true).toJson())
+                        parsed.shouldBeInstanceOf<EndpointConnectionStatusMessage>()
+                        parsed.endpoint shouldBe it
+                        parsed.active shouldBe "true"
+                    }
                 }
-                val end = System.currentTimeMillis()
-
-                return end - start
             }
+            should("escape them in SenderSourceConstraintsMessage") {
+                inputs.forEach {
+                    withClue(it) {
+                        val parsed = parse(SenderSourceConstraintsMessage(it, 720).toJson())
+                        parsed.shouldBeInstanceOf<SenderSourceConstraintsMessage>()
+                        parsed.sourceName shouldBe it
+                        parsed.maxHeight shouldBe 720
+                    }
+                }
+            }
+            should("escape them in AddReceiverMessage") {
+                inputs.forEach {
+                    withClue(it) {
+                        val parsed = parse(AddReceiverMessage(it, it, VideoConstraints(360)).toJson())
+                        parsed.shouldBeInstanceOf<AddReceiverMessage>()
+                        parsed.bridgeId shouldBe it
+                        parsed.sourceName shouldBe it
+                        parsed.videoConstraints shouldBe VideoConstraints(360)
+                    }
+                }
+            }
+            should("escape them in RemoveReceiverMessage") {
+                inputs.forEach {
+                    withClue(it) {
+                        val parsed = parse(RemoveReceiverMessage(it, it).toJson())
+                        parsed.shouldBeInstanceOf<RemoveReceiverMessage>()
+                        parsed.bridgeId shouldBe it
+                        parsed.endpointId shouldBe it
+                    }
+                }
+            }
+            should("escape them in ServerHelloMessage") {
+                inputs.forEach {
+                    withClue(it) {
+                        val parsed = parse(ServerHelloMessage(it).toJson())
+                        parsed.shouldBeInstanceOf<ServerHelloMessage>()
+                        parsed.version shouldBe it
+                    }
+                }
+            }
+        }
 
-            System.err.println("Times=$times")
-            System.err.println("Jackson: ${runTest { toJsonJackson(it) }}")
-            System.err.println("Json-simple: ${runTest { toJsonJsonSimple(it) }}")
-            System.err.println("String concat: ${runTest { toJsonStringConcat(it) }}")
-            System.err.println("String template: ${runTest { toJsonStringTemplate(it) }}")
-            System.err.println("Raw string template: ${runTest { toJsonRawStringTemplate(it) }}")
-            System.err.println("Raw string template (trim): ${runTest { toJsonRawStringTemplate(it).trimMargin() }}")
+        context("the wire format of the messages") {
+            should("be unchanged for EndpointConnectionStatusMessage") {
+                EndpointConnectionStatusMessage("abcdabcd", false).toJson() shouldBe
+                    """{"colibriClass":"EndpointConnectivityStatusChangeEvent","endpoint":"abcdabcd","active":"false"}"""
+            }
+            should("have no whitespace for SenderSourceConstraintsMessage") {
+                SenderSourceConstraintsMessage("s1", 720).toJson() shouldBe
+                    """{"colibriClass":"SenderSourceConstraints","sourceName":"s1","maxHeight":720}"""
+            }
+            should("have only maxHeight and maxFrameRate in the video constraints of AddReceiverMessage") {
+                AddReceiverMessage("bridge1", "s1", VideoConstraints(360, 30.0)).toJson() shouldBe
+                    """{"colibriClass":"AddReceiver","bridgeId":"bridge1","sourceName":"s1",""" +
+                    """"videoConstraints":{"maxHeight":360,"maxFrameRate":30.0}}"""
+                AddReceiverMessage("bridge1", "s1", VideoConstraints(360)).toJson() shouldBe
+                    """{"colibriClass":"AddReceiver","bridgeId":"bridge1","sourceName":"s1",""" +
+                    """"videoConstraints":{"maxHeight":360,"maxFrameRate":-1.0}}"""
+            }
+            should("be unchanged for RemoveReceiverMessage") {
+                RemoveReceiverMessage("bridge1", "abcdabcd").toJson() shouldBe
+                    """{"colibriClass":"RemoveReceiver","bridgeId":"bridge1","endpointId":"abcdabcd"}"""
+            }
+            should("be unchanged for ServerHelloMessage") {
+                ServerHelloMessage().toJson() shouldBe """{"colibriClass":"ServerHello"}"""
+                ServerHelloMessage("v").toJson() shouldBe """{"colibriClass":"ServerHello","version":"v"}"""
+            }
         }
     }
 

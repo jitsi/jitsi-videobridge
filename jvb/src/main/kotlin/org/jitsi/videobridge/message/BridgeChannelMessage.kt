@@ -86,10 +86,9 @@ sealed class BridgeChannelMessage {
     fun toJson(): String = jsonCache
 
     /**
-     * Serialize this [BridgeChannelMessage] to a string in JSON format. Note that this default implementation can be
-     * slow, which is why some of the messages that we serialize often override it with a custom optimized version.
+     * Serialize this [BridgeChannelMessage] to a string in JSON format.
      */
-    protected open fun createJson(): String = mapper.writeValueAsString(this)
+    private fun createJson(): String = mapper.writeValueAsString(this)
 
     companion object {
         private val mapper = jacksonObjectMapper().apply {
@@ -182,12 +181,8 @@ class ServerHelloMessage @JvmOverloads constructor(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     val version: String? = null
 ) : BridgeChannelMessage() {
-
-    override fun createJson(): String =
-        if (version == null) JSON_STRING_NO_VERSION else """{"colibriClass":"$TYPE","version":"$version"}"""
     companion object {
         const val TYPE = "ServerHello"
-        const val JSON_STRING_NO_VERSION: String = """{"colibriClass":"$TYPE"}"""
     }
 }
 
@@ -307,11 +302,6 @@ class EndpointConnectionStatusMessage(
 
     // For whatever reason we encode the boolean in JSON as a string.
     val active: String = activeBoolean.toString()
-
-    /**
-     * Serialize manually because it's faster than Jackson.
-     */
-    override fun createJson(): String = """{"colibriClass":"$TYPE","endpoint":"$endpoint","active":"$active"}"""
 
     companion object {
         const val TYPE = "EndpointConnectivityStatusChangeEvent"
@@ -433,13 +423,6 @@ class SenderSourceConstraintsMessage(
     val sourceName: String,
     val maxHeight: Int
 ) : BridgeChannelMessage() {
-
-    /**
-     * Serialize manually because it's faster than Jackson.
-     */
-    override fun createJson(): String =
-        """{"colibriClass":"$TYPE", "sourceName":"$sourceName", "maxHeight":$maxHeight}"""
-
     companion object {
         const val TYPE = "SenderSourceConstraints"
     }
@@ -454,13 +437,6 @@ class AddReceiverMessage(
     val sourceName: String,
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage() {
-    /**
-     * Serialize manually because it's faster than Jackson.
-     */
-    override fun createJson(): String = "{\"colibriClass\":\"$TYPE\",\"bridgeId\":\"$bridgeId\"," +
-        "\"sourceName\":\"$sourceName\"," +
-        "\"videoConstraints\":$videoConstraints}"
-
     companion object {
         const val TYPE = "AddReceiver"
     }
@@ -474,11 +450,6 @@ class RemoveReceiverMessage(
     val bridgeId: String,
     val endpointId: String
 ) : BridgeChannelMessage() {
-    /**
-     * Serialize manually because it's faster than Jackson.
-     */
-    override fun createJson(): String = """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
-
     companion object {
         const val TYPE = "RemoveReceiver"
     }
