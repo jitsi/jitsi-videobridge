@@ -18,15 +18,18 @@ package org.jitsi.nlj.dtls
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.bouncycastle.tls.AlertDescription
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
 import org.bouncycastle.tls.NamedGroup
 import org.bouncycastle.tls.ProtocolVersion
+import org.bouncycastle.tls.TlsFatalAlert
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.utils.concurrent.ArrayBlockingQueueWithShutdown
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import java.nio.ByteBuffer
@@ -224,15 +227,31 @@ class DtlsStack(
 
     /**
      * Checks that a specific [Certificate] matches the remote fingerprints sent to us over the signaling path.
+     *
+     * A failure is reported as a [TlsFatalAlert]: `bad_certificate` when the certificate does not match or cannot
+     * be parsed, `internal_error` for anything else. BouncyCastle only handles its own [TlsFatalAlert],
+     * [java.io.IOException] and [RuntimeException]: a checked exception such as [DtlsUtils.DtlsException] or a
+     * [org.jitsi.metaconfig.ConfigException] would escape its handshake code without aborting the handshake, so no
+     * alert would be sent to the peer, which would then keep retransmitting until its own handshake timeout.
      */
     private fun verifyAndValidateRemoteCertificate(remoteCertificate: Certificate?) {
-        remoteCertificate?.let {
-            DtlsUtils.verifyAndValidateCertificate(it, remoteFingerprints)
-            // The above throws an exception if the checks fail.
-            logger.cdebug { "Fingerprints verified." }
-        } ?: run {
-            throw DtlsUtils.DtlsException("Remote certificate was null")
+        if (remoteCertificate == null) {
+            // BouncyCastle passes an empty chain rather than null, so this is only a guard.
+            throw TlsFatalAlert(AlertDescription.bad_certificate, "Remote certificate was null")
         }
+        try {
+            DtlsUtils.verifyAndValidateCertificate(remoteCertificate, remoteFingerprints)
+        } catch (e: DtlsUtils.DtlsException) {
+            throw TlsFatalAlert(AlertDescription.bad_certificate, e.message, e)
+        } catch (e: IllegalArgumentException) {
+            // A certificate in the chain is not valid DER.
+            throw TlsFatalAlert(AlertDescription.bad_certificate, e.message, e)
+        } catch (e: TlsFatalAlert) {
+            throw e
+        } catch (e: Exception) {
+            throw TlsFatalAlert(AlertDescription.internal_error, e.message, e)
+        }
+        logger.cdebug { "Fingerprints verified." }
     }
 
     fun sendApplicationData(data: ByteArray, off: Int, len: Int) {
@@ -289,7 +308,8 @@ class DtlsStack(
     }
 
     fun getDebugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
-        put("localFingerprintHashFunction", certificateInfo.localFingerprint)
+        put("localFingerprintHashFunction", certificateInfo.localFingerprintHashFunction)
+        put("localFingerprint", certificateInfo.localFingerprint)
         put("remoteFingerprints", remoteFingerprints.map { (hash, fp) -> "$hash: $fp" }.joinToString())
         put("role", (role?.javaClass ?: "null").toString())
         put("negotiated_protocol_version", negotiatedProtocolVersion?.toString() ?: "null")
@@ -304,6 +324,7 @@ class DtlsStack(
         private const val MIN_IP_OVERHEAD = 20
         private const val MAX_IP_OVERHEAD = MIN_IP_OVERHEAD + 64
         private const val UDP_OVERHEAD = 8
+        private val companionLogger = LoggerImpl(DtlsStack::class.java.name)
 
         /**
          * Because generating the certificateInfo can be expensive, we generate a single
@@ -311,12 +332,29 @@ class DtlsStack(
          * another one).
          */
         private val syncRoot: Any = Any()
+
+        /** When the last attempt to generate a new certificate was started; refreshes are at most one per minute. */
+        private var lastRefreshAttemptMs = 0L
+
         private var certificateInfo: CertificateInfo = DtlsUtils.generateCertificateInfo()
             get() = synchronized(syncRoot) {
                 val expirationPeriodMs = Duration.ofDays(1).toMillis()
-                if (field.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
+                val now = System.currentTimeMillis()
+                if (field.creationTimestampMs + expirationPeriodMs < now &&
+                    lastRefreshAttemptMs + Duration.ofMinutes(1).toMillis() < now
+                ) {
+                    lastRefreshAttemptMs = now
                     // TODO: avoid creating our own thread
-                    thread { field = DtlsUtils.generateCertificateInfo() }
+                    thread {
+                        try {
+                            val newCertificateInfo = DtlsUtils.generateCertificateInfo()
+                            synchronized(syncRoot) { field = newCertificateInfo }
+                        } catch (t: Throwable) {
+                            // Keep the old certificate, which is valid for 7 days from its generation. Retried on
+                            // the next access after a minute.
+                            companionLogger.error("Failed to generate a new DTLS certificate", t)
+                        }
+                    }
                 }
                 return field
             }

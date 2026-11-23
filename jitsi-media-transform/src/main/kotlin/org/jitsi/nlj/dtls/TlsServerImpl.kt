@@ -108,10 +108,16 @@ class TlsServerImpl(
 
     override fun processClientExtensions(clientExtensions: Hashtable<*, *>?) {
         super.processClientExtensions(clientExtensions)
+        // Failures are raised as TlsFatalAlerts: BouncyCastle does not handle the checked DtlsException, and the
+        // handshake would be abandoned without an alert to the client.
         val useSRTPData = TlsSRTPUtils.getUseSRTPExtension(clientExtensions)
+            ?: throw TlsFatalAlert(AlertDescription.handshake_failure, "No use_srtp extension")
         val protectionProfiles = useSRTPData.protectionProfiles
-        chosenSrtpProtectionProfile =
+        chosenSrtpProtectionProfile = try {
             DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
+        } catch (e: DtlsUtils.DtlsException) {
+            throw TlsFatalAlert(AlertDescription.handshake_failure, e.message, e)
+        }
     }
 
     override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()

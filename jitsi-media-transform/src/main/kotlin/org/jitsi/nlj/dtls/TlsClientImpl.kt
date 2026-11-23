@@ -16,6 +16,7 @@
 package org.jitsi.nlj.dtls
 
 import org.bouncycastle.crypto.util.PrivateKeyFactory
+import org.bouncycastle.tls.AlertDescription
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
 import org.bouncycastle.tls.DefaultTlsClient
@@ -28,6 +29,7 @@ import org.bouncycastle.tls.SignatureAlgorithm
 import org.bouncycastle.tls.SignatureAndHashAlgorithm
 import org.bouncycastle.tls.TlsAuthentication
 import org.bouncycastle.tls.TlsCredentials
+import org.bouncycastle.tls.TlsFatalAlert
 import org.bouncycastle.tls.TlsSRTPUtils
 import org.bouncycastle.tls.TlsServerCertificate
 import org.bouncycastle.tls.TlsSession
@@ -139,10 +141,16 @@ class TlsClientImpl(
 
     override fun processServerExtensions(serverExtensions: Hashtable<*, *>?) {
         // TODO: a few cases we should be throwing alerts for in here.  see old TlsClientImpl
+        // Failures are raised as TlsFatalAlerts: BouncyCastle does not handle the checked DtlsException, and the
+        // handshake would be abandoned without an alert to the server.
         val useSRTPData = TlsSRTPUtils.getUseSRTPExtension(serverExtensions)
+            ?: throw TlsFatalAlert(AlertDescription.handshake_failure, "No use_srtp extension")
         val protectionProfiles = useSRTPData.protectionProfiles
-        chosenSrtpProtectionProfile =
+        chosenSrtpProtectionProfile = try {
             DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
+        } catch (e: DtlsUtils.DtlsException) {
+            throw TlsFatalAlert(AlertDescription.handshake_failure, e.message, e)
+        }
     }
 
     override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
