@@ -149,7 +149,9 @@ class TlsClientImpl(
 
     /**
      * Offer the post-quantum hybrid group first, if enabled. It can only be negotiated with DTLS 1.3; a DTLS 1.2
-     * server will just ignore it and pick one of the classical groups that follow.
+     * server will just ignore it and pick one of the classical groups that follow. BouncyCastle's default
+     * [getEarlyKeyShareGroups] sends a key_share for the hybrid whenever it is offered, alongside one for X25519, so
+     * a DTLS 1.3 server without the hybrid needs no HelloRetryRequest round trip.
      */
     override fun getSupportedGroups(namedGroupRoles: Vector<*>?): Vector<Int> {
         @Suppress("UNCHECKED_CAST")
@@ -158,26 +160,6 @@ class TlsClientImpl(
             groups.insertElementAt(NamedGroup.X25519MLKEM768, 0)
         }
         return groups
-    }
-
-    /**
-     * The groups to include a key_share for in the initial ClientHello. Include the post-quantum hybrid group (if
-     * offered) as well as the base class's default share (X25519), so that a DTLS 1.3 server which doesn't support
-     * the hybrid can still complete the handshake without a HelloRetryRequest round trip. The hybrid goes first
-     * because RFC 8446 section 4.2.8 requires the key shares in supported_groups order, and [getSupportedGroups]
-     * lists it first.
-     */
-    override fun getEarlyKeyShareGroups(): Vector<Int>? {
-        @Suppress("UNCHECKED_CAST")
-        val default = super.getEarlyKeyShareGroups() as Vector<Int>? ?: return null
-        return if (DtlsConfig.config.offerPostQuantumKeyExchange) {
-            Vector<Int>().apply {
-                add(NamedGroup.X25519MLKEM768)
-                default.filterTo(this) { it != NamedGroup.X25519MLKEM768 }
-            }
-        } else {
-            default
-        }
     }
 
     override fun getHandshakeTimeoutMillis(): Int = DtlsConfig.config.handshakeTimeout.toMillis().toInt()

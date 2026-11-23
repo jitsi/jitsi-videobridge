@@ -91,7 +91,10 @@ class DtlsTransport(parentLogger: Logger, id: String) {
                 if (e is TlsFatalAlert || e is TlsFatalAlertReceived) {
                     if (!dtlsFailed) {
                         dtlsFailed = true
-                        logger.error("The DTLS connection failed, no more DTLS data can be exchanged over it", e)
+                        val message = "The DTLS connection failed, no more DTLS data can be exchanged over it"
+                        // An alert we raised was already logged with its cause at error level (DtlsUtils); the peer's
+                        // reason for an alert it sent is its own, and often a routine teardown.
+                        if (e is TlsFatalAlertReceived) logger.warn(message, e) else logger.error(message, e)
                     }
                 } else {
                     logger.warn("Failed to handle DTLS data", e)

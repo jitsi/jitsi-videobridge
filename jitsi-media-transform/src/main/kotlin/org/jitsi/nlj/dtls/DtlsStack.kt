@@ -54,31 +54,21 @@ import kotlin.math.min
  * been set, [start] can be called to start the negotiation.
  */
 class DtlsStack(
-    parentLogger: Logger
+    parentLogger: Logger,
+    /**
+     * The certificate info for this particular [DtlsStack] instance. It is saved per instance because the global one
+     * might be refreshed. Tests pass their own.
+     */
+    private val certificateInfo: CertificateInfo = DtlsStack.certificateInfo
 ) {
     private val logger = createChildLogger(parentLogger)
     private val roleSet = CountDownLatch(1)
-
-    /**
-     * The certificate info for this particular [DtlsStack] instance. We save it in a local val because the global one
-     * might be refreshed.
-     */
-    private val certificateInfo = DtlsStack.certificateInfo
 
     /**
      * The configured MTU, read once so that an invalid value fails when the stack is created rather than inside
      * BouncyCastle's send path during the handshake.
      */
     private val mtu = DtlsConfig.config.mtu
-
-    init {
-        if (DtlsConfig.config.dtls13Enabled && !DtlsConfig.config.dtls13Offered) {
-            logger.warn(
-                "DTLS 1.3 is enabled but jmt.dtls.cipher-suites contains no (D)TLS 1.3 cipher suite, so only " +
-                    "DTLS 1.2 will be negotiated."
-            )
-        }
-    }
 
     val localFingerprintHashFunction: String
         get() = certificateInfo.localFingerprintHashFunction

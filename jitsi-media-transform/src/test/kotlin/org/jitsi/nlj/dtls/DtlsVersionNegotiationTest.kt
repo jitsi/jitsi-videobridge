@@ -70,7 +70,9 @@ import kotlin.concurrent.thread
  *   X25519MLKEM768 hybrid.
  *
  * Also verifies that the stack rejects the peer's certificate when it does not match the signaled fingerprint, in
- * both roles and with both DTLS versions (DTLS 1.3 routes the certificates through different code than DTLS 1.2).
+ * both roles and with both DTLS versions (DTLS 1.3 routes the certificates through different code than DTLS 1.2),
+ * and that unsigned (RFC 9925) certificates on both sides, as `use-alg-unsigned` produces, handshake in both roles
+ * and with both versions.
  *
  * The remote endpoint is a plain BouncyCastle DTLS peer (whose default supported groups do not include the hybrid),
  * standing in for e.g. a browser. It can't be another [DtlsStack], because the DTLS versions and groups are
@@ -91,10 +93,14 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
 
     /**
      * Runs a handshake between a [DtlsStack] in the server role and a BouncyCastle peer supporting [peerVersions].
+     * Both use unsigned certificates if [unsigned].
      */
-    private fun stackAsServer(peerVersions: Array<ProtocolVersion>): Pair<HandshakeResult, HandshakeResult> {
-        val stack = DtlsStack(logger).apply { actAsServer() }
-        val peer = BcPeer(stack, peerVersions)
+    private fun stackAsServer(
+        peerVersions: Array<ProtocolVersion>,
+        unsigned: Boolean = false
+    ): Pair<HandshakeResult, HandshakeResult> {
+        val stack = DtlsStack(logger, DtlsUtils.generateCertificateInfo(unsigned)).apply { actAsServer() }
+        val peer = BcPeer(stack, peerVersions, unsigned)
 
         val stackResult = CompletableFuture<HandshakeResult>()
         stack.eventHandler = object : DtlsStack.EventHandler {
@@ -132,10 +138,14 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
 
     /**
      * Runs a handshake between a [DtlsStack] in the client role and a BouncyCastle peer supporting [peerVersions].
+     * Both use unsigned certificates if [unsigned].
      */
-    private fun stackAsClient(peerVersions: Array<ProtocolVersion>): Pair<HandshakeResult, HandshakeResult> {
-        val stack = DtlsStack(logger).apply { actAsClient() }
-        val peer = BcPeer(stack, peerVersions)
+    private fun stackAsClient(
+        peerVersions: Array<ProtocolVersion>,
+        unsigned: Boolean = false
+    ): Pair<HandshakeResult, HandshakeResult> {
+        val stack = DtlsStack(logger, DtlsUtils.generateCertificateInfo(unsigned)).apply { actAsClient() }
+        val peer = BcPeer(stack, peerVersions, unsigned)
 
         val stackResult = CompletableFuture<HandshakeResult>()
         stack.eventHandler = object : DtlsStack.EventHandler {
@@ -247,6 +257,22 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
                 assertNegotiated(stackAsClient(dtls13), ProtocolVersion.DTLSv13, NamedGroup.x25519)
             }
         }
+        context("Unsigned (RFC 9925) certificates on both sides") {
+            // The peer's certificate is verified by its fingerprint alone; the stack's own one must get through
+            // BouncyCastle's handshake code in both roles.
+            should("handshake with DTLS 1.3 as the server") {
+                assertNegotiated(stackAsServer(dtls13, unsigned = true), ProtocolVersion.DTLSv13, NamedGroup.x25519)
+            }
+            should("handshake with DTLS 1.3 as the client") {
+                assertNegotiated(stackAsClient(dtls13, unsigned = true), ProtocolVersion.DTLSv13, NamedGroup.x25519)
+            }
+            should("handshake with DTLS 1.2 as the server") {
+                assertNegotiated(stackAsServer(dtls12Only, unsigned = true), ProtocolVersion.DTLSv12, null)
+            }
+            should("handshake with DTLS 1.2 as the client") {
+                assertNegotiated(stackAsClient(dtls12Only, unsigned = true), ProtocolVersion.DTLSv12, null)
+            }
+        }
         context("A peer whose certificate doesn't match the signaled fingerprint") {
             should("be rejected by a DTLS 1.3 server") {
                 assertRejected(asServer = true, peerVersions = dtls13)
@@ -265,15 +291,20 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
 
     /**
      * A plain BouncyCastle DTLS-SRTP peer supporting [versions] (and BouncyCastle's default key exchange groups,
-     * which do not include the post-quantum hybrid), wired directly to a [DtlsStack]. It uses its own certificate,
-     * and the stack is told the peer's fingerprint (the peer itself verifies nothing, this is a test).
+     * which do not include the post-quantum hybrid), wired directly to a [DtlsStack]. It uses its own certificate
+     * (unsigned per RFC 9925 if [unsigned]), and the stack is told the peer's fingerprint (the peer itself verifies
+     * nothing, this is a test).
      *
      * The "network" between the two has the configured MTU: datagrams which would not fit in it are counted in
      * [oversizedDatagrams] (the handshake flights, in particular the ones carrying a post-quantum key share, must
      * be fragmented to fit).
      */
-    private class BcPeer(private val stack: DtlsStack, private val versions: Array<ProtocolVersion>) {
-        private val certificateInfo = DtlsUtils.generateCertificateInfo()
+    private class BcPeer(
+        private val stack: DtlsStack,
+        private val versions: Array<ProtocolVersion>,
+        unsigned: Boolean = false
+    ) {
+        private val certificateInfo = DtlsUtils.generateCertificateInfo(unsigned)
         private val incoming = LinkedBlockingQueue<ByteArray>()
 
         /** The largest UDP payload that fits in the configured MTU with IPv4 and UDP headers. */
