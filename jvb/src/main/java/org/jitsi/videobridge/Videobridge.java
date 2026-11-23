@@ -465,6 +465,14 @@ public class Videobridge
     }
 
     /**
+     * Sets a listener to be called after the shutdown state changes.
+     */
+    public void setShutdownStateChangeListener(@Nullable Runnable listener)
+    {
+        shutdownManager.setStateChangeListener(listener);
+    }
+
+    /**
      * Stops this {@link Videobridge}.
      */
     void stop()

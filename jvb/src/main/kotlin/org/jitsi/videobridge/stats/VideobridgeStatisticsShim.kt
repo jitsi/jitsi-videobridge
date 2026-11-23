@@ -30,6 +30,7 @@ import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.xmpp.XmppConnection
+import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.BITRATE_DOWNLOAD
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.BITRATE_UPLOAD
@@ -83,6 +84,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
 
+/** The name of the presence stat that signals the SHUTTING_DOWN state to jicofo. */
+const val SHUTTING_DOWN_STAT = "shutting_down"
+
 /**
  * A shim layer which translates the Prometheus metrics (from [VideobridgeMetricsContainer]) to the legacy
  * [ColibriStatsExtension] suitable to be added to XMPP presence or converted to JSON for the response to the legacy
@@ -127,6 +131,16 @@ object VideobridgeStatisticsShim {
                 addStat(Stat(whitelistedKey, value))
             }
         }
+    }
+
+    /**
+     * The statistics to advertise in presence, with the whitelist from [XmppClientConnectionConfig] applied if the
+     * filter is enabled.
+     */
+    fun getPresenceStatsExtension(): ColibriStatsExtension = if (XmppClientConnectionConfig.config.statsFilterEnabled) {
+        getColibriStatsExtension(XmppClientConnectionConfig.config.statsWhitelist)
+    } else {
+        getColibriStatsExtension()
     }
 
     private val timestampFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").apply {
@@ -219,7 +233,7 @@ object VideobridgeStatisticsShim {
             }
 
             put(SHUTDOWN_IN_PROGRESS, VideobridgeMetrics.gracefulShutdown.get())
-            put("shutting_down", VideobridgeMetrics.shuttingDown.get())
+            put(SHUTTING_DOWN_STAT, VideobridgeMetrics.shuttingDown.get())
             put(DRAIN, VideobridgeMetrics.drainMode.get())
 
             put(TIMESTAMP, timestampFormat.format(Date()))

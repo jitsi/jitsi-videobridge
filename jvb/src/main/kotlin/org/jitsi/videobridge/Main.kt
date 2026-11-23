@@ -134,6 +134,8 @@ fun main() {
         XmppClientConnectionConfig.config.presenceInterval,
         xmppConnection
     ).apply { start() }
+    // Advertise a change of the shutdown state right away, so that jicofo sees it before the bridge leaves.
+    videobridge.setShutdownStateChangeListener { presencePublisher.publishPresence() }
 
     val publicServerConfig = JettyBundleActivatorConfig(
         "org.jitsi.videobridge.rest",

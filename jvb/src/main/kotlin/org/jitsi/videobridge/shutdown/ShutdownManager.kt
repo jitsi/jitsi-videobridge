@@ -47,6 +47,21 @@ class ShutdownManager(
     var state: ShutdownState = RUNNING
         private set
 
+    /**
+     * Called after [state] changes. Used to advertise the new state in presence right away, instead of waiting for
+     * the next periodic presence update.
+     */
+    @Volatile
+    var stateChangeListener: Runnable? = null
+
+    private fun fireStateChanged() {
+        try {
+            stateChangeListener?.run()
+        } catch (e: Exception) {
+            logger.warn("State change listener failed", e)
+        }
+    }
+
     fun initiateShutdown(graceful: Boolean) {
         logger.info("Received shutdown request, graceful=$graceful")
 
@@ -58,6 +73,7 @@ class ShutdownManager(
                     "Entered graceful shutdown mode, will stay in this mode for up to " +
                         config.gracefulShutdownMaxDuration
                 )
+                fireStateChanged()
                 TaskPools.SCHEDULED_POOL.schedule(
                     {
                         if (state == GRACEFUL_SHUTDOWN) {
@@ -97,6 +113,7 @@ class ShutdownManager(
         logger.info("Will shut down in ${config.shuttingDownDelay}")
         state = SHUTTING_DOWN
         VideobridgeMetrics.shuttingDown.set(true)
+        fireStateChanged()
         TaskPools.SCHEDULED_POOL.schedule(
             {
                 logger.info("Videobridge is shutting down NOW")

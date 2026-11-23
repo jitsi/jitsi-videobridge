@@ -25,6 +25,8 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.colibri2.toRedactedXml
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
+import org.jitsi.videobridge.stats.SHUTTING_DOWN_STAT
+import org.jitsi.videobridge.stats.VideobridgeStatisticsShim
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.Companion.config
 import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIQ
@@ -85,6 +87,12 @@ class XmppConnection : IQListener {
 
     fun stop() {
         if (running.compareAndSet(true, false)) {
+            // We are about to leave all MUCs. Tell jicofo that this bridge goes away cleanly.
+            try {
+                mucClientManager.setPresenceExtension(shuttingDownStatsExtension())
+            } catch (e: Exception) {
+                logger.warn("Failed to advertise shutting_down before leaving the MUCs", e)
+            }
             mucClientManager.stop()
         }
     }
@@ -146,7 +154,7 @@ class XmppConnection : IQListener {
                     "Config for ${config.id} has changed, removing the old MucClient. Existing " +
                         "config=${existingMucClient.config}, new config=$config"
                 )
-                mucClientManager.removeMucClient(config.id)
+                removeMucClient(config.id)
             } else {
                 logger.info(
                     "Ignoring request to add a MucClient that matches an existing one. Existing " +
@@ -197,8 +205,36 @@ class XmppConnection : IQListener {
             logger.info("Invalid ID: $idNode")
             return false
         }
-        logger.info("Removing muc client ${idNode.asText()}")
-        return mucClientManager.removeMucClient(idNode.asText())
+        val id = idNode.asText()
+        logger.info("Removing muc client $id")
+        return removeMucClient(id)
+    }
+
+    /**
+     * Remove the [MucClient] with the given [id]. Advertise SHUTTING_DOWN in its MUCs before we leave them: from the
+     * point of view of the jicofo instances in these MUCs, this bridge goes away cleanly, and should not be counted as
+     * lost. The presence and the leave use the same XMPP connection, so the presence arrives first. A periodic
+     * presence update may still be sent in between, but jicofo never clears the shutting down state of a bridge.
+     */
+    private fun removeMucClient(id: String): Boolean {
+        mucClientManager.getMucClient(id)?.let { mucClient ->
+            try {
+                mucClient.setPresenceExtension(shuttingDownStatsExtension())
+            } catch (e: Exception) {
+                logger.warn("Failed to advertise shutting_down before removing muc client $id", e)
+            }
+        }
+        return mucClientManager.removeMucClient(id)
+    }
+
+    /** The statistics that we advertise in presence, with the shutting down state set. */
+    private fun shuttingDownStatsExtension() = VideobridgeStatisticsShim.getPresenceStatsExtension().apply {
+        val stat = getStat(SHUTTING_DOWN_STAT)
+        if (stat != null) {
+            stat.value = true
+        } else {
+            addStat(SHUTTING_DOWN_STAT, true)
+        }
     }
 
     /**

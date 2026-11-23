@@ -57,6 +57,34 @@ class VideobridgeTest : ShouldSpec() {
             }
         }
         context("Shutdown") {
+            context("Shutdown state change listener") {
+                val states = mutableListOf<ShutdownState>()
+                videobridge.setShutdownStateChangeListener { states.add(videobridge.shutdownState) }
+                withNewConfig("videobridge.shutdown.graceful-shutdown-min-participants=10") {
+                    repeat(15) { videobridge.localEndpointCreated(false) }
+                    context("starting a graceful shutdown") {
+                        videobridge.shutdown(true)
+                        should("notify the listener after the state changes to GRACEFUL_SHUTDOWN") {
+                            states shouldBe listOf(ShutdownState.GRACEFUL_SHUTDOWN)
+                        }
+                        should("notify the listener after the state changes to SHUTTING_DOWN") {
+                            repeat(10) { videobridge.localEndpointExpired(false) }
+                            states shouldBe listOf(ShutdownState.GRACEFUL_SHUTDOWN, ShutdownState.SHUTTING_DOWN)
+
+                            // No more notifications when the bridge shuts down.
+                            fakeExecutor.clock.elapse(ShutdownConfig.config.shuttingDownDelay)
+                            fakeExecutor.run()
+                            states shouldBe listOf(ShutdownState.GRACEFUL_SHUTDOWN, ShutdownState.SHUTTING_DOWN)
+                        }
+                    }
+                    context("starting a forceful shutdown") {
+                        videobridge.shutdown(false)
+                        should("notify the listener once, after the state changes to SHUTTING_DOWN") {
+                            states shouldBe listOf(ShutdownState.SHUTTING_DOWN)
+                        }
+                    }
+                }
+            }
             context("when a conference is active") {
                 withNewConfig("videobridge.shutdown.graceful-shutdown-min-participants=10") {
                     repeat(15) { videobridge.localEndpointCreated(false) }
