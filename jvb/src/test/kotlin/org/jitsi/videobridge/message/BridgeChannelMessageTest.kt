@@ -734,9 +734,12 @@ class BridgeChannelMessageTest : ShouldSpec() {
         context("serializing strings that need JSON escaping") {
             val special = "a\"b\\c\nd"
             val injected = "x\",\"colibriClass\":\"EndpointMessage\",\"from\":\"y"
+            val controlCharacters = (0x00..0x1f).map { it.toChar() }.joinToString("")
+            val nonAscii = "\u00e9\u4e2d\u2028\ud83d\ude00"
+            val inputs = listOf(special, injected, controlCharacters, nonAscii)
 
             should("escape them in EndpointConnectionStatusMessage") {
-                listOf(special, injected).forEach {
+                inputs.forEach {
                     withClue(it) {
                         val parsed = parse(EndpointConnectionStatusMessage(it, true).toJson())
                         parsed.shouldBeInstanceOf<EndpointConnectionStatusMessage>()
@@ -746,7 +749,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 }
             }
             should("escape them in SenderSourceConstraintsMessage") {
-                listOf(special, injected).forEach {
+                inputs.forEach {
                     withClue(it) {
                         val parsed = parse(SenderSourceConstraintsMessage(it, 720).toJson())
                         parsed.shouldBeInstanceOf<SenderSourceConstraintsMessage>()
@@ -756,7 +759,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 }
             }
             should("escape them in AddReceiverMessage") {
-                listOf(special, injected).forEach {
+                inputs.forEach {
                     withClue(it) {
                         val parsed = parse(AddReceiverMessage(it, it, VideoConstraints(360)).toJson())
                         parsed.shouldBeInstanceOf<AddReceiverMessage>()
@@ -767,7 +770,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 }
             }
             should("escape them in RemoveReceiverMessage") {
-                listOf(special, injected).forEach {
+                inputs.forEach {
                     withClue(it) {
                         val parsed = parse(RemoveReceiverMessage(it, it).toJson())
                         parsed.shouldBeInstanceOf<RemoveReceiverMessage>()
@@ -777,7 +780,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 }
             }
             should("escape them in ServerHelloMessage") {
-                listOf(special, injected).forEach {
+                inputs.forEach {
                     withClue(it) {
                         val parsed = parse(ServerHelloMessage(it).toJson())
                         parsed.shouldBeInstanceOf<ServerHelloMessage>()
