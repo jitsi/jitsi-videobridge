@@ -54,6 +54,7 @@ import java.io.EOFException
 import java.net.URI
 import java.nio.channels.ClosedChannelException
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -124,6 +125,10 @@ internal class Exporter(
     private val instanceOtherMessagesReceived = AtomicLong(0)
     private val instanceParseFailures = AtomicLong(0)
     private val instanceInfoReceived = AtomicLong(0)
+    private val instanceListedSourcePacketsNotExported = AtomicLong(0)
+
+    /** The pairs of a source name and an endpoint ID that [listedSourceNotExported] logged. */
+    private val loggedNotExported: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     val queue: PacketInfoQueue by lazy {
         PacketInfoQueue(
@@ -288,17 +293,51 @@ internal class Exporter(
      * Otherwise (no [requests], or a transcriber whose [requests] are text-translation languages) an empty [exports]
      * list means "export all audio". Either way the SSRC must resolve to a signaled source: audio from an unknown
      * (e.g. not-yet-signaled) SSRC isn't routed to receivers, so it isn't exported either.
+     *
+     * A name in [exports] selects audio only from the endpoint that sent the packet, and only when the name starts with
+     * the ID of that endpoint (see [selects]). So the audio of a source that another endpoint signals with the
+     * same name is not exported, and neither is a listed name in a different form. Such a packet is counted, and the
+     * first one of each name and endpoint is logged (see [listedSourceNotExported]).
      */
     override fun wants(packet: PacketInfo): Boolean {
         if (!isConnected()) return false
         val audioPacket = packet.packet as? AudioRtpPacket ?: return false
         val sourceName = eventHandler.getAudioSourceName(audioPacket.ssrc) ?: return false
-        return exportsSource(sourceName)
+        if (selects(sourceName, packet.endpointId)) return true
+        if (sourceName in exports) listedSourceNotExported(sourceName, packet.endpointId)
+        return false
     }
 
-    /** Whether audio from the source with this name is exported to the peer (see [wants]). */
-    private fun exportsSource(sourceName: String) = (exports.isEmpty() && !requestsSyntheticSources()) ||
-        sourceName in exports
+    /**
+     * Count a packet of a source with a name in [exports] that [wants] does not export, because the name does not
+     * start with the ID of the endpoint that sent it. Log the first packet of each name and endpoint, for up to
+     * [MAX_LOGGED_NOT_EXPORTED] pairs. A connect can list a name before the endpoint signals the source, so the bridge
+     * does not check the names when a connect is created or updated.
+     */
+    private fun listedSourceNotExported(sourceName: String, endpointId: String?) {
+        instanceListedSourcePacketsNotExported.incrementAndGet()
+        val key = "$sourceName/$endpointId"
+        if (loggedNotExported.size < MAX_LOGGED_NOT_EXPORTED && loggedNotExported.add(key)) {
+            logger.warn(
+                "Not exporting the audio of source $sourceName from endpoint $endpointId: the name does not start " +
+                    "with the ID of the endpoint."
+            )
+        }
+    }
+
+    /**
+     * Whether this connect exports all audio: it has no [exports], and its [requests] do not name synthetic sources
+     * (see [wants]).
+     */
+    private fun exportsAll() = exports.isEmpty() && !requestsSyntheticSources()
+
+    /**
+     * Whether this connect selects the source [sourceName] of the endpoint [endpointId], for its audio ([wants]) and
+     * for the order of the speakers ([sendSpeakers]). It selects every source when it exports all audio. Otherwise
+     * [exports] must have the name, and the name must start with the endpoint ID (see [isNamedFor]).
+     */
+    private fun selects(sourceName: String, endpointId: String?): Boolean = exportsAll() ||
+        (sourceName in exports && endpointId != null && isNamedFor(sourceName, endpointId))
 
     /**
      * Apply an update to the connect with this exporter's URL. Only [exports] and [requests] may change on a running
@@ -326,13 +365,13 @@ internal class Exporter(
      * Pass on the conference's recent speakers, the dominant speaker first, so the peer can follow the dominant
      * speaker without measuring audio levels itself. Only agent connects get them: no other peer type has a use for
      * them, and a third-party recorder might not tolerate an unknown event. Like the audio, the list is limited to
-     * the sources this connect exports.
+     * the sources this connect exports ([selects]), so it needs the endpoint of each source.
      *
      * The agent's own audio counts for dominant speaker, but its synthetic source is never in the list, so the first
      * entry is the top human: the agent is not told it is the dominant speaker, and under the `dominant` fan-in it
      * keeps hearing the last human while it talks. The list is therefore empty while only the agent has spoken.
      */
-    fun speakersChanged(recentSpeakers: List<String>, silence: Boolean) {
+    fun speakersChanged(recentSpeakers: List<SpeakerSource>, silence: Boolean) {
         if (type != Connect.Types.AGENT) return
         speakers = Speakers(recentSpeakers, silence)
         sendSpeakers()
@@ -342,7 +381,7 @@ internal class Exporter(
     private fun sendSpeakers() {
         val session = recorderWebSocket.session ?: return
         val speakers = speakers ?: return
-        val exported = speakers.order.filter { exportsSource(it) }
+        val exported = speakers.order.filter { selects(it.sourceName, it.endpointId) }.map { it.sourceName }
         session.sendText(SpeakersEvent(exported, speakers.silence).toJson(), Callback.NOOP)
     }
 
@@ -613,13 +652,14 @@ internal class Exporter(
         put("type", type.toString().lowercase())
         putArray("exports").apply { exports.forEach { add(it) } }
         putArray("requests").apply { requests.forEach { add(it) } }
-        speakers?.let { put("speakers", it.order.toString()) }
+        speakers?.let { put("speakers", it.order.map { s -> s.sourceName }.toString()) }
         put("is_connected", isConnected())
         put("is_shutting_down", isShuttingDown.get())
         put("reconnect_attempts", reconnectAttempts.get())
         put("reconnect_exhausted", reconnectExhausted)
         terminalClose?.let { putObject("terminal_close").put("code", it.code).put("reason", it.reason) }
         put("packets_sent", instancePacketsSent.get())
+        put("listed_source_packets_not_exported", instanceListedSourcePacketsNotExported.get())
         put("websocket_failures", instanceWebSocketFailures.get())
         put("websocket_internal_errors", instanceWebSocketInternalErrors.get())
         put("starts", instanceStarts.get())
@@ -641,7 +681,7 @@ internal class Exporter(
     private class TerminalClose(val code: Int, val reason: String?)
 
     /** The conference's recent speakers, the dominant speaker first, and whether it is currently silent. */
-    private data class Speakers(val order: List<String>, val silence: Boolean)
+    private data class Speakers(val order: List<SpeakerSource>, val silence: Boolean)
 
     companion object {
         /** Terminal close code (opus-transcriber-proxy AGENT_PROTOCOL.md): the agent sent `end`; do not redial. */
@@ -649,6 +689,20 @@ internal class Exporter(
 
         /** Terminal close code (opus-transcriber-proxy AGENT_PROTOCOL.md): endpoint dial failed; do not redial. */
         const val CLOSE_ENDPOINT_UNREACHABLE = 4002
+
+        /** The most pairs of a source name and an endpoint ID that one exporter logs as not exported. */
+        private const val MAX_LOGGED_NOT_EXPORTED = 100
+
+        /**
+         * Whether [sourceName] has the form of a name of a source of the endpoint [endpointId]: the endpoint ID, then
+         * '-', then at least one more character. The jitsi-meet client names its sources
+         * `<endpointId>-<type><index>`, and jicofo uses the same form for a source that has no name. The bridge does
+         * not check the rest of the name, so the endpoint `x` also matches the names of an endpoint `x-y`.
+         */
+        internal fun isNamedFor(sourceName: String, endpointId: String): Boolean =
+            sourceName.length > endpointId.length + 1 &&
+                sourceName.startsWith(endpointId) &&
+                sourceName[endpointId.length] == '-'
 
         private val webSocketClient = WebSocketClient().apply {
             idleTimeout = WebsocketServiceConfig.config.idleTimeout

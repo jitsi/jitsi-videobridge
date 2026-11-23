@@ -75,14 +75,15 @@ class ExporterWrapper internal constructor(
     fun getPacketHandlers(): List<PotentialPacketHandler> = packetHandlers
 
     /** The conference's recent speakers as last reported: nobody, in silence, until someone speaks. */
-    private var speakers: Pair<List<String>, Boolean> = Pair(emptyList(), true)
+    private var speakers: Pair<List<SpeakerSource>, Boolean> = Pair(emptyList(), true)
 
     /**
-     * Pass the conference's recent speakers (source names, the dominant speaker first) on to the exporters; each
-     * decides whether its peer gets them. Kept, so an exporter created later starts from the current order.
+     * Pass the conference's recent speakers (sources with their endpoints, the dominant speaker first) on to the
+     * exporters; each decides whether its peer gets them. Kept, so an exporter created later starts from the current
+     * order.
      */
     @Synchronized
-    fun speakersChanged(recentSpeakers: List<String>, silence: Boolean) {
+    fun speakersChanged(recentSpeakers: List<SpeakerSource>, silence: Boolean) {
         speakers = Pair(recentSpeakers, silence)
         exporters.values.forEach { it.exporter.speakersChanged(recentSpeakers, silence) }
     }
