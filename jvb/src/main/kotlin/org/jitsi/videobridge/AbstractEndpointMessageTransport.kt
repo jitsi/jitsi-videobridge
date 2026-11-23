@@ -28,6 +28,7 @@ import org.jitsi.videobridge.metrics.QueueMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.videobridge.util.messageWithoutInput
 import java.io.IOException
 import java.time.Clock
 import java.util.TreeMap
@@ -73,7 +74,9 @@ abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageH
         val message = try {
             parse(msg)
         } catch (ioe: IOException) {
-            logger.warn("Invalid message received (${ioe.message}: $msg")
+            // The message can hold content from the endpoint, so only its length is logged here.
+            logger.warn("Invalid message received (${ioe.messageWithoutInput()}), length=${msg.length}")
+            logger.debug { "Invalid message: $msg" }
             return
         }
 

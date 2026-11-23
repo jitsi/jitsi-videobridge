@@ -20,18 +20,22 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.core.CloseStatus
 import org.jitsi.config.withNewConfig
+import org.jitsi.mediajson.Media
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.videobridge.util.LogCapture
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
@@ -60,7 +64,8 @@ class ExporterTest : ShouldSpec() {
         requests: List<String> = emptyList(),
         sources: Map<Long, String> = emptyMap(),
         type: Connect.Types = Connect.Types.RECORDER,
-        ping: Boolean = false
+        ping: Boolean = false,
+        handler: ExporterEventHandler? = null
     ): Pair<Exporter, MutableList<Change>> {
         val changes = mutableListOf<Change>()
         producerConnections.clear()
@@ -68,7 +73,7 @@ class ExporterTest : ShouldSpec() {
             URI("ws://localhost:1/"),
             emptyMap(),
             LoggerImpl(javaClass.name),
-            object : ExporterEventHandler {
+            handler ?: object : ExporterEventHandler {
                 override fun handleTranscriptionResult(event: TranscriptionResultEvent) {}
                 override fun handleMediaEvent(event: MediaEvent) {}
                 override fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long) {
@@ -604,6 +609,55 @@ class ExporterTest : ShouldSpec() {
                     stable.onWebSocketError(ClosedChannelException())
 
                     exporter.debugState().path("reconnect_attempts").asInt() shouldBe 1
+                }
+            }
+        }
+
+        context("the log lines about messages that hold the content of a meeting") {
+            val secret = "SECRET-WORDS-31415"
+            should("not quote an incoming message that cannot be parsed") {
+                LogCapture(ExporterTest::class.java.name).use { log ->
+                    val (exporter, _) = fixture()
+
+                    exporter.handleIncomingMessage("""{"event":"no-such-event","text":"$secret"}""")
+                    exporter.handleIncomingMessage(
+                        """{"event":"transcription-result","transcript":[{"text":"$secret""""
+                    )
+                    exporter.handleIncomingMessage("""{"event":"transcription-result","text":$secret}""")
+
+                    log.text shouldContain "Failed to parse incoming websocket message"
+                    log.text shouldNotContain secret
+                    exporter.debugState().path("parse_failures").asInt() shouldBe 3
+                }
+            }
+            should("not quote an incoming message that the handler fails to handle") {
+                LogCapture(ExporterTest::class.java.name).use { log ->
+                    val failing = object : ExporterEventHandler {
+                        override fun handleTranscriptionResult(event: TranscriptionResultEvent) =
+                            throw IllegalStateException("handler failed")
+                        override fun handleMediaEvent(event: MediaEvent) {}
+                        override fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long) {}
+                        override fun handleProducerConnected(sourceNames: List<String>) {}
+                        override fun getAudioSourceName(ssrc: Long): String? = null
+                        override fun getDiarize(ssrc: Long): Boolean = false
+                    }
+                    val (exporter, _) = fixture(handler = failing)
+
+                    exporter.handleIncomingMessage("""{"event":"transcription-result","text":"$secret"}""")
+
+                    log.text shouldContain "Failed to handle incoming websocket message of type transcription-result"
+                    log.text shouldNotContain secret
+                }
+            }
+            should("not log the audio of an event that cannot be sent") {
+                LogCapture(ExporterTest::class.java.name).use { log ->
+                    val (exporter, _) = fixture()
+
+                    exporter.sendEvent(MediaEvent(7, Media("tag-a0", 1, 2, secret)))
+
+                    log.text shouldContain "Not connected, cannot send event"
+                    log.text shouldContain "tag-a0"
+                    log.text shouldNotContain secret
                 }
             }
         }

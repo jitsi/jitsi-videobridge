@@ -46,6 +46,7 @@ import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.videobridge.util.messageWithoutInput
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.xmpp.extensions.colibri2.Connect
@@ -259,13 +260,23 @@ internal class Exporter(
 
     private var serializer: MediaJsonSerializer? = null
 
-    private fun initSerializer() = MediaJsonSerializer(eventHandler::getAudioSourceName, eventHandler::getDiarize) {
+    private fun initSerializer() =
+        MediaJsonSerializer(eventHandler::getAudioSourceName, eventHandler::getDiarize, ::sendEvent)
+
+    /** Sends [event] to the peer. Internal (rather than private) so [ExporterTest] can call it without a socket. */
+    internal fun sendEvent(event: Event) {
         val session = recorderWebSocket.session
         if (session != null) {
-            session.sendText(it.toJson(), Callback.NOOP)
+            session.sendText(event.toJson(), Callback.NOOP)
         } else {
-            logger.warn("Not connected, cannot send event: $it")
+            // A media event holds audio, so only a description of the event is logged.
+            logger.warn("Not connected, cannot send event: ${event.describe()}")
         }
+    }
+
+    private fun Event.describe(): String = when (this) {
+        is MediaEvent -> "media tag=${media.tag} sequenceNumber=$sequenceNumber"
+        else -> this.event
     }
 
     fun isConnected() = recorderWebSocket.isConnected
@@ -344,80 +355,95 @@ internal class Exporter(
 
     /** Internal (rather than private) so [ExporterTest] can drive the event dispatch without opening a socket. */
     internal fun handleIncomingMessage(message: String) {
+        val event = try {
+            Event.parse(message)
+        } catch (e: Exception) {
+            // The message can hold the content of the meeting (transcripts, translations, audio), so it is only
+            // logged at debug level.
+            logger.warn(
+                "Failed to parse incoming websocket message (length=${message.length}): ${e.messageWithoutInput()}"
+            )
+            logger.debug { "Unparsable message from websocket: $message" }
+            parseFailuresCount.inc()
+            instanceParseFailures.incrementAndGet()
+            return
+        }
         try {
-            val event = Event.parse(message)
             logger.debug { "Received message from websocket: ${event.toJson()}" }
+            dispatchIncomingEvent(event)
+        } catch (e: Exception) {
+            logger.warn("Failed to handle incoming websocket message of type ${event.event}", e)
+            parseFailuresCount.inc()
+            instanceParseFailures.incrementAndGet()
+        }
+    }
 
-            when (event) {
-                is TranscriptionResultEvent -> {
-                    transcriptsReceivedCount.inc()
-                    instanceTranscriptsReceived.incrementAndGet()
-                    eventHandler.handleTranscriptionResult(event)
+    private fun dispatchIncomingEvent(event: Event) {
+        when (event) {
+            is TranscriptionResultEvent -> {
+                transcriptsReceivedCount.inc()
+                instanceTranscriptsReceived.incrementAndGet()
+                eventHandler.handleTranscriptionResult(event)
+            }
+
+            is PongEvent -> {
+                val expectedId = lastPingSentId.get()
+                if (event.id == expectedId) {
+                    logger.debug { "Received pong with matching id=${event.id}" }
+                    lastPongReceivedMs.set(System.currentTimeMillis())
+                    // Cancel any pending timeout
+                    pingTimeoutFuture?.cancel(false)
+                    pingTimeoutFuture = null
+                } else {
+                    logger.warn("Received pong with id=${event.id}, expected id=$expectedId")
                 }
+            }
 
-                is PongEvent -> {
-                    val expectedId = lastPingSentId.get()
-                    if (event.id == expectedId) {
-                        logger.debug { "Received pong with matching id=${event.id}" }
-                        lastPongReceivedMs.set(System.currentTimeMillis())
-                        // Cancel any pending timeout
-                        pingTimeoutFuture?.cancel(false)
-                        pingTimeoutFuture = null
-                    } else {
-                        logger.warn("Received pong with id=${event.id}, expected id=$expectedId")
-                    }
-                }
+            is MediaEvent -> {
+                mediaEventsReceivedCount.inc()
+                instanceMediaEventsReceived.incrementAndGet()
+                eventHandler.handleMediaEvent(event)
+            }
 
-                is MediaEvent -> {
-                    mediaEventsReceivedCount.inc()
-                    instanceMediaEventsReceived.incrementAndGet()
-                    eventHandler.handleMediaEvent(event)
-                }
-
-                is StartEvent -> {
-                    // A `start` with a talk timestamp brackets the beginning of a "talk" (translated audio); one
-                    // without is a plain stream-start announcement (the bridge->peer direction), which the bridge
-                    // does not act on when received.
-                    val timestamp = event.start.timestamp
-                    if (timestamp != null) {
-                        sendingChangesReceivedCount.inc()
-                        instanceSendingChangesReceived.incrementAndGet()
-                        eventHandler.handleSendingChange(event.start.tag, true, timestamp)
-                    } else {
-                        otherMessagesReceivedCount.inc()
-                        instanceOtherMessagesReceived.incrementAndGet()
-                    }
-                }
-
-                is StopEvent -> {
-                    // A `stop` with a talk timestamp brackets the end of a "talk"; a plain stop without one is a
-                    // stream-end the bridge does not act on when received.
-                    val timestamp = event.stop.timestamp
-                    if (timestamp != null) {
-                        sendingChangesReceivedCount.inc()
-                        instanceSendingChangesReceived.incrementAndGet()
-                        eventHandler.handleSendingChange(event.stop.tag, false, timestamp)
-                    } else {
-                        otherMessagesReceivedCount.inc()
-                        instanceOtherMessagesReceived.incrementAndGet()
-                    }
-                }
-
-                is InfoEvent -> {
-                    infoReceivedCount.inc()
-                    instanceInfoReceived.incrementAndGet()
-                    logger.info("Received InfoEvent: ${event.toJson()}")
-                }
-
-                else -> {
+            is StartEvent -> {
+                // A `start` with a talk timestamp brackets the beginning of a "talk" (translated audio); one
+                // without is a plain stream-start announcement (the bridge->peer direction), which the bridge
+                // does not act on when received.
+                val timestamp = event.start.timestamp
+                if (timestamp != null) {
+                    sendingChangesReceivedCount.inc()
+                    instanceSendingChangesReceived.incrementAndGet()
+                    eventHandler.handleSendingChange(event.start.tag, true, timestamp)
+                } else {
                     otherMessagesReceivedCount.inc()
                     instanceOtherMessagesReceived.incrementAndGet()
                 }
             }
-        } catch (e: Exception) {
-            logger.warn("Failed to parse incoming websocket message: $message", e)
-            parseFailuresCount.inc()
-            instanceParseFailures.incrementAndGet()
+
+            is StopEvent -> {
+                // A `stop` with a talk timestamp brackets the end of a "talk"; a plain stop without one is a
+                // stream-end the bridge does not act on when received.
+                val timestamp = event.stop.timestamp
+                if (timestamp != null) {
+                    sendingChangesReceivedCount.inc()
+                    instanceSendingChangesReceived.incrementAndGet()
+                    eventHandler.handleSendingChange(event.stop.tag, false, timestamp)
+                } else {
+                    otherMessagesReceivedCount.inc()
+                    instanceOtherMessagesReceived.incrementAndGet()
+                }
+            }
+
+            is InfoEvent -> {
+                infoReceivedCount.inc()
+                instanceInfoReceived.incrementAndGet()
+                logger.info("Received InfoEvent: ${event.toJson()}")
+            }
+
+            else -> {
+                otherMessagesReceivedCount.inc()
+                instanceOtherMessagesReceived.incrementAndGet()
+            }
         }
     }
 

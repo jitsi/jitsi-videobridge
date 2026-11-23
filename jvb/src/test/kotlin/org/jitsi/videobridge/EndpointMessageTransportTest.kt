@@ -18,6 +18,8 @@ package org.jitsi.videobridge
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -26,6 +28,7 @@ import org.jitsi.videobridge.datachannel.DataChannel
 import org.jitsi.videobridge.message.ConnectionStats
 import org.jitsi.videobridge.message.EndpointMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
+import org.jitsi.videobridge.util.LogCapture
 
 class EndpointMessageTransportTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
@@ -75,6 +78,24 @@ class EndpointMessageTransportTest : ShouldSpec() {
                 transport.endpointMessage(EndpointMessage("abcdef02"))
 
                 verify(exactly = 0) { target.sendMessage(any()) }
+            }
+        }
+        context("An incoming message that cannot be parsed") {
+            should("not be quoted in the log") {
+                LogCapture(EndpointMessageTransport::class.java.name).use { log ->
+                    val (_, transport) = setup("abcdef01")
+                    val secret = "SECRET-WORDS-31415"
+
+                    transport.onMessage(
+                        null,
+                        """{"colibriClass":"EndpointMessage","msgPayload":{"name":"a","text":"$secret"}}"""
+                    )
+
+                    transport.onMessage(null, "$secret and more")
+
+                    log.text shouldContain "Invalid message received"
+                    log.text shouldNotContain secret
+                }
             }
         }
         context("Messages that the data channel does not accept") {
