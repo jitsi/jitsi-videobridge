@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.dtls
 
-import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.tls.CipherSuite
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
@@ -59,14 +58,26 @@ class DtlsConfig private constructor() {
     }
 }
 
+/**
+ * The hash function names of the "Hash Function Textual Names" IANA registry which RFC 8122 allows for fingerprints
+ * and which we support. These are the names used in signaling, so they are the only ones that can ever match a
+ * remote fingerprint; a spelling BouncyCastle would also understand, such as "sha256", would silently never match.
+ * MD2 and MD5 are in the registry but RFC 8122 section 5 forbids them; shake128 and shake256 (RFC 8692) are in the
+ * registry but not supported here.
+ */
+private val fingerprintHashFunctions = setOf("sha-1", "sha-224", "sha-256", "sha-384", "sha-512")
+
 private fun validateHashFunction(func: String): String {
-    val ucFunc = func.uppercase()
-    DefaultDigestAlgorithmIdentifierFinder().find(ucFunc)
-        ?: throw ConfigException.UnableToRetrieve.WrongType("Unknown hash function $func")
-    if (ucFunc == "MD5" || ucFunc == "MD2") {
+    val lcFunc = func.lowercase()
+    if (lcFunc == "md5" || lcFunc == "md2") {
         throw ConfigException.UnableToRetrieve.WrongType("Forbidden hash function $func")
     }
-    return func.lowercase()
+    if (lcFunc !in fingerprintHashFunctions) {
+        throw ConfigException.UnableToRetrieve.WrongType(
+            "Unknown hash function $func, not one of ${fingerprintHashFunctions.joinToString()}"
+        )
+    }
+    return lcFunc
 }
 
 private fun String.toBcCipherSuite(): Int = try {

@@ -89,6 +89,31 @@ class DtlsConfigTest : ShouldSpec() {
                 }
             }
         }
+        context("Hash function names which are not the RFC 8122 names") {
+            // BouncyCastle knows these digests, but they are not the names used in signaling, so they could never
+            // match a remote fingerprint.
+            withNewConfig("jmt.dtls.local-fingerprint-hash-function = sha256") {
+                shouldThrow<ConfigException> { DtlsConfig.config.localFingerprintHashFunction }
+            }
+            withNewConfig("jmt.dtls.accepted-fingerprint-hash-functions = [ sha3-256 ]") {
+                shouldThrow<ConfigException> { DtlsConfig.config.acceptedFingerprintHashFunctions }
+            }
+            withNewConfig("jmt.dtls.accepted-fingerprint-hash-functions = [ sha-224 ]") {
+                DtlsConfig.config.acceptedFingerprintHashFunctions shouldContainExactly setOf("sha-224")
+            }
+        }
+        context("All the RFC 8122 hash function names") {
+            withNewConfig(
+                """
+                    jmt.dtls.local-fingerprint-hash-function = sha-1
+                    jmt.dtls.accepted-fingerprint-hash-functions = [ sha-512, sha-384, sha-256, sha-224, sha-1 ]
+                """.trimIndent()
+            ) {
+                DtlsConfig.config.localFingerprintHashFunction shouldBe "sha-1"
+                DtlsConfig.config.acceptedFingerprintHashFunctions shouldContainExactly
+                    listOf("sha-512", "sha-384", "sha-256", "sha-224", "sha-1")
+            }
+        }
         context("Invalid local fingerprint hash function") {
             context("Invalid name") {
                 withNewConfig("jmt.dtls.local-fingerprint-hash-function = sha-257") {
