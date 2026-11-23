@@ -47,43 +47,51 @@ class DtlsFingerprintMismatchTest : ShouldSpec() {
 
     /**
      * Runs a handshake between two stacks where [verifier] has [verifierFingerprints] (which do not match [peer]'s
-     * certificate) instead of the peer's fingerprint. Returns the exceptions each side's [DtlsStack.start] threw.
+     * certificate) instead of the peer's fingerprint. Returns the exception the verifier's [DtlsStack.start] threw
+     * and the one the peer got.
+     *
+     * With DTLS 1.3 a client sends its Finished in the same flight as its certificate, so when the verifier is the
+     * server the peer's handshake completes before the verifier rejects the certificate, and the alert reaches the
+     * peer after its [DtlsStack.start] returned: it then surfaces from [DtlsStack.processIncomingProtocolData].
      */
     private fun handshake(
         verifier: DtlsStack,
         peer: DtlsStack,
         verifierFingerprints: Map<String, List<String>> = mapOf("sha-256" to listOf(wrongFingerprint))
-    ): Pair<Throwable, Throwable> {
+    ): Pair<TlsFatalAlert, Throwable> {
         verifier.remoteFingerprints = verifierFingerprints
         peer.remoteFingerprints = mapOf(verifier.localFingerprintHashFunction to listOf(verifier.localFingerprint))
 
+        val peerFailure = CompletableFuture<Throwable>()
         verifier.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
-            override fun sendData(data: ByteArray, off: Int, len: Int) =
-                peer.processIncomingProtocolData(data, off, len)
+            override fun sendData(data: ByteArray, off: Int, len: Int) {
+                try {
+                    peer.processIncomingProtocolData(data, off, len)
+                } catch (e: TlsFatalAlertReceived) {
+                    // The alert arrived after the peer's handshake had completed (DTLS 1.3, see above).
+                    peerFailure.complete(e)
+                }
+            }
         }
         peer.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
             override fun sendData(data: ByteArray, off: Int, len: Int) =
                 verifier.processIncomingProtocolData(data, off, len)
         }
 
-        val completed = AtomicBoolean()
-        val eventHandler = object : DtlsStack.EventHandler {
+        val verifierCompleted = AtomicBoolean()
+        verifier.eventHandler = object : DtlsStack.EventHandler {
             override fun handshakeComplete(
                 chosenSrtpProtectionProfile: Int,
                 tlsRole: TlsRole,
                 keyingMaterial: ByteArray
             ) {
-                completed.set(true)
+                verifierCompleted.set(true)
             }
         }
-        verifier.eventHandler = eventHandler
-        peer.eventHandler = eventHandler
 
-        val peerFailure = CompletableFuture<Throwable>()
         val peerThread = thread {
             try {
                 peer.start()
-                peerFailure.completeExceptionally(AssertionError("The peer's handshake completed"))
             } catch (t: Throwable) {
                 peerFailure.complete(t)
             }
@@ -92,7 +100,7 @@ class DtlsFingerprintMismatchTest : ShouldSpec() {
             val verifierFailure = shouldThrow<TlsFatalAlert> { verifier.start() }
             peerThread.join(10_000)
 
-            completed.get() shouldBe false
+            verifierCompleted.get() shouldBe false
             return Pair(verifierFailure, peerFailure.get(5, TimeUnit.SECONDS))
         } finally {
             verifier.close()
@@ -102,12 +110,13 @@ class DtlsFingerprintMismatchTest : ShouldSpec() {
     }
 
     /** Asserts that both sides failed with `bad_certificate`, the verifier for the reason starting with [cause]. */
-    private fun assertBadCertificate(failures: Pair<Throwable, Throwable>, cause: String) {
+    private fun assertBadCertificate(failures: Pair<TlsFatalAlert, Throwable>, cause: String) {
         val (verifierFailure, peerFailure) = failures
-        (verifierFailure as TlsFatalAlert).alertDescription shouldBe AlertDescription.bad_certificate
+        verifierFailure.alertDescription shouldBe AlertDescription.bad_certificate
         verifierFailure.cause.shouldBeInstanceOf<DtlsUtils.DtlsException>().message!! shouldStartWith cause
         // The alert reached the peer, so it failed promptly instead of waiting for its handshake timeout.
-        (peerFailure as TlsFatalAlertReceived).alertDescription shouldBe AlertDescription.bad_certificate
+        peerFailure.shouldBeInstanceOf<TlsFatalAlertReceived>().alertDescription shouldBe
+            AlertDescription.bad_certificate
     }
 
     init {
