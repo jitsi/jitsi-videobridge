@@ -167,7 +167,7 @@ class NackHandler(
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Nack handler").apply {
-        addNumber("num_nack_packets_received", numNackedPackets)
+        addNumber("num_nack_packets_received", numNacksReceived)
         addNumber("num_nacked_packets", numNackedPackets)
         addNumber("num_retransmitted_packets", numRetransmittedPackets)
         addNumber("num_packets_not_retransmitted", numPacketsNotResentDueToDelay)

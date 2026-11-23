@@ -686,6 +686,15 @@ class NackHandlerTest : ShouldSpec() {
                 }
             }
         }
+        context("The count of the received NACK packets") {
+            fillCache()
+            clock.elapse(100.ms)
+            nackEverything()
+            should("be the number of NACK packets, and not the number of packets that they request") {
+                nackHandler.getNodeStats().getNumber("num_nack_packets_received") shouldBe numSsrcs
+                nackHandler.getNodeStats().getNumber("num_nacked_packets") shouldBe numSsrcs * packetsPerSsrc
+            }
+        }
         context("With a retransmission budget in the configuration") {
             withNewConfig(
                 """
