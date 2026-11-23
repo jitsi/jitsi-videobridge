@@ -1573,5 +1573,33 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             result!!.packetFeedbacks.size shouldBe 1
             result.packetFeedbacks[0].ambiguousReceiveTime shouldBe false
         }
+
+        // Jitsi local
+        "CongestionControlFeedbackForStreamsWhichWereNotAddedIsIgnored" {
+            val test = OneTransportFeedbackAdapterTest(FeedbackType.Ccfb)
+            // The peer reports on three streams, but only the packets of the first were added (the others might
+            // be audio, which is not congestion controlled).
+            val reportedPackets = createPacketTemplates(numberOfSsrcs = 3, packetsPerSsrc = 3)
+            val addedPackets = reportedPackets.filter { it.ssrc == reportedPackets[0].ssrc }
+            addedPackets.size shouldBe 3
+
+            addedPackets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            val adaptedFeedback = test.createAndProcessFeedback(reportedPackets)
+            comparePacketFeedbackVectors(addedPackets, adaptedFeedback!!.packetFeedbacks)
+            test.adapter.totalUnmatchedReports shouldBe 0
+
+            // Feedback which is only about the other streams produces nothing.
+            test.createAndProcessFeedback(reportedPackets - addedPackets.toSet()) shouldBe null
+            test.adapter.totalUnmatchedReports shouldBe 0
+
+            // A report on a packet of the added stream which is not in the history is still counted.
+            val unknownPacket = addedPackets.last().let { it.copy(rtpSequenceNumber = it.rtpSequenceNumber + 1) }
+            test.createAndProcessFeedback(listOf(unknownPacket)) shouldBe null
+            test.adapter.totalUnmatchedReports shouldBe 1
+        }
     }
 }

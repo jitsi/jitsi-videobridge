@@ -49,7 +49,7 @@ class RembHandler(
     }
 
     private fun onRembPacket(rembPacket: RtcpFbRembPacket) {
-        if (streamInformationStore.supportsTcc) {
+        if (streamInformationStore.supportsTcc || streamInformationStore.supportsCcfb) {
             if (!sawSpuriousRemb) {
                 logger.warn {
                     "Ignoring unexpected REMB, when using TCC (for ${rembPacket.bitrate.bps}). Will " +

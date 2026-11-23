@@ -19,8 +19,8 @@ package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb
 
 import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.extensions.bytearray.putShort
+import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.TransportLayerRtcpFbPacket
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
@@ -84,12 +84,14 @@ class ReceivedPacketInfo(
         "Received: " + super.toString() + ", arrivalTimeOffset=$arrivalTimeOffset, ecn=$ecn"
 }
 
+// The RTCP header, including the SSRC of the packet sender. Unlike other feedback messages, RFC 8888 feedback has no
+// "SSRC of media source" field: the report for the first RTP stream follows directly (RFC 8888 section 3.1).
+private const val kHeaderLength = RtcpHeader.SIZE_BYTES
 private const val kHeaderPerMediaSsrcLength = 8
 private const val kTimestampLength = 4
 
 class RtcpFbCcfbPacketBuilder(
     val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
-    var mediaSourceSsrc: Long = -1,
     // `Packets` MUST be sorted in sequence_number order per SSRC. There MUST not
     // be missing sequence numbers between `Packets`. `Packets` MUST not include
     // duplicate sequence numbers.
@@ -98,8 +100,9 @@ class RtcpFbCcfbPacketBuilder(
 ) {
     private val groupedPackets = packets.groupBy { it.ssrc }
 
-    private fun blockLength(): Int {
-        var totalSize = RtcpFbPacket.HEADER_SIZE + kTimestampLength
+    /** The total size of the packet. */
+    fun blockLength(): Int {
+        var totalSize = kHeaderLength + kTimestampLength
 
         groupedPackets.forEach { (ssrc, packets) ->
             val blockSize = packets.size * 2
@@ -122,8 +125,7 @@ class RtcpFbCcfbPacketBuilder(
             length = RtpUtils.calculateRtcpLengthFieldValue(blockLength)
         }.writeTo(buf, offset)
 
-        RtcpFbPacket.setMediaSourceSsrc(buf, offset, mediaSourceSsrc)
-        var position = offset + RtcpFbPacket.HEADER_SIZE
+        var position = offset + kHeaderLength
 
         groupedPackets.forEach { (ssrc, packets) ->
             check(packets.size <= 16384) {
@@ -257,12 +259,12 @@ class RtcpFbCcfbPacket(
     private val data: CcfbData by lazy(LazyThreadSafetyMode.NONE) {
         val packets = mutableListOf<PacketInfo>()
 
-        require(packetLength - FCI_OFFSET >= kTimestampLength) {
+        require(packetLength - kHeaderLength >= kTimestampLength) {
             "CCFB packet is too small for timestamp"
         }
-        val reportTimestampCompactNtp = buffer.getIntAsLong(packetLength - kTimestampLength)
+        val reportTimestampCompactNtp = buffer.getIntAsLong(offset + packetLength - kTimestampLength)
 
-        var position = offset + FCI_OFFSET
+        var position = offset + kHeaderLength
         val end = offset + packetLength - kTimestampLength
 
         while (position + kHeaderPerMediaSsrcLength < end) {

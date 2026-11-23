@@ -80,6 +80,23 @@ class RetransmissionSenderTest : ShouldSpec() {
                     }
                     retransmissionSender.processPacket(dummyPacketInfo)
                 }
+                should("wrap the RTX sequence number at 16 bits") {
+                    val sequenceNumbers = mutableListOf<Int>()
+                    retransmissionSender.onOutput { sequenceNumbers.add(it.packetAs<RtpPacket>().sequenceNumber) }
+
+                    repeat(0x10000 + 10) {
+                        val packet = RtpPacket(ByteArray(40), 0, 20).apply {
+                            version = 2
+                            payloadType = originalPayloadType
+                            sequenceNumber = 123
+                            ssrc = originalSsrc
+                        }
+                        retransmissionSender.processPacket(PacketInfo(packet))
+                    }
+
+                    // The first RTX sequence number is 1.
+                    sequenceNumbers shouldBe List(0x10000 + 10) { (it + 1) and 0xFFFF }
+                }
             }
             context("which does not have an associated rtx stream") {
                 val noRtxPacket = dummyPacket.clone().apply {

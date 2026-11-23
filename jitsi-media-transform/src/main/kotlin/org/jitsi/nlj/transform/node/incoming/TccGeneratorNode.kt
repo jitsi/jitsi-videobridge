@@ -77,7 +77,8 @@ class TccGeneratorNode(
             tccExtensionId = it
         }
         streamInformation.onRtpPayloadTypesChanged {
-            enabled = streamInformation.supportsTcc
+            // RFC 8888 feedback replaces transport-cc feedback when both are offered.
+            enabled = streamInformation.supportsTcc && !streamInformation.supportsCcfb
         }
     }
 

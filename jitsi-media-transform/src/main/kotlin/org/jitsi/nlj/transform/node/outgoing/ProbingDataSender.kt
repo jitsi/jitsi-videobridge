@@ -180,7 +180,7 @@ class ProbingDataSender(
             packetInfo.packetOrigin = if (probingInfo != null) PacketOrigin.Probing else PacketOrigin.Padding
             garbageDataSender.processPacket(packetInfo)
 
-            currDummySeqNum++
+            currDummySeqNum = (currDummySeqNum + 1) and 0xFFFF
             bytesSent += packetLength
         }
         currDummyTimestamp += 3000

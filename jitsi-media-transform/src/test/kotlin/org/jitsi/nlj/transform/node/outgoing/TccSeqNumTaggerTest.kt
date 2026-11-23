@@ -19,14 +19,18 @@ package org.jitsi.nlj.transform.node.outgoing
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -88,6 +92,52 @@ class TccSeqNumTaggerTest : ShouldSpec() {
 
             tagged.size shouldBe numThreads * packetsPerThread
             tagged.toSet().size shouldBe numThreads * packetsPerThread
+        }
+
+        should("write the sequence number in the packet when transport-cc feedback is negotiated") {
+            tagged.clear()
+            val tagger = TccSeqNumTagger(transportCcEngine, streamInformationStore)
+            val packetInfo = videoPacketInfo()
+            tagger.processPacket(packetInfo)
+
+            tagged.toList() shouldBe listOf(1L)
+            val ext = packetInfo.packetAs<RtpPacket>().getHeaderExtension(tccExtId).shouldNotBeNull()
+            TccHeaderExtension.getSequenceNumber(ext) shouldBe 1
+        }
+
+        should("register packets without a sequence number in them when RFC 8888 feedback is negotiated") {
+            tagged.clear()
+            val ccfbOnly = StreamInformationStoreImpl().apply {
+                addRtpPayloadType(Vp8PayloadType(100, emptyMap(), setOf("ack ccfb")))
+            }
+            val tagger = TccSeqNumTagger(transportCcEngine, ccfbOnly)
+            val packetInfo = videoPacketInfo()
+            tagger.processPacket(packetInfo)
+
+            tagged.toList() shouldBe listOf(1L)
+            packetInfo.packetAs<RtpPacket>().hasExtensions shouldBe false
+        }
+
+        should("not write the sequence number when both kinds of feedback are negotiated") {
+            tagged.clear()
+            val both = StreamInformationStoreImpl().apply {
+                addRtpExtensionMapping(RtpExtension(tccExtId.toByte(), RtpExtensionType.TRANSPORT_CC))
+                addRtpPayloadType(Vp8PayloadType(100, emptyMap(), setOf("transport-cc", "ack ccfb")))
+            }
+            val tagger = TccSeqNumTagger(transportCcEngine, both)
+            val packetInfo = videoPacketInfo()
+            tagger.processPacket(packetInfo)
+
+            tagged.toList() shouldBe listOf(1L)
+            packetInfo.packetAs<RtpPacket>().getHeaderExtension(tccExtId) shouldBe null
+        }
+
+        should("not register packets when neither kind of feedback is negotiated") {
+            tagged.clear()
+            val tagger = TccSeqNumTagger(transportCcEngine, StreamInformationStoreImpl())
+            tagger.processPacket(videoPacketInfo())
+
+            tagged.toList() shouldBe emptyList()
         }
     }
 }

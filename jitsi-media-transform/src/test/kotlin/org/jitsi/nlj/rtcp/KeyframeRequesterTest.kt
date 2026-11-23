@@ -64,6 +64,7 @@ class KeyframeRequesterTest : ShouldSpec() {
         override var supportsPli: Boolean = true
         override val supportsRemb: Boolean = true
         override val supportsTcc: Boolean = true
+        override val supportsCcfb: Boolean = false
         override fun onRtpExtensionMapping(rtpExtensionType: RtpExtensionType, handler: RtpExtensionHandler) {
             // no-op
         }
