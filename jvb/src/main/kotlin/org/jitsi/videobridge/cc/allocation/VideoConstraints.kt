@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 
@@ -36,6 +37,8 @@ data class VideoConstraints @JvmOverloads constructor(
 
     fun heightIsLimited() = maxHeight != UNLIMITED_HEIGHT
     fun frameRateIsLimited() = maxFrameRate != UNLIMITED_FRAME_RATE
+
+    @JsonIgnore
     fun isDisabled() = maxHeight == 0 || maxFrameRate == 0.0
 
     companion object {

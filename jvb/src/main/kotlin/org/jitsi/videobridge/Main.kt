@@ -94,9 +94,19 @@ fun main() {
     org.jitsi.videobridge.xmpp.Smack.initialize()
     PacketQueue.setEnableStatisticsDefault(true)
 
-    // Trigger an exception early in case the DTLS cipher suites are misconfigured
+    // Trigger an exception early in case the DTLS cipher suites, MTU or fingerprint hash functions are misconfigured.
+    // They are otherwise first read when the first endpoint is created and its certificate generated and verified.
     try {
         DtlsConfig.config.cipherSuites
+        DtlsConfig.config.mtu
+        DtlsConfig.config.localFingerprintHashFunction
+        DtlsConfig.config.acceptedFingerprintHashFunctions
+        if (DtlsConfig.config.dtls13Enabled && !DtlsConfig.config.dtls13Offered) {
+            logger.warn(
+                "DTLS 1.3 is enabled but jmt.dtls.cipher-suites contains no (D)TLS 1.3 cipher suite, so only " +
+                    "DTLS 1.2 will be negotiated."
+            )
+        }
     } catch (ce: ConfigException) {
         logger.error("Dtls configuration error: $ce")
         // According to https://freedesktop.org/software/systemd/man/systemd.exec…html#Process%20Exit%20Code

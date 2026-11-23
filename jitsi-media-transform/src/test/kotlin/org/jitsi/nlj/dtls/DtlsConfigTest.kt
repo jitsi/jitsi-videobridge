@@ -20,6 +20,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.bouncycastle.tls.CipherSuite
+import org.bouncycastle.tls.ProtocolVersion
 import org.jitsi.config.withNewConfig
 import org.jitsi.metaconfig.ConfigException
 
@@ -65,6 +66,82 @@ class DtlsConfigTest : ShouldSpec() {
                 }
             }
         }
+        context("MTU") {
+            context("By default") {
+                DtlsConfig.config.mtu shouldBe 1200
+            }
+            context("Too small") {
+                withNewConfig("jmt.dtls.mtu = 100") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.mtu }
+                }
+                withNewConfig("jmt.dtls.mtu = 575") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.mtu }
+                }
+            }
+            context("Too large") {
+                withNewConfig("jmt.dtls.mtu = 65536") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.mtu }
+                }
+            }
+            context("At the limits") {
+                withNewConfig("jmt.dtls.mtu = 576") {
+                    DtlsConfig.config.mtu shouldBe 576
+                }
+                withNewConfig("jmt.dtls.mtu = 65535") {
+                    DtlsConfig.config.mtu shouldBe 65535
+                }
+            }
+        }
+        context("DTLS 1.3 enabled") {
+            context("By default") {
+                DtlsConfig.config.dtls13Enabled shouldBe true
+                DtlsConfig.config.dtls13Offered shouldBe true
+                DtlsConfig.config.supportedVersions.toList() shouldBe
+                    listOf(ProtocolVersion.DTLSv13, ProtocolVersion.DTLSv12)
+            }
+            context("Without any DTLS 1.3 cipher suite") {
+                // E.g. a cipher-suites list carried over from before DTLS 1.3 support.
+                withNewConfig(
+                    "jmt.dtls.cipher-suites = [ TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, " +
+                        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 ]"
+                ) {
+                    DtlsConfig.config.dtls13Enabled shouldBe true
+                    DtlsConfig.config.dtls13Offered shouldBe false
+                    DtlsConfig.config.supportedVersions.toList() shouldBe listOf(ProtocolVersion.DTLSv12)
+                    DtlsConfig.config.offerPostQuantumKeyExchange shouldBe false
+                }
+            }
+            context("When disabled") {
+                withNewConfig("jmt.dtls.enable-dtls13 = false") {
+                    DtlsConfig.config.dtls13Enabled shouldBe false
+                    DtlsConfig.config.supportedVersions.toList() shouldBe listOf(ProtocolVersion.DTLSv12)
+                    // The post-quantum key exchange requires DTLS 1.3
+                    DtlsConfig.config.postQuantumKeyExchangeEnabled shouldBe true
+                    DtlsConfig.config.offerPostQuantumKeyExchange shouldBe false
+                }
+            }
+        }
+        context("Post-quantum key exchange") {
+            context("By default") {
+                DtlsConfig.config.postQuantumKeyExchangeEnabled shouldBe true
+                DtlsConfig.config.offerPostQuantumKeyExchange shouldBe true
+            }
+            context("When disabled") {
+                withNewConfig("jmt.dtls.enable-post-quantum-key-exchange = false") {
+                    DtlsConfig.config.offerPostQuantumKeyExchange shouldBe false
+                }
+            }
+        }
+        context("Unsigned certificates") {
+            context("By default") {
+                DtlsConfig.config.useAlgUnsigned shouldBe false
+            }
+            context("When enabled") {
+                withNewConfig("jmt.dtls.use-alg-unsigned = true") {
+                    DtlsConfig.config.useAlgUnsigned shouldBe true
+                }
+            }
+        }
         context("Valid fingerprint hash functions") {
             withNewConfig(
                 """
@@ -87,6 +164,31 @@ class DtlsConfigTest : ShouldSpec() {
                     DtlsConfig.config.acceptedFingerprintHashFunctions shouldContainExactly
                         setOf("sha-512", "sha-384", "sha-256")
                 }
+            }
+        }
+        context("Hash function names which are not the RFC 8122 names") {
+            // BouncyCastle knows these digests, but they are not the names used in signaling, so they could never
+            // match a remote fingerprint.
+            withNewConfig("jmt.dtls.local-fingerprint-hash-function = sha256") {
+                shouldThrow<ConfigException> { DtlsConfig.config.localFingerprintHashFunction }
+            }
+            withNewConfig("jmt.dtls.accepted-fingerprint-hash-functions = [ sha3-256 ]") {
+                shouldThrow<ConfigException> { DtlsConfig.config.acceptedFingerprintHashFunctions }
+            }
+            withNewConfig("jmt.dtls.accepted-fingerprint-hash-functions = [ sha-224 ]") {
+                DtlsConfig.config.acceptedFingerprintHashFunctions shouldContainExactly setOf("sha-224")
+            }
+        }
+        context("All the RFC 8122 hash function names") {
+            withNewConfig(
+                """
+                    jmt.dtls.local-fingerprint-hash-function = sha-1
+                    jmt.dtls.accepted-fingerprint-hash-functions = [ sha-512, sha-384, sha-256, sha-224, sha-1 ]
+                """.trimIndent()
+            ) {
+                DtlsConfig.config.localFingerprintHashFunction shouldBe "sha-1"
+                DtlsConfig.config.acceptedFingerprintHashFunctions shouldContainExactly
+                    listOf("sha-512", "sha-384", "sha-256", "sha-224", "sha-1")
             }
         }
         context("Invalid local fingerprint hash function") {

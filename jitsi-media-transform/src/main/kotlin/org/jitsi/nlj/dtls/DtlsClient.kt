@@ -20,6 +20,7 @@ import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSClientProtocol
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
+import org.bouncycastle.tls.ProtocolVersion
 import org.bouncycastle.tls.TlsTimeoutException
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.utils.logging2.Logger
@@ -39,6 +40,12 @@ class DtlsClient(
 
     private val tlsClient: TlsClientImpl = TlsClientImpl(certificateInfo, verifyAndValidateRemoteCertificate, logger)
 
+    override val negotiatedProtocolVersion: ProtocolVersion?
+        get() = tlsClient.negotiatedProtocolVersion
+
+    override val negotiatedGroup: Int?
+        get() = tlsClient.negotiatedGroup
+
     override fun start(): DTLSTransport = connect()
 
     fun connect(): DTLSTransport {
@@ -54,7 +61,7 @@ class DtlsClient(
         } catch (e: Exception) {
             // A handshake timeout is logged by the caller, which handles it.
             if (e !is TlsTimeoutException) {
-                logger.cerror { "Error during DTLS connection: $e" }
+                logger.cerror { "Error during DTLS connection: $e" + (e.cause?.let { " (caused by $it)" } ?: "") }
             }
             throw e
         }

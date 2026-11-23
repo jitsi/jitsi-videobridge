@@ -18,13 +18,18 @@ package org.jitsi.nlj.dtls
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.bouncycastle.tls.AlertDescription
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
+import org.bouncycastle.tls.NamedGroup
+import org.bouncycastle.tls.ProtocolVersion
+import org.bouncycastle.tls.TlsFatalAlert
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.utils.concurrent.ArrayBlockingQueueWithShutdown
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import java.nio.ByteBuffer
@@ -52,16 +57,21 @@ import kotlin.math.min
  * been set, [start] can be called to start the negotiation.
  */
 class DtlsStack(
-    parentLogger: Logger
+    parentLogger: Logger,
+    /**
+     * The certificate info for this particular [DtlsStack] instance. It is saved per instance because the global one
+     * might be refreshed. Tests pass their own.
+     */
+    private val certificateInfo: CertificateInfo = DtlsStack.certificateInfo
 ) {
     private val logger = createChildLogger(parentLogger)
     private val roleSet = CountDownLatch(1)
 
     /**
-     * The certificate info for this particular [DtlsStack] instance. We save it in a local val because the global one
-     * might be refreshed.
+     * The configured MTU, read once so that an invalid value fails when the stack is created rather than inside
+     * BouncyCastle's send path during the handshake.
      */
-    private val certificateInfo = DtlsStack.certificateInfo
+    private val mtu = DtlsConfig.config.mtu
 
     val localFingerprintHashFunction: String
         get() = certificateInfo.localFingerprintHashFunction
@@ -99,6 +109,19 @@ class DtlsStack(
      */
     var role: DtlsRole? = null
         private set
+
+    /**
+     * The DTLS protocol version that was negotiated, or null if the handshake has not completed.
+     */
+    val negotiatedProtocolVersion: ProtocolVersion?
+        get() = role?.negotiatedProtocolVersion
+
+    /**
+     * The key exchange group ([NamedGroup]) that was negotiated, or null if the handshake has not completed or was
+     * not a DTLS 1.3 handshake (the group is not recorded for DTLS 1.2).
+     */
+    val negotiatedGroup: Int?
+        get() = role?.negotiatedGroup
 
     /**
      * A buffer we'll use to receive data from [dtlsTransport].
@@ -204,15 +227,31 @@ class DtlsStack(
 
     /**
      * Checks that a specific [Certificate] matches the remote fingerprints sent to us over the signaling path.
+     *
+     * A failure is reported as a [TlsFatalAlert]: `bad_certificate` when the certificate does not match or cannot
+     * be parsed, `internal_error` for anything else. BouncyCastle only handles its own [TlsFatalAlert],
+     * [java.io.IOException] and [RuntimeException]: a checked exception such as [DtlsUtils.DtlsException] or a
+     * [org.jitsi.metaconfig.ConfigException] would escape its handshake code without aborting the handshake, so no
+     * alert would be sent to the peer, which would then keep retransmitting until its own handshake timeout.
      */
     private fun verifyAndValidateRemoteCertificate(remoteCertificate: Certificate?) {
-        remoteCertificate?.let {
-            DtlsUtils.verifyAndValidateCertificate(it, remoteFingerprints)
-            // The above throws an exception if the checks fail.
-            logger.cdebug { "Fingerprints verified." }
-        } ?: run {
-            throw DtlsUtils.DtlsException("Remote certificate was null")
+        if (remoteCertificate == null) {
+            // BouncyCastle passes an empty chain rather than null, so this is only a guard.
+            throw TlsFatalAlert(AlertDescription.bad_certificate, "Remote certificate was null")
         }
+        try {
+            DtlsUtils.verifyAndValidateCertificate(remoteCertificate, remoteFingerprints)
+        } catch (e: DtlsUtils.DtlsException) {
+            throw TlsFatalAlert(AlertDescription.bad_certificate, e.message, e)
+        } catch (e: IllegalArgumentException) {
+            // A certificate in the chain is not valid DER.
+            throw TlsFatalAlert(AlertDescription.bad_certificate, e.message, e)
+        } catch (e: TlsFatalAlert) {
+            throw e
+        } catch (e: Exception) {
+            throw TlsFatalAlert(AlertDescription.internal_error, e.message, e)
+        }
+        logger.cdebug { "Fingerprints verified." }
     }
 
     fun sendApplicationData(data: ByteArray, off: Int, len: Int) {
@@ -269,14 +308,23 @@ class DtlsStack(
     }
 
     fun getDebugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
-        put("localFingerprintHashFunction", certificateInfo.localFingerprint)
+        put("localFingerprintHashFunction", certificateInfo.localFingerprintHashFunction)
+        put("localFingerprint", certificateInfo.localFingerprint)
         put("remoteFingerprints", remoteFingerprints.map { (hash, fp) -> "$hash: $fp" }.joinToString())
         put("role", (role?.javaClass ?: "null").toString())
+        put("negotiated_protocol_version", negotiatedProtocolVersion?.toString() ?: "null")
+        put("negotiated_group", negotiatedGroup?.let { NamedGroup.getText(it) } ?: "null")
         put("num_packet_drops_queue_full", numPacketDropsQueueFull)
     }
 
     companion object {
         private const val QUEUE_SIZE = 50
+
+        /** IP/UDP overhead constants, as in [org.bouncycastle.tls.UDPTransport]. */
+        private const val MIN_IP_OVERHEAD = 20
+        private const val MAX_IP_OVERHEAD = MIN_IP_OVERHEAD + 64
+        private const val UDP_OVERHEAD = 8
+        private val companionLogger = LoggerImpl(DtlsStack::class.java.name)
 
         /**
          * Because generating the certificateInfo can be expensive, we generate a single
@@ -284,12 +332,29 @@ class DtlsStack(
          * another one).
          */
         private val syncRoot: Any = Any()
+
+        /** When the last attempt to generate a new certificate was started; refreshes are at most one per minute. */
+        private var lastRefreshAttemptMs = 0L
+
         private var certificateInfo: CertificateInfo = DtlsUtils.generateCertificateInfo()
             get() = synchronized(syncRoot) {
                 val expirationPeriodMs = Duration.ofDays(1).toMillis()
-                if (field.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
+                val now = System.currentTimeMillis()
+                if (field.creationTimestampMs + expirationPeriodMs < now &&
+                    lastRefreshAttemptMs + Duration.ofMinutes(1).toMillis() < now
+                ) {
+                    lastRefreshAttemptMs = now
                     // TODO: avoid creating our own thread
-                    thread { field = DtlsUtils.generateCertificateInfo() }
+                    thread {
+                        try {
+                            val newCertificateInfo = DtlsUtils.generateCertificateInfo()
+                            synchronized(syncRoot) { field = newCertificateInfo }
+                        } catch (t: Throwable) {
+                            // Keep the old certificate, which is valid for 7 days from its generation. Retried on
+                            // the next access after a minute.
+                            companionLogger.error("Failed to generate a new DTLS certificate", t)
+                        }
+                    }
                 }
                 return field
             }
@@ -325,14 +390,18 @@ class DtlsStack(
         }
 
         /**
-         * Receive limit computation copied from [org.bouncycastle.tls.UDPTransport]
+         * Receive limit computation copied from [org.bouncycastle.tls.UDPTransport]. We are prepared to receive
+         * anything up to a full Ethernet-sized datagram, whatever we assume about the path MTU for sending.
          */
-        override fun getReceiveLimit(): Int = 1500 - 20 - 8
+        override fun getReceiveLimit(): Int = 1500 - MIN_IP_OVERHEAD - UDP_OVERHEAD
 
         /**
-         * Send limit computation copied from [org.bouncycastle.tls.UDPTransport]
+         * Send limit computed as in [org.bouncycastle.tls.UDPTransport], but from the configured MTU rather than
+         * the interface MTU. BouncyCastle fragments handshake flights to fit it (application data records are
+         * bounded separately). A datagram larger than the path MTU is lost, dropped if DF is set or fragmented and
+         * then likely dropped, which stalls the handshake until it is retransmitted.
          */
-        override fun getSendLimit(): Int = 1500 - 84 - 8
+        override fun getSendLimit(): Int = mtu - MAX_IP_OVERHEAD - UDP_OVERHEAD
 
         override fun close() {}
     }
