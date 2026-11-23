@@ -17,11 +17,12 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
+import java.time.Clock
 import java.time.Duration
 
 /* Base type for network controller,
  * based on WebRTC api/transport/network_control.h in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 
 /** Configuration sent to factory create function. The parameters here are
@@ -40,7 +41,16 @@ class NetworkControllerConfig(
     /** Initial stream specific configuration, these are changed at any later time
      * by calls to OnStreamsConfig.
      */
-    val streamBasedConfig: StreamsConfig = StreamsConfig()
+    val streamBasedConfig: StreamsConfig = StreamsConfig(),
+
+    /** Default time window used for calculating how send packets are paced.
+     * Note that a network controller can choose to request the pacer to pace
+     * packets stricter.
+     */
+    val defaultPacingTimeWindow: Duration = PacerConfig.kDefaultTimeInterval,
+
+    /** Jitsi local: the clock. In WebRTC it is part of the environment in the configuration. */
+    val clock: Clock = Clock.systemUTC()
 )
 
 /** NetworkControllerInterface is implemented by network controllers. A network
@@ -85,6 +95,11 @@ interface NetworkControllerInterface {
     fun onTransportPacketsFeedback(report: TransportPacketsFeedback): NetworkControlUpdate
 
     // Omitted: onNetworkStateUpdate: Not used
+
+    /** Returns true if the network controller supports adaptation to ECN.
+     * https://www.rfc-editor.org/rfc/rfc9331.html
+     */
+    fun supportsEcnAdaptation(): Boolean = false
 }
 
 /** NetworkControllerFactoryInterface is an interface for creating a network

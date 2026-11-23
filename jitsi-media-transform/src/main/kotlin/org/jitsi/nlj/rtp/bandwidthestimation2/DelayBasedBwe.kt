@@ -31,7 +31,7 @@ import java.time.Instant
 
 /** Delay-based bandwidth estimation,
  * based on WebRTC modules/congestion_controller/goog_cc/delay_based_bwe.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings have been generally removed, set to their default settings, and APIs that aren't
  * used by Chrome have also been removed.
@@ -227,8 +227,6 @@ class DelayBasedBwe(
     fun setMinBitrate(minBitrate: Bandwidth) {
         rateControl.setMinBitrate(minBitrate)
     }
-
-    fun getExpectedBwePeriod(): Duration = rateControl.getExpectedBandwidthPeriod()
 
     fun lastEstimate(): Bandwidth = prevBitrate
     fun lastState(): BandwidthUsage = prevState

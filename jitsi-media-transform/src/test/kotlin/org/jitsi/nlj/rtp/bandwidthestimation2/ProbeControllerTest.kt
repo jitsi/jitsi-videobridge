@@ -45,7 +45,7 @@ private val kBitrateDropTimeout = 5.secs
 
 /** Unit tests for ProbeController,
  * based on WebRTC modules/congestion_controller/goog_cc/probe_controller_unittest.cc in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */
@@ -174,8 +174,10 @@ class ProbeControllerTest : FreeSpec() {
             probes[0].targetDataRate.bps shouldBe kMaxBitrate.bps + 100
         }
 
-        "ProbesOnMaxAllocatedBitrateIncreaseOnlyWhenInAlr" {
-            val fixture = ProbeControllerFixture()
+        "ProbesInAlrWhenAllocationProbingOutsideAlrIsDisabled" {
+            val fixture = ProbeControllerFixture(
+                config = ProbeControllerConfig(probeOnMaxAllocatedBitrateChangeWithoutAlr = false)
+            )
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
@@ -191,21 +193,90 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
 
             // Probe when in alr.
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             probes = probeController.onMaxTotalAllocatedBitrate(
                 kMaxBitrate + 1.bps,
                 fixture.currentTime()
             )
             probes.size shouldBe 2
             probes[0].targetDataRate shouldBe kMaxBitrate
+        }
 
-            // Do not probe when not in alr.
-            probeController.setAlrStartTimeMs(null)
-            probes = probeController.onMaxTotalAllocatedBitrate(
-                kMaxBitrate + 2.bps,
+        "ProbesOnMaxAllocatedBitrateIncreaseOutsideAlrByDefault" {
+            val fixture = ProbeControllerFixture()
+            val probeController = fixture.createController()
+            val kTransportMaxBitrate = 10000.kbps
+            val kEstimatedAfterInitialProbing = 300.kbps
+            val kScreenShareMaxBitrate = 3500.kbps
+
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes =
+                probeController.setBitrates(kMinBitrate, kStartBitrate, kTransportMaxBitrate, fixture.currentTime())
+            probes = probeController.setEstimatedBitrate(
+                kEstimatedAfterInitialProbing,
+                BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probes = probeController.process(fixture.currentTime())
             probes.isEmpty() shouldBe true
+
+            probeController.setAlrStartTime(null)
+            probes = probeController.onMaxTotalAllocatedBitrate(kScreenShareMaxBitrate, fixture.currentTime())
+            probes.size shouldBe 1
+            probes[0].targetDataRate shouldBe 2 * kEstimatedAfterInitialProbing
+        }
+
+        "AllocationProbingOutsideAlrCanBeDisabled" {
+            val fixture = ProbeControllerFixture(
+                config = ProbeControllerConfig(probeOnMaxAllocatedBitrateChangeWithoutAlr = false)
+            )
+            val probeController = fixture.createController()
+            val kTransportMaxBitrate = 10000.kbps
+            val kEstimatedAfterInitialProbing = 300.kbps
+            val kScreenShareMaxBitrate = 3500.kbps
+
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes =
+                probeController.setBitrates(kMinBitrate, kStartBitrate, kTransportMaxBitrate, fixture.currentTime())
+            probes = probeController.setEstimatedBitrate(
+                kEstimatedAfterInitialProbing,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probes = probeController.process(fixture.currentTime())
+            probes.isEmpty() shouldBe true
+
+            probeController.setAlrStartTime(null)
+            probeController.onMaxTotalAllocatedBitrate(kScreenShareMaxBitrate, fixture.currentTime())
+                .isEmpty() shouldBe true
+        }
+
+        "DoesNotProbeWhenMaxAllocatedBitrateDecreases" {
+            val fixture = ProbeControllerFixture()
+            val probeController = fixture.createController()
+
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.isEmpty() shouldBe false
+
+            // Set the initial allocation while initial probing is still in progress.
+            probeController.onMaxTotalAllocatedBitrate(kMaxBitrate, fixture.currentTime()).isEmpty() shouldBe true
+            probes = probeController.setEstimatedBitrate(
+                kStartBitrate,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probeController.process(fixture.currentTime()).isEmpty() shouldBe true
+
+            // A lower allocation should update the limit without triggering a probe.
+            probeController.onMaxTotalAllocatedBitrate(kMaxBitrate / 2, fixture.currentTime()).isEmpty() shouldBe true
+
+            // A subsequent increase from the lower allocation should trigger probing.
+            probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate * 3 / 4, fixture.currentTime())
+            probes.isEmpty() shouldBe false
         }
 
         "ProbesOnMaxAllocatedBitrateLimitedByCurrentBwe" {
@@ -226,7 +297,7 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
 
             // Probe when in alr.
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 1
             probes[0].targetDataRate shouldBe 2.0 * kStartBitrate
@@ -258,10 +329,10 @@ class ProbeControllerTest : FreeSpec() {
             fixture.advanceTime(kExponentialProbingTimeout)
             probes = probeController.process(fixture.currentTime())
             probes.isEmpty() shouldBe true
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
 
             // Do no probe, since probe_max_allocation:false.
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate + 1.bps, fixture.currentTime())
             probes.isEmpty() shouldBe true
         }
@@ -472,7 +543,7 @@ class ProbeControllerTest : FreeSpec() {
                 fixture.currentTime()
             )
 
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             fixture.advanceTime(kAlrEndedTimeout + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes = probeController.setEstimatedBitrate(
@@ -498,7 +569,7 @@ class ProbeControllerTest : FreeSpec() {
                 fixture.currentTime()
             )
 
-            probeController.setAlrStartTimeMs(null)
+            probeController.setAlrStartTime(null)
             fixture.advanceTime(kAlrProbeInterval + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes = probeController.setEstimatedBitrate(
@@ -506,7 +577,7 @@ class ProbeControllerTest : FreeSpec() {
                 BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
-            probeController.setAlrEndedTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrEndedTime(fixture.currentTime())
             fixture.advanceTime(kAlrEndedTimeout - 1.ms)
             probes = probeController.requestProbe(fixture.currentTime())
 
@@ -526,7 +597,7 @@ class ProbeControllerTest : FreeSpec() {
                 fixture.currentTime()
             )
 
-            probeController.setAlrStartTimeMs(null)
+            probeController.setAlrStartTime(null)
             fixture.advanceTime(kAlrProbeInterval + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes = probeController.setEstimatedBitrate(
@@ -534,7 +605,7 @@ class ProbeControllerTest : FreeSpec() {
                 BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
-            probeController.setAlrEndedTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrEndedTime(fixture.currentTime())
             fixture.advanceTime(kAlrEndedTimeout + 1.ms)
             probes = probeController.requestProbe(fixture.currentTime())
 
@@ -553,7 +624,7 @@ class ProbeControllerTest : FreeSpec() {
                 fixture.currentTime()
             )
 
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             fixture.advanceTime(kAlrProbeInterval + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes = probeController.setEstimatedBitrate(
@@ -582,14 +653,14 @@ class ProbeControllerTest : FreeSpec() {
             val startTime = fixture.currentTime()
 
             // Expect the controller to send a new probe after 5s has passed.
-            probeController.setAlrStartTimeMs(startTime.toEpochMilli())
+            probeController.setAlrStartTime(startTime)
             fixture.advanceTime(5.secs)
             probes = probeController.process(fixture.currentTime())
             probes.size shouldBe 1
             probes[0].targetDataRate.bps shouldBe 1000
 
             // The following probe should be sent at 10s into ALR.
-            probeController.setAlrStartTimeMs(startTime.toEpochMilli())
+            probeController.setAlrStartTime(startTime)
             fixture.advanceTime(4.secs)
             probes = probeController.process(fixture.currentTime())
             probes = probeController.setEstimatedBitrate(
@@ -599,7 +670,7 @@ class ProbeControllerTest : FreeSpec() {
             )
             probes.isEmpty() shouldBe true
 
-            probeController.setAlrStartTimeMs(startTime.toEpochMilli())
+            probeController.setAlrStartTime(startTime)
             fixture.advanceTime(1.secs)
             probes = probeController.process(fixture.currentTime())
             probes.size shouldBe 1
@@ -617,7 +688,7 @@ class ProbeControllerTest : FreeSpec() {
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val alrStartTime = fixture.currentTime()
 
-            probeController.setAlrStartTimeMs(alrStartTime.toEpochMilli())
+            probeController.setAlrStartTime(alrStartTime)
             probeController.enablePeriodicAlrProbing(true)
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probeController.reset(fixture.currentTime())
@@ -708,7 +779,7 @@ class ProbeControllerTest : FreeSpec() {
             // Configure ALR for periodic probing.
             probeController.enablePeriodicAlrProbing(true)
             val alrStartTime = fixture.currentTime()
-            probeController.setAlrStartTimeMs(alrStartTime.toEpochMilli())
+            probeController.setAlrStartTime(alrStartTime)
 
             val estimatedBitrate = 10 * kMbpsMultiplier
             probes = probeController.setEstimatedBitrate(
@@ -779,7 +850,7 @@ class ProbeControllerTest : FreeSpec() {
             fixture.advanceTime(5.secs)
             probes = probeController.process(fixture.currentTime())
 
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             probes = probeController.onMaxTotalAllocatedBitrate(200.kbps, fixture.currentTime())
             probes.size shouldBe 1
             probes[0].targetDataRate.bps shouldBe 400_000
@@ -799,7 +870,7 @@ class ProbeControllerTest : FreeSpec() {
                 fixture.currentTime()
             )
             // Expect the controller to send a new probe after 5s has passed.
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             fixture.advanceTime(5.secs)
             probes = probeController.process(fixture.currentTime())
             probes.size shouldBe 1
@@ -852,7 +923,7 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
 
             // Probe when in alr.
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             fixture.advanceTime(kAlrProbeInterval + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes.size shouldBe 1
@@ -879,7 +950,7 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
 
             // Not probe in alr when loss based estimate decreases.
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             fixture.advanceTime(kAlrProbeInterval + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes.isEmpty() shouldBe true
@@ -904,7 +975,7 @@ class ProbeControllerTest : FreeSpec() {
             probes = probeController.process(fixture.currentTime())
             probes.isEmpty() shouldBe true
 
-            probeController.setAlrStartTimeMs(null)
+            probeController.setAlrStartTime(null)
             fixture.advanceTime(kAlrProbeInterval + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes.isEmpty() shouldBe true
@@ -976,7 +1047,7 @@ class ProbeControllerTest : FreeSpec() {
             )
 
             fixture.advanceTime(10.secs)
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probeController.setAlrStartTime(fixture.currentTime())
             probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate / 2, fixture.currentTime())
             // No probes since total allocated is not higher than the current estimate.
             probes.isEmpty() shouldBe true

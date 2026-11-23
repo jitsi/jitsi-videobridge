@@ -49,7 +49,7 @@ import kotlin.math.pow
  * will switch to a "slow-start mode" where we increase multiplicatively.
  *
  * Based on WebRTC modules/remote_bitrate_estimator/aimd_rate_control.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 class AimdRateControl(private val sendSide: Boolean = false) {
 
@@ -180,23 +180,6 @@ class AimdRateControl(private val sendSide: Boolean = false) {
         val increaseRateBpsPerSecond = (avgPacketSize.per(responseTime)).bps.toDouble()
         val kMinIncreaseRateBpsPerSecond = 4000.0
         return increaseRateBpsPerSecond.coerceAtLeast(kMinIncreaseRateBpsPerSecond)
-    }
-
-    fun getExpectedBandwidthPeriod(): Duration {
-        val kMinPeriod = 2.secs
-        val kDefaultPeriod = 3.secs
-        val kMaxPeriod = 50.secs
-
-        val increaseRateBpsPerSecond = getNearMaxIncreaseRateBpsPerSecond()
-        if (lastDecrease == null) {
-            return kDefaultPeriod
-        }
-
-        val timeToRecoverDecreaseSeconds =
-            lastDecrease!!.bps / increaseRateBpsPerSecond
-
-        val period = durationOfDoubleSeconds(timeToRecoverDecreaseSeconds)
-        return period.coerceIn(kMinPeriod, kMaxPeriod)
     }
 
     private fun changeBitrate(input: RateControlInput, atTime: Instant) {

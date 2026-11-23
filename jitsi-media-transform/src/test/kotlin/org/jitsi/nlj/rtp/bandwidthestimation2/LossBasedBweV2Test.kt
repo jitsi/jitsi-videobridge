@@ -29,6 +29,7 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.bytesPerSec
 import org.jitsi.nlj.util.div
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.times
@@ -43,7 +44,7 @@ import java.time.Instant
 /**
  * Unit tests for Loss-Based BWE,
  * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe_v2_test.cc in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 
 val kObservationDurationLowerBound = 250.ms
@@ -1604,6 +1605,32 @@ class LossBasedBweV2Test : FreeSpec() {
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe kStartBitrate
+        }
+
+        "SelectHigherCandidateIfHavingSameObjective" {
+            val config = shortObservationConfig()
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val kStartBitrate = 1000.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(kStartBitrate)
+            val enoughFeedback01 = createPacketResultsWithReceivedPackets(
+                firstPacketTimestamp = Instant.EPOCH
+            )
+            val enoughFeedback02 = createPacketResultsWithReceivedPackets(
+                firstPacketTimestamp = Instant.EPOCH + kObservationDurationLowerBound
+            )
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback01,
+                delayBasedEstimate = kStartBitrate,
+                inAlr = false
+            )
+            val delayBasedEstimate = (kStartBitrate.bytesPerSec * 1.02 + 1).bytesPerSec
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback02,
+                delayBasedEstimate = delayBasedEstimate,
+                inAlr = false
+            )
+
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe delayBasedEstimate
         }
     }
 }

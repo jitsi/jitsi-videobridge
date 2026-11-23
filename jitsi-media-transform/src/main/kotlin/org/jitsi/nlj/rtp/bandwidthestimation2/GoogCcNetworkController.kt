@@ -43,13 +43,12 @@ import kotlin.math.roundToLong
 
 /** Top-level Google CC Network Controller,
  * based on WebRTC modules/congestion_controller/goog_cc/goog_cc_network_control.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings have been generally removed, set to their default settings,
  * except where needed by unit tests.
  */
 class GoogCcConfig(
-    val feedbackOnly: Boolean = false,
     /* Not in this object in WebRTC: This is a field trial parameter there */
     val rateControlSettings: CongestionWindowConfig = CongestionWindowConfig()
 )
@@ -108,11 +107,9 @@ class GoogCcNetworkController(
             if (initialConfig!!.streamBasedConfig.requestsAlrProbing != null) {
                 probeController.enablePeriodicAlrProbing(initialConfig!!.streamBasedConfig.requestsAlrProbing!!)
             }
-            if (initialConfig!!.streamBasedConfig.enableRepeatedInitialProbing != null) {
-                probeController.enableRepeatedInitialProbing(
-                    initialConfig!!.streamBasedConfig.enableRepeatedInitialProbing!!
-                )
-            }
+            probeController.enableRepeatedInitialProbing(
+                initialConfig!!.streamBasedConfig.enableRepeatedInitialProbing
+            )
             val totalBitrate = initialConfig!!.streamBasedConfig.maxTotalAllocatedBitrate
             if (totalBitrate != null) {
                 val probes = probeController.onMaxTotalAllocatedBitrate(totalBitrate, msg.atTime)
@@ -124,8 +121,11 @@ class GoogCcNetworkController(
             congestionWindowPushbackController.updatePacingQueue(msg.pacerQueue.bytes.roundToLong())
         }
         bandwidthEstimation.updateEstimate(msg.atTime)
-        val startTimeMs = alrDetector.getApplicationLimitedRegionStartTime()
-        probeController.setAlrStartTimeMs(startTimeMs)
+        // Avoid ALR probing before the first transport feedback is received in
+        // order to avoid ALR probing if receive side BWE is used.
+        probeController.setAlrStartTime(
+            if (firstTransportFeedbackReceived) alrDetector.getApplicationLimitedRegionStartTime() else null
+        )
 
         val probes = probeController.process(msg.atTime)
         update.probeClusterConfigs.addAll(probes)
@@ -145,10 +145,6 @@ class GoogCcNetworkController(
     }
 
     override fun onRemoteBitrateReport(msg: RemoteBitrateReport): NetworkControlUpdate {
-        if (packetFeedbackOnly) {
-            logger.error("Received REMB for packet feedback only GoogCC")
-            return NetworkControlUpdate()
-        }
         bandwidthEstimation.updateReceiverEstimate(msg.receiveTime, msg.bandwidth)
 
         timeSeriesLogger.trace {
@@ -159,7 +155,7 @@ class GoogCcNetworkController(
     }
 
     override fun onRoundTripTimeUpdate(msg: RoundTripTimeUpdate): NetworkControlUpdate {
-        if (packetFeedbackOnly || msg.smoothed) {
+        if (msg.smoothed) {
             return NetworkControlUpdate()
         }
         assert(msg.roundTripTime != Duration.ZERO)
@@ -169,7 +165,7 @@ class GoogCcNetworkController(
     }
 
     override fun onSentPacket(sentPacket: SentPacket): NetworkControlUpdate {
-        alrDetector.onBytesSent(sentPacket.size.bytes.roundToLong(), sentPacket.sendTime.toEpochMilli())
+        alrDetector.onBytesSent(sentPacket.size, sentPacket.sendTime)
         acknowledgedBitrateEstimator.setAlr(alrDetector.getApplicationLimitedRegionStartTime() != null)
 
         if (!firstPacketSent) {
@@ -274,9 +270,6 @@ class GoogCcNetworkController(
     }
 
     override fun onTransportLossReport(msg: TransportLossReport): NetworkControlUpdate {
-        if (packetFeedbackOnly) {
-            return NetworkControlUpdate()
-        }
         val totalPacketsDelta = msg.packetsReceivedDelta + msg.packetsLostDelta
         bandwidthEstimation.updatePacketsLost(msg.packetsLostDelta, totalPacketsDelta, msg.receiveTime)
         return NetworkControlUpdate()
@@ -303,6 +296,11 @@ class GoogCcNetworkController(
             // against building very large network queues.
             return NetworkControlUpdate()
         }
+        if (!firstTransportFeedbackReceived) {
+            // Send side BWE is used.
+            firstTransportFeedbackReceived = true
+        }
+
         if (congestionWindowPushbackController != null) {
             congestionWindowPushbackController.updateOutstandingData(report.dataInFlight.bytes.roundToLong())
         }
@@ -331,47 +329,11 @@ class GoogCcNetworkController(
             // TODO(srte): Use time since last unacknowledged packet.
             bandwidthEstimation.updatePropagationRtt(report.feedbackTime, minPropagationRtt)
         }
-        if (packetFeedbackOnly) {
-            if (!feedbackMaxRtts.isEmpty()) {
-                val sumRttMs = feedbackMaxRtts.sum()
-                val meanRttMs = sumRttMs / feedbackMaxRtts.size
-                delayBasedBwe.onRttUpdate(meanRttMs.ms)
-            }
 
-            var feedbackMinRtt = MAX_DURATION
-            for (packetFeedback in feedbacks) {
-                val pendingTime = Duration.between(packetFeedback.receiveTime, maxRecvTime)
-                val rtt = Duration.between(packetFeedback.sentPacket.sendTime, report.feedbackTime) - pendingTime
-                // Value used for predicting NACK round trip time in FEC controller.
-                feedbackMinRtt = min(rtt, feedbackMinRtt)
-            }
-            if (feedbackMinRtt.isFinite()) {
-                bandwidthEstimation.updateRtt(feedbackMinRtt, report.feedbackTime)
-            }
-
-            expectedPacketsSinceLastLossUpdate += report.packetsWithFeedback().size
-            for (packetFeedback in report.packetsWithFeedback()) {
-                if (!packetFeedback.isReceived()) {
-                    lostPacketsSinceLastLossUpdate += 1
-                }
-            }
-            if (report.feedbackTime > nextLossUpdate) {
-                nextLossUpdate = report.feedbackTime + kLossUpdateInterval
-                bandwidthEstimation.updatePacketsLost(
-                    lostPacketsSinceLastLossUpdate.toLong(),
-                    expectedPacketsSinceLastLossUpdate.toLong(),
-                    report.feedbackTime
-                )
-                expectedPacketsSinceLastLossUpdate = 0
-                lostPacketsSinceLastLossUpdate = 0
-            }
-        }
         val alrStartTime = alrDetector.getApplicationLimitedRegionStartTime()
-
         if (previouslyInAlr && alrStartTime == null) {
-            val nowMs = report.feedbackTime.toEpochMilli()
             acknowledgedBitrateEstimator.setAlrEndedTime(report.feedbackTime)
-            probeController.setAlrEndedTimeMs(nowMs)
+            probeController.setAlrEndedTime(report.feedbackTime)
         }
         previouslyInAlr = alrStartTime != null
         acknowledgedBitrateEstimator.incomingPacketFeedbackVector(report.sortedByReceiveTime())
@@ -433,7 +395,7 @@ class GoogCcNetworkController(
         recoveredFromOveruse = result.recoveredFromOveruse
 
         if (recoveredFromOveruse) {
-            probeController.setAlrStartTimeMs(alrStartTime)
+            probeController.setAlrStartTime(alrStartTime)
             val probes = probeController.requestProbe(report.feedbackTime)
             update.probeClusterConfigs.addAll(probes)
         }
@@ -458,7 +420,6 @@ class GoogCcNetworkController(
             networkEstimate.atTime = atTime
             networkEstimate.lossRateRatio = (lastEstimatedFractionLoss ?: 0u).toFloat() / 255.0f
             networkEstimate.roundTripTime = lastEstimatedRoundTripTime
-            networkEstimate.bwePeriod = delayBasedBwe.getExpectedBwePeriod()
 
             this.atTime = atTime
             if (rateControlSettings.useCongestionWindowDropFrameOnly()) {
@@ -468,7 +429,7 @@ class GoogCcNetworkController(
             }
 
             targetRate = lastPushbackTargetRate
-            stableTargetRate = bandwidthEstimation.getEstimatedLinkCapacity()
+            isBandwidthLimited = alrDetector.getApplicationLimitedRegionStartTime() == null
         }
         update.pacerConfig = getPacingRates(atTime)
         update.congestionWindow = currentDataWindow
@@ -494,26 +455,24 @@ class GoogCcNetworkController(
                     lossBasedTargetRate.bps
             }
         }
-        var stableTargetRate = bandwidthEstimation.getEstimatedLinkCapacity()
-        stableTargetRate = min(stableTargetRate, pushbackTargetRate)
+
+        val isBandwidthLimited = alrDetector.getApplicationLimitedRegionStartTime() == null
 
         if (lossBasedTargetRate != lastLossBasedTargetRate ||
             lossBasedState != lastLossBasedState ||
             fractionLoss != lastEstimatedFractionLoss ||
             roundTripTime != lastEstimatedRoundTripTime ||
             pushbackTargetRate != lastPushbackTargetRate ||
-            stableTargetRate != lastStableTargetRate
+            isBandwidthLimited != lastIsBandwidthLimited
         ) {
             lastLossBasedTargetRate = lossBasedTargetRate
             lastPushbackTargetRate = pushbackTargetRate
             lastEstimatedFractionLoss = fractionLoss
             lastEstimatedRoundTripTime = roundTripTime
-            lastStableTargetRate = stableTargetRate
             lastLossBasedState = lossBasedState
+            lastIsBandwidthLimited = isBandwidthLimited
 
-            alrDetector.setEstimatedBitrate(lossBasedTargetRate.bps.toInt())
-
-            val bwePeriod = delayBasedBwe.getExpectedBwePeriod()
+            alrDetector.setEstimatedBitrate(lossBasedTargetRate)
 
             val targetRateMsg = TargetTransferRate()
             targetRateMsg.atTime = atTime
@@ -523,11 +482,10 @@ class GoogCcNetworkController(
             } else {
                 targetRateMsg.targetRate = pushbackTargetRate
             }
-            targetRateMsg.stableTargetRate = stableTargetRate
             targetRateMsg.networkEstimate.atTime = atTime
             targetRateMsg.networkEstimate.roundTripTime = roundTripTime
             targetRateMsg.networkEstimate.lossRateRatio = fractionLoss.toFloat() / 255.0f
-            targetRateMsg.networkEstimate.bwePeriod = bwePeriod
+            targetRateMsg.isBandwidthLimited = isBandwidthLimited
 
             update.targetRate = targetRateMsg
 
@@ -552,19 +510,21 @@ class GoogCcNetworkController(
     private fun getPacingRates(atTime: Instant): PacerConfig {
         // Pacing rate is based on target rate before congestion window pushback,
         // because we don't want to build queues in the pacer when pushback occurs.
-        val pacingRate = max(minTotalAllocatedBitrate, lastLossBasedTargetRate) * pacingFactor
+        val pacingRate = max(minTotalAllocatedBitrate, lastLossBasedTargetRate) *
+            (
+                pacingFactor ?: if (firstTransportFeedbackReceived) {
+                    kDefaultPaceMultiplierWithSendSideBwe
+                } else {
+                    kDefaultPaceMultiplier
+                }
+                )
         var paddingRate = if (lastLossBasedState == LossBasedState.kIncreaseUsingPadding) {
             max(maxPaddingRate, lastLossBasedTargetRate)
         } else {
             maxPaddingRate
         }
         paddingRate = min(paddingRate, lastPushbackTargetRate)
-        val msg = PacerConfig()
-        msg.atTime = atTime
-        msg.timeWindow = 1.secs
-        msg.dataWindow = pacingRate * msg.timeWindow
-        msg.padWindow = paddingRate * msg.timeWindow
-        return msg
+        return PacerConfig.create(atTime, pacingRate, paddingRate, pacingTimeWindow)
     }
 
     /** Jitsi local addition.
@@ -574,7 +534,6 @@ class GoogCcNetworkController(
         val time: Instant,
         val rtt: Duration,
         val target: Bandwidth,
-        val stableTarget: Bandwidth,
         val pacing: Bandwidth?,
         val padding: Bandwidth?,
         val window: DataSize,
@@ -618,7 +577,6 @@ class GoogCcNetworkController(
             put("time", time.toEpochMilli())
             put("rtt", rtt.toDouble())
             put("target", target.bps)
-            put("stable_target", stableTarget.bps)
             put("pacing", pacing?.bps?.toDouble() ?: Double.NaN)
             put("padding", padding?.bps?.toDouble() ?: Double.NaN)
             put("window", window.bytes)
@@ -640,7 +598,6 @@ class GoogCcNetworkController(
             point.apply {
                 addField("rtt", rtt.toDouble())
                 addField("target", target.bps)
-                addField("stable_target", stableTarget.bps)
                 addField("pacing", pacing?.bps ?: Double.NaN)
                 addField("padding", padding?.bps ?: Double.NaN)
                 addField("window", window.bytes)
@@ -671,7 +628,6 @@ class GoogCcNetworkController(
             time = target.atTime,
             rtt = target.networkEstimate.roundTripTime,
             target = target.targetRate,
-            stableTarget = target.stableTargetRate,
             pacing = pacing?.dataRate(),
             padding = pacing?.padRate(),
             window = congestionWindow,
@@ -690,7 +646,6 @@ class GoogCcNetworkController(
         )
     }
 
-    private val packetFeedbackOnly = googCcConfig.feedbackOnly
     private val safeResetOnRouteChange = false
     private val safeResetAcknowledgedRate = false
     private val useMinAllocatableAsLowerBound = true
@@ -705,7 +660,7 @@ class GoogCcNetworkController(
     }
 
     private val bandwidthEstimation = SendSideBandwidthEstimation(logger, diagnosticContext)
-    private val alrDetector = AlrDetector()
+    private val alrDetector = AlrDetector(config.clock)
     private var probeBitrateEstimator = ProbeBitrateEstimator(logger, diagnosticContext)
     private var delayBasedBwe = DelayBasedBwe(logger, diagnosticContext).also {
         it.setMinBitrate(kCongestionControllerMinBitrate)
@@ -720,40 +675,40 @@ class GoogCcNetworkController(
     private var startingRate: Bandwidth? = null
 
     private var firstPacketSent = false
+    private var firstTransportFeedbackReceived = false
 
     /* Skipping NetworkStateEstimate */
-
-    private var nextLossUpdate = Instant.MIN
-    private var lostPacketsSinceLastLossUpdate = 0
-    private var expectedPacketsSinceLastLossUpdate = 0
 
     private val feedbackMaxRtts = ArrayDeque<Long>()
 
     private var lastLossBasedTargetRate = config.constraints.startingRate!!
     private var lastPushbackTargetRate = lastLossBasedTargetRate
-    private var lastStableTargetRate = lastLossBasedTargetRate
     private var lastLossBasedState: LossBasedState = LossBasedState.kDelayBasedEstimate
 
     private var lastEstimatedFractionLoss: UByte? = 0u
     private var lastEstimatedRoundTripTime = MAX_DURATION
 
-    private var pacingFactor = config.streamBasedConfig.pacingFactor ?: kDefaultPaceMultiplier
+    private var pacingFactor: Double? = config.streamBasedConfig.pacingFactor
+    private val pacingTimeWindow = config.defaultPacingTimeWindow
     private var minTotalAllocatedBitrate = config.streamBasedConfig.minTotalAllocatedBitrate ?: Bandwidth.ZERO
     private var maxPaddingRate = config.streamBasedConfig.maxPaddingRate ?: Bandwidth.ZERO
 
     private var previouslyInAlr = false
+    private var lastIsBandwidthLimited = true
     private var currentDataWindow: DataSize? = null
 
     companion object {
-        // From RTCPSender video report interval.
-        private val kLossUpdateInterval = 1000.ms
-
         // Pacing-rate relative to our target send rate.
         // Multiplicative factor that is applied to the target bitrate to calculate
         // the number of bytes that can be transmitted per interval.
         // Increasing this factor will result in lower delays in cases of bitrate
         // overshoots from the encoder.
         private const val kDefaultPaceMultiplier = 2.5
+
+        // If send side bandwidth estimation is used, this pacing multiplier is used per
+        // default.
+        // This is a float in WebRTC, so it is not exactly 1.1.
+        private val kDefaultPaceMultiplierWithSendSideBwe = 1.1f.toDouble()
 
         // If the probe result is far below the current throughput estimate
         // it's unlikely that the probe is accurate, so we don't want to drop too far.

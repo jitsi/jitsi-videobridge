@@ -34,7 +34,7 @@ import java.time.Instant
 
 /** Probe controller,
  * based on WebRTC modules/congestion_controller/goog_cc/probe_controller.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */
@@ -107,6 +107,7 @@ class ProbeControllerConfig(
 
     // Configures the probes emitted by changed to the allocated bitrate.
     val probeOnMaxAllocatedBitrateChange: Boolean = true,
+    val probeOnMaxAllocatedBitrateChangeWithoutAlr: Boolean = true,
     val firstAllocationProbeScale: Double? = 1.0,
     val secondAllocationProbeScale: Double? = 2.0,
     val allocationProbeLimitByCurrentScale: Double = 2.0,
@@ -225,11 +226,11 @@ class ProbeController(
         atTime: Instant
     ): MutableList<ProbeClusterConfig> {
         val inAlr = alrStartTime != null
-        val allowAllocationProbe = inAlr
+        val allowAllocationProbe = inAlr || config.probeOnMaxAllocatedBitrateChangeWithoutAlr
 
         if (config.probeOnMaxAllocatedBitrateChange &&
             state == State.kProbingComplete &&
-            maxTotalAllocatedBitrate != this.maxTotalAllocatedBitrate &&
+            maxTotalAllocatedBitrate > this.maxTotalAllocatedBitrate &&
             estimatedBitrate < maxBitrate &&
             estimatedBitrate < maxTotalAllocatedBitrate &&
             allowAllocationProbe
@@ -376,16 +377,12 @@ class ProbeController(
         repeatedInitialProbingEnabled = enable
     }
 
-    fun setAlrStartTimeMs(alrStartTimeMs: Long?) {
-        if (alrStartTimeMs != null) {
-            alrStartTime = Instant.ofEpochMilli(alrStartTimeMs)
-        } else {
-            alrStartTime = null
-        }
+    fun setAlrStartTime(alrStartTime: Instant?) {
+        this.alrStartTime = alrStartTime
     }
 
-    fun setAlrEndedTimeMs(alrEndTimeMs: Long) {
-        alrEndTime = Instant.ofEpochMilli(alrEndTimeMs)
+    fun setAlrEndedTime(alrEndTime: Instant) {
+        this.alrEndTime = alrEndTime
     }
 
     fun requestProbe(atTime: Instant): MutableList<ProbeClusterConfig> {

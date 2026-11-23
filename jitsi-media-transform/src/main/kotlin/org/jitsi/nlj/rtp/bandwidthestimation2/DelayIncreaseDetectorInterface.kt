@@ -20,7 +20,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
  * Interface to detect delay increase.
  * *
  * Based on WebRTC modules/congestion_controller/goog_cc/delay_increase_detector_interface.h in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 interface DelayIncreaseDetectorInterface {
     fun update(

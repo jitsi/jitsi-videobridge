@@ -25,7 +25,7 @@ import java.time.Instant
  * Interface to estimate acknowledged bitrate.
  * *
  * Based on WebRTC modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator_interface.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 interface AcknowledgedBitrateEstimatorInterface {
     fun incomingPacketFeedbackVector(packetFeedbackVector: List<PacketResult>)

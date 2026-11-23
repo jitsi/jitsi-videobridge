@@ -20,14 +20,13 @@ import java.time.Duration
 
 /** Google CC Network Controller Factory,
  * based on WebRTC api/transport/goog_cc_factory.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  *
  * Field trial settings have been generally removed, set to their default settings, and features not used in
  * Chrome have been removed.
  */
 
 class GoogCcFactoryConfig(
-    val feedbackOnly: Boolean = false,
     /* Not in this object in WebRTC: This is a field trial parameter there */
     val rateControlSettings: CongestionWindowConfig = CongestionWindowConfig()
 )
@@ -36,7 +35,7 @@ class GoogCcNetworkControllerFactory(
     private val factoryConfig: GoogCcFactoryConfig = GoogCcFactoryConfig()
 ) : NetworkControllerFactoryInterface {
     override fun create(config: NetworkControllerConfig): NetworkControllerInterface {
-        val googCcConfig = GoogCcConfig(feedbackOnly = factoryConfig.feedbackOnly)
+        val googCcConfig = GoogCcConfig()
         return GoogCcNetworkController(config, googCcConfig)
     }
 

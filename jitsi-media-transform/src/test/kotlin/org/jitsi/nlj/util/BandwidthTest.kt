@@ -68,6 +68,21 @@ class BandwidthTest : ShouldSpec() {
                 b.bps shouldBe 500_000
             }
         }
+        context("converting to whole kilobits per second") {
+            should("round to the nearest, with a half rounding up") {
+                0.bps.toRoundedKbps() shouldBe 0
+                499.bps.toRoundedKbps() shouldBe 0
+                500.bps.toRoundedKbps() shouldBe 1
+                1499.bps.toRoundedKbps() shouldBe 1
+                1500.bps.toRoundedKbps() shouldBe 2
+                240_000.bps.toRoundedKbps() shouldBe 240
+                (-499).bps.toRoundedKbps() shouldBe 0
+                (-500).bps.toRoundedKbps() shouldBe 0
+                (-501).bps.toRoundedKbps() shouldBe -1
+                (-1500).bps.toRoundedKbps() shouldBe -1
+                (-1501).bps.toRoundedKbps() shouldBe -2
+            }
+        }
         context("printing bandwidths") {
             should("print as the most appropriate unit") {
                 2_500_000.bps.toString() shouldBe "2.5 mbps"

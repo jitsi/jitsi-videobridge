@@ -63,6 +63,7 @@ class GoogCcTransportCcEngine(
         NetworkControllerConfig(
             logger,
             diagnosticContext,
+            clock = clock,
             constraints = TargetRateConstraints(
                 atTime = clock.instant(),
                 startingRate = BandwidthEstimatorConfig.initBw,
@@ -100,8 +101,8 @@ class GoogCcTransportCcEngine(
                     feedback.packetFeedbacks.forEach { fb ->
                         lossListeners.forEach { l ->
                             if (fb.isReceived()) {
-                                l.packetReceived(fb.previouslyReportedLost)
-                            } else if (!fb.previouslyReportedLost) {
+                                l.packetReceived(fb.reportedRecoveredForTheFirstTime)
+                            } else if (fb.reportedLostForTheFirstTime) {
                                 l.packetLost(1)
                             }
                         }

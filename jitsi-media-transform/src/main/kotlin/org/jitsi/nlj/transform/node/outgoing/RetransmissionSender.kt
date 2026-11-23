@@ -87,6 +87,7 @@ class RetransmissionSender(
                 "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}"
         }
         RtxPacket.addOriginalSequenceNumber(rtpPacket)
+        packetInfo.originalSsrc = rtpPacket.ssrc
         rtpPacket.ssrc = rtxSsrc
         rtpPacket.payloadType = rtxPt
         rtpPacket.sequenceNumber = rtxSeqNum

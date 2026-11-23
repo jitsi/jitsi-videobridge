@@ -37,7 +37,7 @@ import kotlin.collections.ArrayDeque
  * Robust throughput estimator.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/robust_throughput_estimator.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138)
+ * WebRTC tag branch-heads/8078 (Chromium 156)
  */
 class RobustThroughputEstimator(val settings: RobustThroughputEstimatorSettings) :
     AcknowledgedBitrateEstimatorInterface {

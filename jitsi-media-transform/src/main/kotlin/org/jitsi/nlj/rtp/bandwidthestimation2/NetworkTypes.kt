@@ -20,20 +20,24 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
+import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.per
+import org.jitsi.nlj.util.times
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 import org.jitsi.utils.toDoubleMillis
+import org.jitsi.utils.toMicros
 import java.time.Duration
 import java.time.Instant
 
 /* Common network types used for bandwidth estimation,
  * based on WebRTC api/transport/network_types.{h,cc} in
- * WebRTC tag branch-heads/7204 (Chromium 138).
+ * WebRTC tag branch-heads/8078 (Chromium 156).
  */
 
 /* Configuration */
@@ -62,7 +66,7 @@ class StreamsConfig(
     // If `enable_repeated_initial_probing` is set to true, Probes are sent
     // periodically every 1s during the first 5s after the network becomes
     // available. The probes ignores max_total_allocated_bitrate.
-    val enableRepeatedInitialProbing: Boolean? = null,
+    val enableRepeatedInitialProbing: Boolean = false,
 
     val pacingFactor: Double? = null,
 
@@ -92,7 +96,10 @@ class NetworkRouteChange(
     val atTime: Instant = Instant.MAX,
     // The TargetRateConstraints are set here so they can be changed synchronously
     // when network route changes.
-    val constraints: TargetRateConstraints = TargetRateConstraints()
+    val constraints: TargetRateConstraints = TargetRateConstraints(),
+    // If true, the change is significant enough to warrant a reset of the
+    // bandwidth estimator.
+    val restartBwe: Boolean = true
 )
 
 /**
@@ -161,11 +168,32 @@ class TransportLossReport(
 class PacketResult(
     var sentPacket: SentPacket = SentPacket(),
     var receiveTime: Instant = NEVER,
+
+    // Delta from when feedback was sent and the packet was received. Can be used
+    // for calculating round trip time per packet.
+    var arrivalTimeOffset: Duration? = null,
+
+    // Ecn marking from the feedback report how this packet was received.
     var ecn: EcnMarking = EcnMarking.kNotEct,
+
+    // Indicates if packet was sent with ECN marking 'ect1'.
+    var sentWithEct1: Boolean = false,
+
+    // Indicates if packet was reported lost for the first time.
+    var reportedLostForTheFirstTime: Boolean = false,
+
+    // Indicates if packet was recovered, i.e., previously feedback report marked
+    // this packet as lost, but current report marks it as received.
+    var reportedRecoveredForTheFirstTime: Boolean = false,
+
+    // Indicates if the packet receive time is ambiguous (e.g. because the packet
+    // was retransmitted without RTX and could match multiple transmissions),
+    // meaning receive_time is a best-effort estimate and should not be used for
+    // delay or RTT calculations.
+    var ambiguousReceiveTime: Boolean = false,
+
     // `rtp_packet_info` is only set if the feedback is related to a RTP packet.
-    var rtpPacketInfo: RtpPacketInfo? = null,
-    // Jitsi extension: Whether a packet was previously reported lost
-    var previouslyReportedLost: Boolean = false
+    var rtpPacketInfo: RtpPacketInfo? = null
 ) {
     data class RtpPacketInfo(
         val ssrc: Long = 0,
@@ -175,7 +203,17 @@ class PacketResult(
 
     fun isReceived() = receiveTime.isFinite()
 
-    fun copy(): PacketResult = PacketResult(sentPacket.copy(), receiveTime, ecn, rtpPacketInfo, previouslyReportedLost)
+    fun copy(): PacketResult = PacketResult(
+        sentPacket.copy(),
+        receiveTime,
+        arrivalTimeOffset,
+        ecn,
+        sentWithEct1,
+        reportedLostForTheFirstTime,
+        reportedRecoveredForTheFirstTime,
+        ambiguousReceiveTime,
+        rtpPacketInfo
+    )
 }
 
 /**
@@ -185,6 +223,8 @@ class TransportPacketsFeedback {
     var feedbackTime: Instant = NEVER
     var dataInFlight: DataSize = DataSize.ZERO
     var packetFeedbacks: MutableList<PacketResult> = ArrayList()
+
+    @Deprecated("Use hasPacketWithBleachedEct1() instead")
     var transportSupportsEcn: Boolean = false
 
     /** Arrival times for messages without send times information */
@@ -197,6 +237,29 @@ class TransportPacketsFeedback {
     fun packetsWithFeedback(): List<PacketResult> = packetFeedbacks
 
     fun sortedByReceiveTime(): List<PacketResult> = receivedWithSendInfo().sortedBy { it.receiveTime }
+
+    // True if at least one packet is CE marked.
+    fun hasPacketWithEcnCe(): Boolean = packetFeedbacks.any { it.ecn == EcnMarking.kCe }
+
+    // True if at least one packet that was sent with an ECT(1) marking was
+    // reported received without it, i.e. the path bleached the marking to
+    // Not-ECT or replaced it with ECT(0).
+    fun hasPacketWithBleachedEct1(): Boolean = packetFeedbacks.any { fb ->
+        // Only received packets say anything about what the path did to the
+        // marking. Packets reported lost carry a defaulted Not-ECT marking and
+        // would otherwise be indistinguishable from bleached ones. ECT(0) counts
+        // as bleached since the path took the packet out of L4S.
+        fb.sentWithEct1 && fb.isReceived() && fb.ecn != EcnMarking.kEct1 && fb.ecn != EcnMarking.kCe
+    }
+
+    // True if at least one packet that was sent with an ECT(1) marking was
+    // reported received still marked ECT(1) or CE.
+    fun hasPacketWithEcn(): Boolean = packetFeedbacks.any { fb ->
+        // Only packets that were sent as ECT(1) say anything about what the path
+        // did to the marking. Some networks set the ECN bits on packets that were
+        // sent Not-ECT.
+        fb.sentWithEct1 && fb.isReceived() && (fb.ecn == EcnMarking.kEct1 || fb.ecn == EcnMarking.kCe)
+    }
 }
 
 // Network estimation
@@ -206,31 +269,61 @@ class NetworkEstimate {
     // Deprecated, use TargetTransferRate::target_rate instead.
     var bandwidth = Bandwidth.INFINITY
     var roundTripTime = MAX_DURATION
-    var bwePeriod = MAX_DURATION
 
     var lossRateRatio = 0.0f
 
     /* Jitsi local */
     override fun toString(): String = "atTime $atTime: " +
-        "bandwidth $bandwidth, rtt $roundTripTime, bwePeriod $bwePeriod, lossRateRatio $lossRateRatio"
+        "bandwidth $bandwidth, rtt $roundTripTime, lossRateRatio $lossRateRatio"
 }
 
 class PacerConfig {
     var atTime = Instant.MAX
 
     // Pacer should send at most data_window data over time_window duration.
+    // If `time_window` is zero, Pacer should pace every packet as
+    // accurate as possible and data_rate() is calculated as
+    // data_window/1 second;
     var dataWindow = DataSize.INFINITY
     var timeWindow = MAX_DURATION
+
+    fun rateWindow(): Duration = if (timeWindow.isZero) 1.secs else timeWindow
 
     // Pacer should send at least pad_window data over time_window duration.
     var padWindow = DataSize.ZERO
 
-    fun dataRate() = dataWindow.per(timeWindow)
-    fun padRate() = padWindow.per(timeWindow)
+    fun dataRate() = dataWindow.per(rateWindow())
+    fun padRate() = padWindow.per(rateWindow())
 
     /* Jitsi Local */
     override fun toString(): String = "Data rate ${dataRate()} ($dataWindow per $timeWindow), " +
         "pad rate ${padRate()} ($padWindow per $timeWindow)"
+
+    companion object {
+        val kDefaultTimeInterval: Duration = 40.ms
+
+        fun create(
+            atTime: Instant,
+            sendRate: Bandwidth,
+            padRate: Bandwidth,
+            timeWindow: Duration = kDefaultTimeInterval
+        ): PacerConfig {
+            val pacerConfig = PacerConfig()
+            pacerConfig.atTime = atTime
+            pacerConfig.timeWindow = timeWindow
+            // Note that precision is lost here, since DataSize store number of bytes.
+            pacerConfig.dataWindow = wholeBytesSentAt(sendRate, pacerConfig.rateWindow())
+            pacerConfig.padWindow = wholeBytesSentAt(padRate, pacerConfig.rateWindow())
+            return pacerConfig
+        }
+
+        /**
+         * `DataRate * TimeDelta` in WebRTC, where a DataSize is a whole number of bytes: the result is rounded
+         * to the nearest byte. The windows are calculated this way so that they are the same as in WebRTC.
+         */
+        private fun wholeBytesSentAt(rate: Bandwidth, duration: Duration): DataSize =
+            ((rate.bps * duration.toMicros() + 4_000_000) / 8_000_000).bytes
+    }
 }
 
 data class ProbeClusterConfig(
@@ -256,12 +349,15 @@ class TargetTransferRate {
     // The estimate on which the target rate is based on.
     var networkEstimate = NetworkEstimate()
     var targetRate = Bandwidth.ZERO
-    var stableTargetRate = Bandwidth.ZERO
     var cwndReduceRatio = 0.0
+
+    // True if WebRTC is actively sending near estimated link capacity (not in
+    // ALR).
+    var isBandwidthLimited = true
 
     /* Jitsi local */
     override fun toString(): String = "atTime $atTime: networkEstimate {$networkEstimate}, " +
-        "targetRate $targetRate, stableTargetRate $stableTargetRate, cwndReduceRatio $cwndReduceRatio"
+        "targetRate $targetRate, cwndReduceRatio $cwndReduceRatio, isBandwidthLimited $isBandwidthLimited"
 }
 
 // Contains updates of network controller comand state. Using nullables to
@@ -285,10 +381,8 @@ open class NetworkControlUpdate(
     fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
         targetRate?.let {
             point.addField("target_rate_bps", it.targetRate.bps)
-            point.addField("stable_target_rate_bps", it.stableTargetRate.bps)
             point.addField("cwnd_reduce_ratio", it.cwndReduceRatio)
             point.addField("rtt_ms", it.networkEstimate.roundTripTime.toDoubleMillis())
-            point.addField("bwe_period_ms", it.networkEstimate.bwePeriod.toDoubleMillis())
             point.addField("loss_rate_ratio", it.networkEstimate.lossRateRatio)
         }
         congestionWindow?.let {
