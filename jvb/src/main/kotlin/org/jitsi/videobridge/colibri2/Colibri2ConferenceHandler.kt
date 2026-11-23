@@ -186,9 +186,12 @@ class Colibri2ConferenceHandler(
         }
 
         val endpoint = if (c2endpoint.create) {
+            // bad_request rather than conflict for the two ID checks: jicofo handles a conflict as the bridge being
+            // out of sync and moves the whole conference, while a bad_request only fails this participant.
+            if (!Conference.isValidEndpointId(c2endpoint.id)) {
+                throw IqProcessingException(Condition.bad_request, "Invalid endpoint ID")
+            }
             if (c2endpoint.id == Conference.TRANSCRIBER_ID) {
-                // bad_request rather than conflict: jicofo handles a conflict as the bridge being out of sync and
-                // moves the whole conference, while a bad_request only fails this participant.
                 throw IqProcessingException(Condition.bad_request, "Endpoint ID ${c2endpoint.id} is reserved")
             }
             if (conference.getLocalEndpoint(c2endpoint.id) != null) {
@@ -528,6 +531,13 @@ class Colibri2ConferenceHandler(
                 relay.removeRemoteEndpoint(endpoint.id)
             } else {
                 if (endpoint.create) {
+                    if (!Conference.isValidEndpointId(endpoint.id)) {
+                        // Jicofo signals a new endpoint to the relays before the bridge of the endpoint has answered,
+                        // so an ID that bridge refuses can still arrive here. Skip only this endpoint: the request
+                        // has the other endpoints of the relay too.
+                        logger.warn("Ignoring a relayed endpoint with an invalid ID")
+                        return@forEach
+                    }
                     val synthetic = endpoint.hasCapability(Capability.CAP_SYNTHETIC_ENDPOINT)
                     val sources = endpoint.parseSourceDescs(synthetic)
                     relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second, synthetic)

@@ -319,6 +319,23 @@ public class Conference
     public static final String TRANSCRIBER_ID = "transcriber";
 
     /**
+     * The IDs accepted for an endpoint: one or more ASCII letters, digits, '_' or '-'. This admits the IDs the
+     * signaling produces (the MUC resource of a participant, which for a SIP participant can be the SIP user with the
+     * other characters replaced by '-', and "agent-" followed by letters, digits, '_' or '-' for a voice agent) and
+     * excludes everything that needs escaping in JSON or in a log line.
+     */
+    private static final Pattern VALID_ENDPOINT_ID = Pattern.compile("[a-zA-Z0-9_-]+");
+
+    /**
+     * Whether {@code id} is accepted as the ID of an endpoint (see {@link #VALID_ENDPOINT_ID}). The reserved
+     * {@link #TRANSCRIBER_ID} matches the pattern and is checked separately.
+     */
+    public static boolean isValidEndpointId(String id)
+    {
+        return id != null && VALID_ENDPOINT_ID.matcher(id).matches();
+    }
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID.
@@ -927,6 +944,10 @@ public class Conference
         if (isExpired())
         {
             throw new ConferenceExpiredException(getID());
+        }
+        if (!isValidEndpointId(id))
+        {
+            throw new IllegalArgumentException("Invalid endpoint ID");
         }
         if (TRANSCRIBER_ID.equals(id))
         {
