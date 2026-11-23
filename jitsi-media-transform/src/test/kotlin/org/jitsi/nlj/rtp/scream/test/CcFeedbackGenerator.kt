@@ -19,11 +19,11 @@ import io.kotest.assertions.fail
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacketResult
 import org.jitsi.nlj.rtp.bandwidthestimation2.SentPacket
 import org.jitsi.nlj.rtp.bandwidthestimation2.TransportPacketsFeedback
-import org.jitsi.nlj.rtp.scream.dataSentAt
-import org.jitsi.nlj.rtp.scream.microsToDuration
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.dataSentAt
+import org.jitsi.nlj.util.microsToDuration
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.isInfinite

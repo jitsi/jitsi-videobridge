@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.rtp.scream
+package org.jitsi.nlj.util
 
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
@@ -34,9 +34,9 @@ import kotlin.math.truncate
  *
  * A TimeDelta is a whole number of microseconds, a DataSize a whole number of bytes, and a DataRate a whole number
  * of bits per second. Multiplying or dividing one by a floating point number rounds to the nearest whole number,
- * with a half rounding away from zero. The operators in jitsi-utils and in org.jitsi.nlj.util round differently,
- * and have a different resolution. The SCReAM port uses the functions here, so that it calculates the same values
- * as WebRTC does from the same input.
+ * with a half rounding away from zero. The operators on Duration in jitsi-utils, and on DataSize and Bandwidth in
+ * this package, round differently and have a different resolution. The ports of SCReAM and of the pacer use the
+ * functions here, so that they calculate the same values as WebRTC does from the same input.
  */
 
 /** Rounds to the nearest integer, with a half rounding away from zero, as std::llround does. */

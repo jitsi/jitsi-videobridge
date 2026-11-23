@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.rtp.scream
+package org.jitsi.nlj.util
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe

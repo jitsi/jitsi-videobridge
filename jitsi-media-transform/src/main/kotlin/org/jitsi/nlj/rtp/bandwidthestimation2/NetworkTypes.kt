@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.dataSentAt
 import org.jitsi.nlj.util.per
 import org.jitsi.nlj.util.times
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
@@ -325,17 +326,10 @@ class PacerConfig {
             pacerConfig.atTime = atTime
             pacerConfig.timeWindow = timeWindow
             // Note that precision is lost here, since DataSize store number of bytes.
-            pacerConfig.dataWindow = wholeBytesSentAt(sendRate, pacerConfig.rateWindow())
-            pacerConfig.padWindow = wholeBytesSentAt(padRate, pacerConfig.rateWindow())
+            pacerConfig.dataWindow = dataSentAt(sendRate, pacerConfig.rateWindow())
+            pacerConfig.padWindow = dataSentAt(padRate, pacerConfig.rateWindow())
             return pacerConfig
         }
-
-        /**
-         * `DataRate * TimeDelta` in WebRTC, where a DataSize is a whole number of bytes: the result is rounded
-         * to the nearest byte. The windows are calculated this way so that they are the same as in WebRTC.
-         */
-        private fun wholeBytesSentAt(rate: Bandwidth, duration: Duration): DataSize =
-            ((rate.bps * duration.toMicros() + 4_000_000) / 8_000_000).bytes
     }
 }
 

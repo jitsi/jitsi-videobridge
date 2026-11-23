@@ -19,8 +19,14 @@ import org.jitsi.nlj.rtp.bandwidthestimation2.TransportPacketsFeedback
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.dataSentAt
 import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.min
+import org.jitsi.nlj.util.rateOf
+import org.jitsi.nlj.util.ratioTo
+import org.jitsi.nlj.util.scaledBy
+import org.jitsi.nlj.util.timeBetween
+import org.jitsi.nlj.util.wholeBytes
 import org.jitsi.utils.MIN_DURATION
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.isFinite

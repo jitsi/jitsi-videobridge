@@ -81,7 +81,9 @@ class Transceiver(
     /**
      * Resolves the sdes:mid to stamp on an outgoing packet given its (rewritten) SSRC, or null to not stamp a mid.
      */
-    getMidBySsrc: (Long) -> String? = { null }
+    getMidBySsrc: (Long) -> String? = { null },
+    /** Whether the sender can pace the packets it sends, see [RtpSenderImpl]. */
+    allowPacing: Boolean = false
 ) : Stoppable {
     private val logger = createChildLogger(parentLogger)
     val packetIOActivity = PacketIOActivity()
@@ -132,7 +134,8 @@ class Transceiver(
         streamInformationStore,
         logger,
         diagnosticContext,
-        getMidBySsrc
+        getMidBySsrc,
+        allowPacing
     )
     private val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(

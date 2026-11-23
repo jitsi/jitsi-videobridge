@@ -44,8 +44,10 @@ import org.jitsi.nlj.rtp.scream.test.CcFeedbackGenerator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.dataSentAt
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.max
+import org.jitsi.nlj.util.scaledBy
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms

@@ -22,6 +22,7 @@ import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.dataSentAt
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.per
 import org.jitsi.nlj.util.times
@@ -288,7 +289,7 @@ class BitrateProberTest : FreeSpec() {
                 )
             )
             // Probe size should ensure a minimum of 1 ms interval.
-            prober.recommendedMinProbeSize() shouldBeGreaterThan kHighBitrate * 1.ms
+            prober.recommendedMinProbeSize() shouldBeGreaterThan dataSentAt(kHighBitrate, 1.ms)
         }
 
         "ProbeSizeCanBeSetInProbeClusterConfig" {
@@ -308,7 +309,7 @@ class BitrateProberTest : FreeSpec() {
                     id = 0
                 )
             )
-            prober.recommendedMinProbeSize() shouldBe kHighBitrate * 20.ms
+            prober.recommendedMinProbeSize() shouldBe dataSentAt(kHighBitrate, 20.ms)
 
             prober.onIncomingPacket(1000.bytes)
             // Next time to send probe should be "min_probe_delta" if the recommended
@@ -351,7 +352,7 @@ class BitrateProberTest : FreeSpec() {
             val prober = BitrateProber(logger, config)
             val kBitrate = 10000.kbps // 10 Mbps.
             val kPacketSize = 1000.bytes
-            val kExpectedDataSent = kBitrate * 15.ms
+            val kExpectedDataSent = dataSentAt(kBitrate, 15.ms)
 
             val now = Instant.EPOCH
             prober.createProbeCluster(
@@ -380,7 +381,7 @@ class BitrateProberTest : FreeSpec() {
             val prober = BitrateProber(logger, config)
             val kBitrate = 1000000.kbps // 1 Gbps.
             val kPacketSize = 1000.bytes
-            val kExpectedDataSent = kBitrate * 15.ms
+            val kExpectedDataSent = dataSentAt(kBitrate, 15.ms)
 
             val now = Instant.EPOCH
             prober.createProbeCluster(
@@ -496,7 +497,7 @@ class BitrateProberTest : FreeSpec() {
             prober.isProbing() shouldBe true
             prober.probeSent(
                 Instant.EPOCH + 1.ms,
-                clusterConfig.targetDataRate * clusterConfig.targetDuration
+                dataSentAt(clusterConfig.targetDataRate, clusterConfig.targetDuration)
             )
             prober.isProbing() shouldBe false
 

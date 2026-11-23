@@ -40,6 +40,11 @@ import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.min
+import org.jitsi.nlj.util.plusFinite
+import org.jitsi.nlj.util.ratioTo
+import org.jitsi.nlj.util.scaledBy
+import org.jitsi.nlj.util.timeBetween
+import org.jitsi.nlj.util.timeToSend
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging.DiagnosticContext

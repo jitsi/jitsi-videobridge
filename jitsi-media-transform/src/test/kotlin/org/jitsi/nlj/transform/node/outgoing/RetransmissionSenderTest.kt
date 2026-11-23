@@ -97,6 +97,38 @@ class RetransmissionSenderTest : ShouldSpec() {
                     // The first RTX sequence number is 1.
                     sequenceNumbers shouldBe List(0x10000 + 10) { (it + 1) and 0xFFFF }
                 }
+                should("number the RTX packets in the order they are sent in when sequence numbers are deferred") {
+                    val deferringSender =
+                        RetransmissionSender(streamInformationStore, StdoutLogger(), deferSequenceNumbers = true)
+                    val output = mutableListOf<PacketInfo>()
+                    deferringSender.onOutput { output.add(it) }
+
+                    fun packet(sequenceNumber: Int) = PacketInfo(
+                        RtpPacket(ByteArray(40), 0, 20).apply {
+                            version = 2
+                            payloadType = originalPayloadType
+                            this.sequenceNumber = sequenceNumber
+                            ssrc = originalSsrc
+                        }
+                    )
+                    deferringSender.processPacket(packet(10))
+                    deferringSender.processPacket(packet(11))
+
+                    // The packets are RTX packets, without an RTX sequence number yet.
+                    output.map { it.packetAs<RtpPacket>().ssrc } shouldBe listOf(rtxSsrc, rtxSsrc)
+                    output.map { it.packetAs<RtpPacket>().sequenceNumber } shouldBe listOf(10, 11)
+
+                    // A pacer sends the second packet first.
+                    deferringSender.assignRtxSequenceNumber(output[1])
+                    deferringSender.assignRtxSequenceNumber(output[0])
+                    output[1].packetAs<RtpPacket>().sequenceNumber shouldBe 1
+                    output[0].packetAs<RtpPacket>().sequenceNumber shouldBe 2
+
+                    // A packet that is not an RTX packet keeps its sequence number.
+                    val mediaPacket = packet(12)
+                    deferringSender.assignRtxSequenceNumber(mediaPacket)
+                    mediaPacket.packetAs<RtpPacket>().sequenceNumber shouldBe 12
+                }
             }
             context("which does not have an associated rtx stream") {
                 val noRtxPacket = dummyPacket.clone().apply {

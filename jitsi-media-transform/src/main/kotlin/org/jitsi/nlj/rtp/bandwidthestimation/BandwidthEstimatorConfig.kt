@@ -31,6 +31,11 @@ class BandwidthEstimatorConfig {
                 .convertFrom<String> { Bandwidth.fromString(it) }
         }
 
+        /** Whether the packets sent to an endpoint are paced, with the GoogleCc2 engine. */
+        val pacerEnabled: Boolean by config {
+            "jmt.bwe.estimator.GoogleCc2.pacer.enabled".from(JitsiConfig.newConfig)
+        }
+
         /** When SCReAM is used in place of Google CC, with the GoogleCc2 engine. */
         val screamMode: ScreamMode by config {
             "jmt.bwe.estimator.GoogleCc2.scream".from(JitsiConfig.newConfig)

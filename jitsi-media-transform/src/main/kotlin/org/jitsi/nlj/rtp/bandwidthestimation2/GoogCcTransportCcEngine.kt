@@ -22,9 +22,12 @@ import org.jitsi.metaconfig.config
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo.Companion.kNotAProbe
+import org.jitsi.nlj.rtp.pacing.PacerControl
+import org.jitsi.nlj.rtp.pacing.PacingController
 import org.jitsi.nlj.rtp.scream.ScreamNetworkController
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
@@ -163,12 +166,126 @@ class GoogCcTransportCcEngine(
             processUpdate(update)
         }
 
+        // WebRTC does not stay congested across a route change: feedback for packets sent on the old route may
+        // never arrive.
+        if (isCongested) {
+            isCongested = false
+            pacer?.setCongested(false)
+        }
+
         // The new path may preserve the ECT(1) marking even if the old one did not.
         ect1Policy.onNetworkRouteChanged()
     }
 
     private val bitrateProber = BitrateProber(logger)
     private var probeTask: ScheduledFuture<*>? = null
+
+    /**
+     * The pacer of the sender, or null if packets are not paced. With a pacer, the pacing rate, the congestion
+     * window and the probe clusters of the network controller go to the pacer, which also sends the probes. Without
+     * one the engine sends the probes with its own prober, and ignores the pacing rate and the congestion window.
+     *
+     * The engine calls the pacer with its lock held. See [PacerControl].
+     */
+    private var pacer: PacerControl? = null
+
+    /** Sets the pacer of the sender. It has to be set before [start]. */
+    @Synchronized
+    fun setPacer(pacer: PacerControl?) {
+        this.pacer = pacer
+    }
+
+    /** The congestion window of the network controller. It is used with a pacer only. */
+    private var congestionWindowSize = DataSize.INFINITY
+
+    /** Whether the data in flight has reached the congestion window. */
+    private var isCongested = false
+
+    /** The reduce ratio that the network controller reported with its last target rate. */
+    private var lastCwndReduceRatio = 0.0
+
+    /** Whether the rate reported to the listeners is zero because the queue of the pacer is too long. */
+    private var pacerQueueTooLong = false
+
+    /**
+     * Reports the rate that the listeners can send at. Without a pacer this is the target rate of the network
+     * controller. With a pacer the engine makes two adjustments that WebRTC makes outside the controller:
+     *
+     * The target rate is reduced by the controller's reduce ratio, as in VideoStreamEncoder::UpdateTargetBitrate.
+     * A controller reports that ratio, and leaves its target rate unchanged, when too much data is in flight or
+     * waiting in the pacer. WebRTC's encoder drops frames in answer. Here the listener allocates less.
+     *
+     * The rate is zero while the packets waiting in the pacer would take longer to send than
+     * [PacingController.kMaxExpectedQueueLength], as in CongestionControlHandler::GetUpdate.
+     *
+     * Throws the first exception that a listener throws, after all listeners have been called.
+     */
+    private fun reportTargetRate() {
+        val targetRate = lastTargetRate ?: return
+        val rate = when {
+            pacer == null -> targetRate
+            pacerQueueTooLong -> Bandwidth.ZERO
+            else -> reduceTargetRate(targetRate, lastCwndReduceRatio)
+        }
+        var listenerFailure: Throwable? = null
+        listeners.forEach { listener ->
+            try {
+                listener.bandwidthEstimationChanged(rate)
+            } catch (t: Throwable) {
+                val first = listenerFailure
+                if (first == null) {
+                    listenerFailure = t
+                } else {
+                    first.addSuppressed(t)
+                }
+            }
+        }
+        listenerFailure?.let { throw it }
+    }
+
+    /** VideoStreamEncoder::UpdateTargetBitrate in WebRTC, with the minimum rate of the estimator as the minimum. */
+    private fun reduceTargetRate(targetRate: Bandwidth, cwndReduceRatio: Double): Bandwidth {
+        val minRate = BandwidthEstimatorConfig.minBw
+        if (cwndReduceRatio > 0.01 && targetRate > Bandwidth.ZERO && targetRate > minRate) {
+            val reduceBitrateBps = minOf((targetRate.bps * cwndReduceRatio).toLong(), targetRate.bps - minRate.bps)
+            if (reduceBitrateBps > 0) {
+                // At maximum the congestion window can drop 1/2 frames.
+                val frameDropInterval = maxOf(2L, targetRate.bps / reduceBitrateBps)
+                return (targetRate.bps - targetRate.bps / frameDropInterval).bps
+            }
+        }
+        return targetRate
+    }
+
+    /** Stops the listeners from sending while the queue of the pacer is too long, and lets them send again after. */
+    private fun updatePacerQueueTooLong() {
+        val pacer = pacer ?: return
+        val tooLong = pacer.expectedQueueTime() > PacingController.kMaxExpectedQueueLength
+        if (tooLong != pacerQueueTooLong) {
+            pacerQueueTooLong = tooLong
+            logger.info(
+                if (tooLong) {
+                    "The queue of the pacer is too long, reporting a rate of zero."
+                } else {
+                    "The queue of the pacer is short again, reporting the target rate."
+                }
+            )
+            reportTargetRate()
+        }
+    }
+
+    /**
+     * Tells the pacer when the data in flight reaches the congestion window or falls below it, as
+     * RtpTransportControllerSend::UpdateCongestedState does in WebRTC.
+     */
+    private fun updateCongestedState() {
+        val pacer = pacer ?: return
+        val congested = feedbackAdapter.getOutstandingData() >= congestionWindowSize
+        if (congested != isCongested) {
+            isCongested = congested
+            pacer.setCongested(congested)
+        }
+    }
 
     private var processTask: ScheduledFuture<*>? = null
 
@@ -277,6 +394,7 @@ class GoogCcTransportCcEngine(
         }
         val update = networkController.onTransportPacketsFeedback(feedback)
         processUpdate(update)
+        updateCongestedState()
         ect1Policy.onPacketsFeedback(feedback.hasPacketWithBleachedEct1(), feedback.hasPacketWithEcn())
 
         feedback.packetFeedbacks.forEach { fb ->
@@ -303,10 +421,12 @@ class GoogCcTransportCcEngine(
             creationTime = now
         )
         ect1Policy.onPacketSent(now, packetInfo.sendAsEct1)
-        if (pacedPacketInfo == null) {
-            bitrateProber.onIncomingPacket(length)
+        if (pacer == null) {
+            if (pacedPacketInfo == null) {
+                bitrateProber.onIncomingPacket(length)
+            }
+            maybeScheduleProbing(now)
         }
-        maybeScheduleProbing(now)
     }
 
     @Synchronized
@@ -328,6 +448,7 @@ class GoogCcTransportCcEngine(
             val update = networkController.onSentPacket(sentPacket)
             processUpdate(update)
         }
+        updateCongestedState()
     }
 
     @Synchronized
@@ -385,7 +506,12 @@ class GoogCcTransportCcEngine(
             processExceptionLog.loggingExceptions {
                 synchronized(this@GoogCcTransportCcEngine) {
                     val now = clock.instant()
-                    processUpdate(networkController.onProcessInterval(ProcessInterval(atTime = now)))
+                    updatePacerQueueTooLong()
+                    processUpdate(
+                        networkController.onProcessInterval(
+                            ProcessInterval(atTime = now, pacerQueue = pacer?.queueSizeData())
+                        )
+                    )
                 }
             }
         }, processInterval, processInterval, TimeUnit.MILLISECONDS)
@@ -449,36 +575,44 @@ class GoogCcTransportCcEngine(
         update.targetRate?.let { targetRate ->
             logger.debug { "GoogleCcEstimator setting TargetRate to $targetRate" }
             lastTargetRate = targetRate.targetRate
-            listeners.forEach { listener ->
-                try {
-                    listener.bandwidthEstimationChanged(targetRate.targetRate)
-                } catch (t: Throwable) {
-                    val first = listenerFailure
-                    if (first == null) {
-                        listenerFailure = t
-                    } else {
-                        first.addSuppressed(t)
-                    }
-                }
+            lastCwndReduceRatio = targetRate.cwndReduceRatio
+            try {
+                reportTargetRate()
+            } catch (t: Throwable) {
+                listenerFailure = t
             }
         }
+        val pacer = pacer
         update.congestionWindow?.let { congestionWindow ->
-            /* We don't use a congestion window */
-            /* TODO: does this do anything bad to the estimator? */
-            logger.trace { "GoogleCcEstimator wants to set CongestionWindow to $congestionWindow" }
+            if (pacer != null) {
+                congestionWindowSize = congestionWindow
+                updateCongestedState()
+            } else {
+                /* We don't use a congestion window */
+                /* TODO: does this do anything bad to the estimator? */
+                logger.trace { "GoogleCcEstimator wants to set CongestionWindow to $congestionWindow" }
+            }
         }
         update.pacerConfig?.let { pacerConfig ->
-            /* We don't use a pacer */
-            /* TODO: does this do anything bad to the estimator? */
-            logger.trace { "GoogleCcEstimator wants to set PacerConfig to $pacerConfig" }
+            if (pacer != null) {
+                pacer.setPacerConfig(pacerConfig)
+            } else {
+                /* We don't use a pacer */
+                /* TODO: does this do anything bad to the estimator? */
+                logger.trace { "GoogleCcEstimator wants to set PacerConfig to $pacerConfig" }
+            }
         }
         update.probeClusterConfigs.let { configs ->
             if (configs.isNotEmpty()) {
                 logger.debug { "GoogleCcEstimator creating ${configs.size} ProbeClusterConfigs: $configs" }
-                configs.forEach { config ->
-                    bitrateProber.createProbeCluster(config)
+                if (pacer != null) {
+                    pacer.createProbeClusters(configs)
+                } else {
+                    configs.forEach { config ->
+                        bitrateProber.createProbeCluster(config)
+                    }
+                    maybeScheduleProbing(clock.instant())
                 }
-                maybeScheduleProbing(clock.instant())
             }
         }
 
