@@ -2,6 +2,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation
 
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
+import org.jitsi.nlj.rtp.bandwidthestimation2.ScreamMode
 import org.jitsi.nlj.util.Bandwidth
 
 class BandwidthEstimatorConfig {
@@ -28,6 +29,12 @@ class BandwidthEstimatorConfig {
                 .convertFrom<String> { Bandwidth.fromString(it) }.softDeprecated("use jmt.bwe.estimator.max-bw")
             "jmt.bwe.estimator.max-bw".from(JitsiConfig.newConfig)
                 .convertFrom<String> { Bandwidth.fromString(it) }
+        }
+
+        /** When SCReAM is used in place of Google CC, with the GoogleCc2 engine. */
+        val screamMode: ScreamMode by config {
+            "jmt.bwe.estimator.GoogleCc2.scream".from(JitsiConfig.newConfig)
+                .convertFrom<String> { ScreamMode.fromConfigValue(it) }
         }
     }
 }

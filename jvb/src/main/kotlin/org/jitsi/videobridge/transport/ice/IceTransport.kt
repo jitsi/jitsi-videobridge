@@ -763,16 +763,44 @@ class IceTransport @JvmOverloads constructor(
         logger.info("No longer running, stopped reading packets")
     }
 
+    /** The component packets were last sent on, and its count of send pair changes at the time. */
+    @Volatile
+    private var lastSendComponent: Component? = null
+
+    @Volatile
+    private var lastSendPairChangeCount = 0
+
+    /**
+     * Whether a packet sent now can be sent with the ECT(1) marking (RFC 9331), see [send]. This depends on the
+     * candidate pair in use: [EventHandler.sendRouteChanged] is called when it may have changed.
+     */
+    val supportsEct1: Boolean
+        get() = currentBundle.component.supportsEct1()
+
     /**
      * Send data out via this transport
+     *
+     * @param ect1 whether to send the packet with the ECT(1) marking. Without [supportsEct1] it is sent without.
      */
-    fun send(data: ByteArray, off: Int, length: Int) {
+    @JvmOverloads
+    fun send(data: ByteArray, off: Int, length: Int, ect1: Boolean = false) {
         if (running.get()) {
             try {
                 // Always the established bundle: during a restart the new Agent is still running checks and we
                 // keep sending on the old selected pair until cutOver() swaps it in (make-before-break).
-                currentBundle.component.send(data, off, length)
+                val component = currentBundle.component
+                component.send(data, off, length, ect1)
                 packetStats.numPacketsSent.increment()
+
+                val sendPairChangeCount = component.sendPairChangeCount
+                if (component !== lastSendComponent || sendPairChangeCount != lastSendPairChangeCount) {
+                    // More than one thread sends. If two of them see the same change the handler is called twice,
+                    // which does no harm.
+                    val first = lastSendComponent == null
+                    lastSendComponent = component
+                    lastSendPairChangeCount = sendPairChangeCount
+                    eventHandler?.sendRouteChanged(first)
+                }
             } catch (e: IOException) {
                 logger.error("Error sending packet", e)
                 throw RuntimeException("Error sending packet", e)
@@ -1138,6 +1166,14 @@ class IceTransport @JvmOverloads constructor(
          * Notify the event handler that ICE consent was updated
          */
         fun consentUpdated(time: Instant)
+
+        /**
+         * Notify the event handler that packets are now sent on a different candidate pair than before, so that
+         * they may take a different network path, and [supportsEct1] may have changed.
+         *
+         * @param first whether this is the first pair packets are sent on.
+         */
+        fun sendRouteChanged(first: Boolean) {}
     }
 }
 

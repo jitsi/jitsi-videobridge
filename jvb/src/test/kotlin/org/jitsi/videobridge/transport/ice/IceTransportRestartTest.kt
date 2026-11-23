@@ -33,6 +33,7 @@ import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
+import java.time.Instant
 
 /**
  * Tests the ICE restart state machine of [IceTransport]: which Agent is described, which one gets the peer's
@@ -98,8 +99,8 @@ class IceTransportRestartTest : ShouldSpec({
         should("keep sending on the established Agent until the new one connects") {
             transport.requestIceRestart()
             transport.send(ByteArray(10), 0, 10)
-            verify(exactly = 1) { initial.component.send(any(), any(), any()) }
-            verify(exactly = 0) { agents.created[1].component.send(any(), any(), any()) }
+            verify(exactly = 1) { initial.component.send(any(), any(), any(), any()) }
+            verify(exactly = 0) { agents.created[1].component.send(any(), any(), any(), any()) }
         }
         should("not start connectivity checks before the peer's credentials arrive") {
             transport.requestIceRestart()
@@ -179,7 +180,48 @@ class IceTransportRestartTest : ShouldSpec({
                 agents.created[1].fireState(IceProcessingState.COMPLETED)
 
                 transport.send(ByteArray(10), 0, 10)
-                verify(exactly = 1) { agents.created[1].component.send(any(), any(), any()) }
+                verify(exactly = 1) { agents.created[1].component.send(any(), any(), any(), any()) }
+            }
+            should("report that packets are sent on a new route") {
+                val routeChanges = mutableListOf<Boolean>()
+                transport.eventHandler = object : IceTransport.EventHandler {
+                    override fun writeable() {}
+                    override fun connected() {}
+                    override fun failed() {}
+                    override fun consentUpdated(time: Instant) {}
+                    override fun sendRouteChanged(first: Boolean) {
+                        routeChanges.add(first)
+                    }
+                }
+
+                // The first packet is sent on the first route.
+                transport.send(ByteArray(10), 0, 10)
+                transport.send(ByteArray(10), 0, 10, true)
+                routeChanges shouldBe listOf(true)
+                verify(exactly = 1) { initial.component.send(any(), any(), any(), false) }
+                verify(exactly = 1) { initial.component.send(any(), any(), any(), true) }
+
+                // The component starts to send on another candidate pair.
+                every { initial.component.sendPairChangeCount } returns 2
+                transport.send(ByteArray(10), 0, 10)
+                transport.send(ByteArray(10), 0, 10)
+                routeChanges shouldBe listOf(true, false)
+
+                // The restart moves sending to another component.
+                transport.requestIceRestart()
+                agents.created[1].fireState(IceProcessingState.COMPLETED)
+                transport.send(ByteArray(10), 0, 10)
+                transport.send(ByteArray(10), 0, 10)
+                routeChanges shouldBe listOf(true, false, false)
+            }
+            should("say whether the component it sends on supports ECT(1)") {
+                transport.supportsEct1 shouldBe false
+                every { initial.component.supportsEct1() } returns true
+                transport.supportsEct1 shouldBe true
+
+                transport.requestIceRestart()
+                agents.created[1].fireState(IceProcessingState.COMPLETED)
+                transport.supportsEct1 shouldBe false
             }
             should("describe it without an ice-generation") {
                 // The generation marks a transport to restart against. The established one is not that.
