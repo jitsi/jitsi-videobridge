@@ -669,7 +669,7 @@ public class Conference
             logger.info("Recent speakers changed: " + recentSpeakersIds + ", dominant speaker changed: "
                     + dominantSpeakerChanged + " silence:" + silence);
             broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds, silence));
-            exporter.speakersChanged(Exporter.speakerSourceNames(recentSpeakers), silence);
+            exporter.speakersChanged(SpeakerSource.of(recentSpeakers), silence);
 
             if (dominantSpeakerChanged && !silence)
             {
