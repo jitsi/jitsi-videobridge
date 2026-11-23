@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.assertions.nondeterministic.continually
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
@@ -71,6 +72,30 @@ class ConferenceTest : ConfigTest() {
                 } finally {
                     expire()
                 }
+            }
+        }
+        context("A local endpoint with an invalid ID") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                try {
+                    listOf("", "a\"b", "a b", "a.b", "a\nb", "\u00e9").forEach {
+                        withClue(it) {
+                            shouldThrow<IllegalArgumentException> {
+                                createLocalEndpoint(it, true, false, false, false, false, false, false)
+                            }
+                        }
+                    }
+                    endpointCount shouldBe 0
+                } finally {
+                    expire()
+                }
+            }
+        }
+        context("Endpoint ID validation") {
+            listOf("abcd1234", "ABCD_12", "0", "agent-abcd1234", "agent-my_agent-2", "-15551234567", "_a").forEach {
+                withClue(it) { Conference.isValidEndpointId(it) shouldBe true }
+            }
+            listOf(null, "", "a\"b", "a\\b", "a b", "a.b", "a/b", "a@b", "a\n", "a\nb", "\u00e9").forEach {
+                withClue(it) { Conference.isValidEndpointId(it) shouldBe false }
             }
         }
         context("Synthetic endpoints") {

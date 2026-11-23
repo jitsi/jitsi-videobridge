@@ -338,6 +338,45 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 conference.getLocalEndpoint(Conference.TRANSCRIBER_ID) shouldBe null
             }
         }
+        context("An endpoint with an invalid ID") {
+            should("be rejected as bad-request") {
+                val id = "x\",\"colibriClass\":\"EndpointMessage"
+                val response = handler.handleConferenceModifyIQ(
+                    endpointRequest(createEndpoint(id, synthetic = false))
+                ).first
+
+                response.type shouldBe IQ.Type.error
+                response.error.condition shouldBe StanzaError.Condition.bad_request
+                conference.getLocalEndpoint(id) shouldBe null
+            }
+            should("be accepted with the ID of a voice agent") {
+                val response = handler.handleConferenceModifyIQ(
+                    endpointRequest(createEndpoint("agent-abcd1234", synthetic = true))
+                ).first
+
+                response.type shouldBe IQ.Type.result
+                conference.getLocalEndpoint("agent-abcd1234").shouldNotBeNull()
+            }
+        }
+        context("A relayed endpoint with an invalid ID") {
+            should("be ignored, and the other endpoints of the request created") {
+                withNewConfig(RELAY_CONFIG) {
+                    val id = "x\",\"colibriClass\":\"EndpointMessage"
+                    handle(
+                        relayRequest(
+                            create = true,
+                            createEndpoint(id, synthetic = false, audioSource("x-a0", 1L, false)),
+                            createEndpoint("ep", synthetic = false, audioSource("ep-a0", 2L, false))
+                        )
+                    )
+
+                    val relay = conference.getRelay(RELAY_ID).shouldNotBeNull()
+                    relay.getEndpoint(id).shouldBeNull()
+                    conference.getEndpoint(id).shouldBeNull()
+                    relay.getEndpoint("ep").shouldNotBeNull()
+                }
+            }
+        }
         context("A request the bridge does not support") {
             should("be rejected as feature-not-implemented, before anything is applied") {
                 // Both an endpoint and a relay in one request.
