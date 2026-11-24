@@ -49,16 +49,21 @@ class ShutdownManager(
 
     /**
      * Called after [state] changes. Used to advertise the new state in presence right away, instead of waiting for
-     * the next periodic presence update.
+     * the next periodic presence update. It runs on [TaskPools.SCHEDULED_POOL], never on the thread that changes the
+     * state: that thread can hold the lock of the conferences (when a conference expires), and the listener takes
+     * other locks.
      */
     @Volatile
     var stateChangeListener: Runnable? = null
 
     private fun fireStateChanged() {
-        try {
-            stateChangeListener?.run()
-        } catch (e: Exception) {
-            logger.warn("State change listener failed", e)
+        val listener = stateChangeListener ?: return
+        TaskPools.SCHEDULED_POOL.execute {
+            try {
+                listener.run()
+            } catch (e: Exception) {
+                logger.warn("State change listener failed", e)
+            }
         }
     }
 
@@ -73,7 +78,6 @@ class ShutdownManager(
                     "Entered graceful shutdown mode, will stay in this mode for up to " +
                         config.gracefulShutdownMaxDuration
                 )
-                fireStateChanged()
                 TaskPools.SCHEDULED_POOL.schedule(
                     {
                         if (state == GRACEFUL_SHUTDOWN) {
@@ -84,6 +88,7 @@ class ShutdownManager(
                     config.gracefulShutdownMaxDuration.toMillis(),
                     TimeUnit.MILLISECONDS
                 )
+                fireStateChanged()
             } else {
                 logger.info("Graceful shutdown already initiated mode.")
             }
@@ -113,7 +118,6 @@ class ShutdownManager(
         logger.info("Will shut down in ${config.shuttingDownDelay}")
         state = SHUTTING_DOWN
         VideobridgeMetrics.shuttingDown.set(true)
-        fireStateChanged()
         TaskPools.SCHEDULED_POOL.schedule(
             {
                 logger.info("Videobridge is shutting down NOW")
@@ -122,5 +126,6 @@ class ShutdownManager(
             config.shuttingDownDelay.toMillis(),
             TimeUnit.MILLISECONDS
         )
+        fireStateChanged()
     }
 }

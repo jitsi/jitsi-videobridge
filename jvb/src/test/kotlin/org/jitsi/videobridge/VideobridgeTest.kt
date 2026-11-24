@@ -64,22 +64,35 @@ class VideobridgeTest : ShouldSpec() {
                     repeat(15) { videobridge.localEndpointCreated(false) }
                     context("starting a graceful shutdown") {
                         videobridge.shutdown(true)
+                        should("not run the listener on the thread that changes the state") {
+                            states shouldBe emptyList()
+                        }
                         should("notify the listener after the state changes to GRACEFUL_SHUTDOWN") {
+                            fakeExecutor.run()
                             states shouldBe listOf(ShutdownState.GRACEFUL_SHUTDOWN)
                         }
                         should("notify the listener after the state changes to SHUTTING_DOWN") {
+                            fakeExecutor.run()
                             repeat(10) { videobridge.localEndpointExpired(false) }
+                            videobridge.shutdownState shouldBe ShutdownState.SHUTTING_DOWN
+                            // Not called inline: the caller can hold the conferences lock (when a conference expires).
+                            states shouldBe listOf(ShutdownState.GRACEFUL_SHUTDOWN)
+                            fakeExecutor.run()
                             states shouldBe listOf(ShutdownState.GRACEFUL_SHUTDOWN, ShutdownState.SHUTTING_DOWN)
+                            VideobridgeMetrics.shuttingDown.get() shouldBe true
 
-                            // No more notifications when the bridge shuts down.
+                            // The shutdown is scheduled independently of the listener, and no more notifications.
                             fakeExecutor.clock.elapse(ShutdownConfig.config.shuttingDownDelay)
                             fakeExecutor.run()
+                            verify(exactly = 1) { shutdownService.beginShutdown() }
                             states shouldBe listOf(ShutdownState.GRACEFUL_SHUTDOWN, ShutdownState.SHUTTING_DOWN)
                         }
                     }
                     context("starting a forceful shutdown") {
                         videobridge.shutdown(false)
                         should("notify the listener once, after the state changes to SHUTTING_DOWN") {
+                            states shouldBe emptyList()
+                            fakeExecutor.run()
                             states shouldBe listOf(ShutdownState.SHUTTING_DOWN)
                         }
                     }
