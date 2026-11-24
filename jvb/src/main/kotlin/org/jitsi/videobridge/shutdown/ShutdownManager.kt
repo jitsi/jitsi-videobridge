@@ -47,6 +47,26 @@ class ShutdownManager(
     var state: ShutdownState = RUNNING
         private set
 
+    /**
+     * Called after [state] changes. Used to advertise the new state in presence right away, instead of waiting for
+     * the next periodic presence update. It runs on [TaskPools.SCHEDULED_POOL], never on the thread that changes the
+     * state: that thread can hold the lock of the conferences (when a conference expires), and the listener takes
+     * other locks.
+     */
+    @Volatile
+    var stateChangeListener: Runnable? = null
+
+    private fun fireStateChanged() {
+        val listener = stateChangeListener ?: return
+        TaskPools.SCHEDULED_POOL.execute {
+            try {
+                listener.run()
+            } catch (e: Exception) {
+                logger.warn("State change listener failed", e)
+            }
+        }
+    }
+
     fun initiateShutdown(graceful: Boolean) {
         logger.info("Received shutdown request, graceful=$graceful")
 
@@ -68,6 +88,7 @@ class ShutdownManager(
                     config.gracefulShutdownMaxDuration.toMillis(),
                     TimeUnit.MILLISECONDS
                 )
+                fireStateChanged()
             } else {
                 logger.info("Graceful shutdown already initiated mode.")
             }
@@ -105,5 +126,6 @@ class ShutdownManager(
             config.shuttingDownDelay.toMillis(),
             TimeUnit.MILLISECONDS
         )
+        fireStateChanged()
     }
 }

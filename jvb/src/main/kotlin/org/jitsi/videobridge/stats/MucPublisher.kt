@@ -17,7 +17,6 @@ package org.jitsi.videobridge.stats
 
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.xmpp.XmppConnection
-import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension
 import java.time.Duration
 import java.util.concurrent.ScheduledExecutorService
@@ -47,12 +46,9 @@ class MucPublisher(
         task = null
     }
 
-    private fun publishPresence() {
-        val statsExt: ColibriStatsExtension = if (XmppClientConnectionConfig.config.statsFilterEnabled) {
-            VideobridgeStatisticsShim.getColibriStatsExtension(XmppClientConnectionConfig.config.statsWhitelist)
-        } else {
-            VideobridgeStatisticsShim.getColibriStatsExtension()
-        }
+    /** Publish the current statistics in presence in all MUCs. */
+    fun publishPresence() {
+        val statsExt: ColibriStatsExtension = VideobridgeStatisticsShim.getPresenceStatsExtension()
         logger.debug { "Publishing statistics in presence: $statsExt" }
 
         xmppConnection.setPresenceExtension(statsExt)
