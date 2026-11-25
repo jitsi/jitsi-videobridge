@@ -43,7 +43,6 @@
         <jacoco.version>0.8.14</jacoco.version>
         <bouncycastle.version>1.87</bouncycastle.version>
         <jersey.version>3.1.11</jersey.version>
-        <prometheus.version>0.16.0</prometheus.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
