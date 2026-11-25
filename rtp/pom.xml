@@ -20,11 +20,6 @@
             <version>${kotlin.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-reflect</artifactId>
-            <version>${kotlin.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
             <version>${jitsi.utils.version}</version>
@@ -52,12 +47,6 @@
             <groupId>io.kotest</groupId>
             <artifactId>kotest-assertions-core-jvm</artifactId>
             <version>${kotest.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.pkts</groupId>
-            <artifactId>pkts-core</artifactId>
-            <version>3.0.10</version>
             <scope>test</scope>
         </dependency>
         <dependency>

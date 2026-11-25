@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
 import org.jitsi.health.Result;
 import org.jitsi.nlj.*;
@@ -506,7 +505,7 @@ public class Videobridge
 
         ObjectNode conferences = JsonNodeFactory.instance.objectNode();
         debugState.set("conferences", conferences);
-        if (StringUtils.isBlank(conferenceId))
+        if (conferenceId == null || conferenceId.isBlank())
         {
             getConferences().stream()
                     .filter(c -> mode != DebugStateMode.STATS || c.isRtcStatsEnabled())

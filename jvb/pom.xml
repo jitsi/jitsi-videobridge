@@ -19,7 +19,6 @@
     <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
     <slf4j.version>2.0.16</slf4j.version>
     <exec-maven-plugin.version>3.6.3</exec-maven-plugin.version>
-    <ktlint.version>1.8.0</ktlint.version>
   </properties>
 
   <profiles>
@@ -52,21 +51,6 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>33.8.0-jre</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-rewrite</artifactId>
-      <version>${jetty.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-security</artifactId>
-      <version>${jetty.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty.ee10</groupId>
-      <artifactId>jetty-ee10-servlets</artifactId>
-      <version>${jetty.version}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty.ee10.websocket</groupId>
@@ -227,18 +211,6 @@
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
       <artifactId>jersey-test-framework-provider-jetty</artifactId>
-      <version>${jersey.version}</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>junit</groupId>
-          <artifactId>junit</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.glassfish.jersey.test-framework.providers</groupId>
-      <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
       <version>${jersey.version}</version>
       <scope>test</scope>
       <exclusions>
